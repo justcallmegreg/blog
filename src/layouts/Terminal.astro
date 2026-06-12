@@ -32,8 +32,13 @@ function isActive(href: string): boolean {
     {cfg.effects.crtGlitch && <CRTGlitch intervalSeconds={cfg.effects.crtGlitchIntervalSeconds} />}
     <slot name="background" />
     <header class="topbar">
+      <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
       <div class="topbar-row">
-        <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+        <nav class="tabs" aria-label="Primary">
+          {tabs.map((t) => (
+            <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
+          ))}
+        </nav>
         <a class="rss-link" href="/rss.xml" aria-label="RSS feed">
           <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true">
             <circle cx="6.18" cy="17.82" r="2.18" />
@@ -43,11 +48,6 @@ function isActive(href: string): boolean {
           <span>RSS</span>
         </a>
       </div>
-      <nav class="tabs" aria-label="Primary">
-        {tabs.map((t) => (
-          <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
-        ))}
-      </nav>
     </header>
     <main class="container">
       <slot />
