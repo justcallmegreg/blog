@@ -54,6 +54,7 @@ describe('ContentStore', () => {
     expect(posts[0].date).toBe('2026-06-12');
     expect(posts[0].title).toBe('First');
     expect(store.getPost('/2026/06/12/first')?.html).toContain('Hello');
+    expect(store.getPost('/2026/06/12/first')?.excerpt).toBe('Hello');
   });
 
   it('keeps drafts retrievable by URL but flagged', async () => {

@@ -41,6 +41,10 @@
     if (t.closest('a, button') && !t.closest('#sound-toggle')) blip();
   });
 
+  // Other components (e.g. the search box on keystroke) trigger a blip via this
+  // event so the mute state stays centralized here.
+  document.addEventListener('ui:blip', () => blip());
+
   toggle.addEventListener('click', () => {
     muted = !muted;
     localStorage.setItem(KEY, muted ? '1' : '0');

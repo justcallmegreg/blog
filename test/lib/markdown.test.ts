@@ -1,5 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { renderMarkdown } from '../../src/lib/markdown';
+import { renderMarkdown, extractExcerpt } from '../../src/lib/markdown';
+
+describe('extractExcerpt', () => {
+  it('takes the first prose paragraph, skipping a leading heading', () => {
+    const md = '# My Title\n\nThis is the **first** paragraph.\n\nSecond paragraph.';
+    expect(extractExcerpt(md)).toBe('This is the first paragraph.');
+  });
+
+  it('collapses whitespace and strips inline markdown to plain text', () => {
+    expect(extractExcerpt('A [link](http://x) and `code`\nwrapped line.')).toBe(
+      'A link and code wrapped line.'
+    );
+  });
+
+  it('caps at maxWords and appends an ellipsis', () => {
+    const body = Array.from({ length: 10 }, (_, i) => `w${i}`).join(' ');
+    expect(extractExcerpt(body, 3)).toBe('w0 w1 w2…');
+  });
+
+  it('returns empty string when there is no paragraph', () => {
+    expect(extractExcerpt('# Only a heading')).toBe('');
+  });
+});
 
 describe('renderMarkdown', () => {
   it('renders markdown to HTML', async () => {

@@ -1,22 +1,59 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
 import MatrixRain from '../components/MatrixRain.astro';
+import Search from '../components/Search.astro';
 import { ensureStarted } from '../lib/store-singleton';
 import { getConfig } from '../lib/config';
+import type { Post } from '../lib/content-store';
 
 const cfg = getConfig();
 const store = await ensureStarted();
 const posts = store.listPosts();
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+const now = new Date();
+const today = ymd(now);
+const yesterday = ymd(new Date(now.getTime() - 86_400_000));
+
+const groups = [
+  { label: 'TODAY', posts: posts.filter((p) => p.date === today) },
+  { label: 'YESTERDAY', posts: posts.filter((p) => p.date === yesterday) },
+  {
+    label: 'EARLIER',
+    posts: posts.filter((p) => p.date !== today && p.date !== yesterday),
+  },
+].filter((g) => g.posts.length > 0);
+
+const dot = (date: string) => date.replace(/-/g, '.');
+const searchKey = (p: Post) => `${p.title} ${p.excerpt} ${dot(p.date)}`.toLowerCase();
 ---
 <Terminal>
   {cfg.effects.matrixRain && (
     <MatrixRain slot="background" durationSeconds={cfg.effects.matrixRainDurationSeconds} />
   )}
   {cfg.site.description && <p class="lede">{cfg.site.description}</p>}
-  <ul class="post-list">
-    {posts.map((p) => (
-      <li>&gt; {p.date.replace(/-/g, '.')}  <a href={p.url}>{p.title}</a></li>
-    ))}
-    {posts.length === 0 && <li>&gt; no log entries found.</li>}
-  </ul>
+
+  <Search />
+
+  {groups.map((g) => (
+    <section class="group" data-group>
+      <h2 class="group-title">{g.label}</h2>
+      <ul class="post-list">
+        {g.posts.map((p) => (
+          <li class="entry" data-search={searchKey(p)}>
+            <a class="entry-title" href={p.url}>{p.title}</a>
+            <div class="entry-meta">{dot(p.date)}</div>
+            {p.excerpt && <p class="entry-teaser">{p.excerpt}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  {posts.length === 0 && <p>&gt; no log entries found.</p>}
+  <p id="no-results" hidden>&gt; no matching entries.</p>
 </Terminal>

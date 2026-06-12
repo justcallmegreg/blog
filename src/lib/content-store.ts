@@ -4,7 +4,7 @@ import { cloneRepo, fetchReset, lsTreeBlobs } from './git';
 import { listLocalFiles } from './local-files';
 import { parsePostPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown, extractExcerpt } from './markdown';
 
 export interface Post {
   url: string;
@@ -16,6 +16,7 @@ export interface Post {
   slug: string;
   title: string;
   description?: string;
+  excerpt: string;
   draft: boolean;
   html: string;
   blobHash: string;
@@ -96,6 +97,7 @@ export class ContentStore {
       try {
         const { data, content } = parseFrontmatter(raw);
         const html = await renderMarkdown(content, info.urlPrefix);
+        const excerpt = extractExcerpt(content) || data.description || '';
         this.index.set(info.url, {
           url: info.url,
           urlPrefix: info.urlPrefix,
@@ -106,6 +108,7 @@ export class ContentStore {
           slug: info.slug,
           title: data.title ?? info.slug,
           description: data.description,
+          excerpt,
           draft: data.draft,
           html,
           blobHash: hash,

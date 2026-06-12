@@ -1,0 +1,61 @@
+---
+// Terminal-style fuzzy search over the post list. The native caret is hidden
+// and a blinking block cursor is rendered instead; entries are filtered by a
+// subsequence match against their data-search text, empty groups collapse, and
+// each keystroke routes a click through ClickSound via the 'ui:blip' event.
+---
+<div class="search" id="search">
+  <span class="search-label">&gt; SEARCH:&nbsp;</span><span class="search-typed" id="search-typed"></span><span class="cursor search-cursor"> </span>
+  <input
+    id="search-input"
+    class="search-input"
+    type="text"
+    autocomplete="off"
+    autocapitalize="off"
+    autocorrect="off"
+    spellcheck="false"
+    aria-label="Search posts"
+  />
+</div>
+<script>
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const typed = document.getElementById('search-typed') as HTMLElement;
+  const box = document.getElementById('search') as HTMLElement;
+  const entries = Array.from(document.querySelectorAll<HTMLElement>('.entry'));
+  const groups = Array.from(document.querySelectorAll<HTMLElement>('[data-group]'));
+  const noResults = document.getElementById('no-results') as HTMLElement | null;
+
+  /** Subsequence fuzzy match: every char of q appears in order within hay. */
+  function fuzzy(q: string, hay: string): boolean {
+    if (!q) return true;
+    let i = 0;
+    for (let j = 0; j < hay.length && i < q.length; j++) {
+      if (hay[j] === q[i]) i++;
+    }
+    return i === q.length;
+  }
+
+  function apply() {
+    const q = input.value.toLowerCase().replace(/\s+/g, '');
+    typed.textContent = input.value;
+    let any = false;
+    for (const el of entries) {
+      const show = fuzzy(q, el.dataset.search ?? '');
+      el.hidden = !show;
+      if (show) any = true;
+    }
+    for (const g of groups) {
+      g.hidden = !g.querySelector('.entry:not([hidden])');
+    }
+    if (noResults) noResults.hidden = any;
+  }
+
+  input.addEventListener('input', apply);
+  input.addEventListener('keydown', (e) => {
+    if (e.key.length === 1 || e.key === 'Backspace') {
+      document.dispatchEvent(new Event('ui:blip'));
+    }
+  });
+  box.addEventListener('click', () => input.focus());
+  input.focus();
+</script>
