@@ -18,21 +18,21 @@ function ymd(d: Date): string {
 const now = new Date();
 const today = ymd(now);
 const yesterday = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
-const startOfMonth = ymd(new Date(now.getFullYear(), now.getMonth(), 1));
 // Monday-based start of the current week.
 const daysFromMonday = (now.getDay() + 6) % 7;
 const startOfWeek = ymd(
   new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday)
 );
 
-// First matching bucket wins, so buckets stay mutually exclusive. The "<= today"
-// bound keeps future-dated posts out of week/month and in EARLIER.
+// First matching bucket wins, so buckets stay mutually exclusive. Everything
+// older than this week (and any future-dated posts) falls into the final
+// "This month and earlier" group. The "<= today" bound keeps future-dated
+// posts out of "this week".
 const buckets: { label: string; match: (d: string) => boolean; posts: Post[] }[] = [
   { label: 'TODAY', match: (d) => d === today, posts: [] },
   { label: 'YESTERDAY', match: (d) => d === yesterday, posts: [] },
   { label: 'THIS WEEK', match: (d) => d >= startOfWeek && d <= today, posts: [] },
-  { label: 'THIS MONTH', match: (d) => d >= startOfMonth && d <= today, posts: [] },
-  { label: 'EARLIER', match: () => true, posts: [] },
+  { label: 'THIS MONTH AND EARLIER', match: () => true, posts: [] },
 ];
 for (const p of posts) {
   (buckets.find((b) => b.match(p.date)) ?? buckets[buckets.length - 1]).posts.push(p);
