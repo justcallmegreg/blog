@@ -57,4 +57,21 @@ describe('git operations', () => {
     blobs = await lsTreeBlobs(dest);
     expect(blobs.get('2026/06/12/a.md')).not.toBe(firstHash);
   });
+
+  it('scrubs the token from clone error messages', async () => {
+    const token = 'SECRETTOKEN123';
+    let msg = '';
+    try {
+      await cloneRepo({
+        repo: 'https://nonexistent.invalid/repo/xyz.git',
+        branch: 'main',
+        dir: join(workDir, 'fail'),
+        token,
+      });
+    } catch (e) {
+      msg = (e as Error).message;
+    }
+    expect(msg.length).toBeGreaterThan(0);
+    expect(msg).not.toContain(token);
+  });
 });

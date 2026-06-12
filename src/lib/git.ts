@@ -9,9 +9,20 @@ export function applyToken(repo: string, token: string | undefined): string {
   return repo.replace(/^https:\/\//, `https://x-access-token:${token}@`);
 }
 
-async function git(args: string[], cwd?: string): Promise<string> {
-  const { stdout } = await run('git', args, { cwd, maxBuffer: 1024 * 1024 * 64 });
-  return stdout;
+async function git(args: string[], cwd?: string, redact?: string): Promise<string> {
+  try {
+    const { stdout } = await run('git', args, { cwd, maxBuffer: 1024 * 1024 * 64 });
+    return stdout;
+  } catch (err) {
+    if (redact && err instanceof Error) {
+      err.message = err.message.replaceAll(redact, '***');
+      const cmdErr = err as Error & { cmd?: string };
+      if (cmdErr.cmd) {
+        cmdErr.cmd = cmdErr.cmd.replaceAll(redact, '***');
+      }
+    }
+    throw err;
+  }
 }
 
 export interface CloneOptions {
@@ -23,16 +34,20 @@ export interface CloneOptions {
 
 export async function cloneRepo(opts: CloneOptions): Promise<void> {
   const url = applyToken(opts.repo, opts.token);
-  await git([
-    'clone',
-    '--depth',
-    '1',
-    '--branch',
-    opts.branch,
-    '--single-branch',
-    url,
-    opts.dir,
-  ]);
+  await git(
+    [
+      'clone',
+      '--depth',
+      '1',
+      '--branch',
+      opts.branch,
+      '--single-branch',
+      url,
+      opts.dir,
+    ],
+    undefined,
+    opts.token,
+  );
 }
 
 export async function fetchReset(opts: {
