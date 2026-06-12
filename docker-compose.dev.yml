@@ -1,0 +1,23 @@
+# Dev mode: serve a LOCAL content folder from the container — no git clone,
+# no push, no commit. Edit a markdown file on the host and it shows up on the
+# next sync. Set CONTENT_DIR to your local content repo (defaults to the
+# sibling ../blog-content) and run:
+#
+#   CONTENT_DIR=/absolute/path/to/blog-content docker compose -f docker-compose.dev.yml up --build
+#
+# (or just `docker compose -f docker-compose.dev.yml up --build` to use ../blog-content)
+services:
+  blog:
+    build: .
+    ports:
+      - "4321:4321"
+    environment:
+      PORT: "4321"
+      HOST: "0.0.0.0"
+      CONFIG_PATH: /config/config.yaml
+      # Tells the engine to read content directly from the mounted folder
+      # instead of cloning content.repo. This is the dev toggle.
+      CONTENT_LOCAL_DIR: /content
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ${CONTENT_DIR:-../blog-content}:/content:ro

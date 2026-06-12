@@ -98,6 +98,29 @@ describe('ContentStore', () => {
     expect(store.resolveAssetPath('2026', '06', '12', '../../../etc/passwd')).toBeNull();
   });
 
+  it('local mode reads a plain directory directly and picks up edits without git', async () => {
+    const localDir = mkdtempSync(join(tmpdir(), 'local-content-'));
+    mkdirSync(join(localDir, '2099/01/01'), { recursive: true });
+    writeFileSync(join(localDir, '2099/01/01/hi.md'), '---\ntitle: Hi\n---\nbody');
+    const store = new ContentStore({
+      repo: 'unused-in-local-mode',
+      branch: 'main',
+      subdir: '',
+      cacheDir: localDir,
+      local: true,
+    });
+    await store.start(); // must NOT attempt a git clone
+    expect(store.getPost('/2099/01/01/hi')?.title).toBe('Hi');
+
+    // edit the file in place (no commit) and re-sync
+    writeFileSync(join(localDir, '2099/01/01/hi.md'), '---\ntitle: Hi v2\n---\nchanged');
+    const changed = await store.sync();
+    expect(changed).toContain('2099/01/01/hi.md');
+    expect(store.getPost('/2099/01/01/hi')?.title).toBe('Hi v2');
+
+    rmSync(localDir, { recursive: true, force: true });
+  });
+
   it('resolves asset paths to an absolute path even when cacheDir is relative', () => {
     // Regression: a relative cacheDir (e.g. the default './cache') must still
     // resolve and pass the traversal guard rather than always returning null.

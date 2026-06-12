@@ -72,6 +72,31 @@ docker run -p 4321:4321 \
 The container is stateless — it clones the content repo into an ephemeral cache on start and
 re-syncs on a timer. No volumes are required for content.
 
+> **Note:** `content.repo` must be reachable *from inside the container*. A remote URL
+> (`https://github.com/you/blog-content.git`) works. A host `file://` path does **not** — the
+> container can't see your host filesystem. To serve a local folder, use dev mode below.
+
+## Dev mode (serve a local content folder)
+
+To preview your local content repo in the container **without pushing or committing**, mount
+the folder and set `CONTENT_LOCAL_DIR`. In this mode the engine reads the directory directly
+(no git clone/fetch) and detects changes by file mtime+size, so edits appear on the next sync.
+
+```bash
+# uses ../blog-content by default; override with CONTENT_DIR=/abs/path
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Open http://localhost:4321, edit a markdown file in your content folder, and it shows up within
+`syncIntervalSeconds` — no restart, no commit. (Set a low `syncIntervalSeconds` in `config.yaml`
+for snappier dev feedback.)
+
+The same toggle works without Docker:
+
+```bash
+npm run build && CONTENT_LOCAL_DIR=../blog-content CONFIG_PATH=./config.yaml npm start
+```
+
 ## Develop
 
 ```bash

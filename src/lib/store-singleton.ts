@@ -13,13 +13,27 @@ export function getStore(opts: ContentStoreOptions): ContentStore {
 /** Idempotent: clones + first index once, then starts the periodic sync loop. */
 export async function ensureStarted(): Promise<ContentStore> {
   const cfg = getConfig();
-  const s = getStore({
-    repo: cfg.content.repo,
-    branch: cfg.content.branch,
-    subdir: cfg.content.subdir,
-    cacheDir: process.env.CACHE_DIR ?? './cache',
-    token: process.env.CONTENT_REPO_TOKEN,
-  });
+  // Dev mode: when CONTENT_LOCAL_DIR is set, read content directly from that
+  // directory (a mounted volume) instead of cloning the git repo — no commit
+  // needed, edits appear on the next sync. Otherwise use the git content repo.
+  const localDir = process.env.CONTENT_LOCAL_DIR;
+  const s = getStore(
+    localDir
+      ? {
+          repo: cfg.content.repo,
+          branch: cfg.content.branch,
+          subdir: cfg.content.subdir,
+          cacheDir: localDir,
+          local: true,
+        }
+      : {
+          repo: cfg.content.repo,
+          branch: cfg.content.branch,
+          subdir: cfg.content.subdir,
+          cacheDir: process.env.CACHE_DIR ?? './cache',
+          token: process.env.CONTENT_REPO_TOKEN,
+        }
+  );
   if (!startPromise) {
     startPromise = s.start().then(() => {
       timer = setInterval(() => {

@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { cloneRepo, fetchReset, lsTreeBlobs } from './git';
+import { listLocalFiles } from './local-files';
 import { parsePostPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
 import { renderMarkdown } from './markdown';
@@ -26,6 +27,12 @@ export interface ContentStoreOptions {
   subdir: string;
   cacheDir: string;
   token?: string;
+  /**
+   * Local (dev) mode: treat `cacheDir` as a directory to read content from
+   * directly — no git clone or fetch. Change detection uses file mtime+size
+   * instead of git blob hashes, so uncommitted edits show up on the next sync.
+   */
+  local?: boolean;
 }
 
 export class ContentStore {
@@ -50,7 +57,7 @@ export class ContentStore {
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
-    if (!existsSync(join(this.opts.cacheDir, '.git'))) {
+    if (!this.opts.local && !existsSync(join(this.opts.cacheDir, '.git'))) {
       await cloneRepo({
         repo: this.opts.repo,
         branch: this.opts.branch,
@@ -61,14 +68,18 @@ export class ContentStore {
     await this.reindex();
   }
 
-  /** git fetch + reset, then reindex. Returns content-root-relative paths that changed. */
+  /** Refresh content (git fetch+reset unless local), then reindex. Returns content-root-relative paths that changed. */
   async sync(): Promise<string[]> {
-    await fetchReset({ dir: this.opts.cacheDir, branch: this.opts.branch, token: this.opts.token });
+    if (!this.opts.local) {
+      await fetchReset({ dir: this.opts.cacheDir, branch: this.opts.branch, token: this.opts.token });
+    }
     return this.reindex();
   }
 
   private async reindex(): Promise<string[]> {
-    const blobs = await lsTreeBlobs(this.opts.cacheDir);
+    const blobs = this.opts.local
+      ? listLocalFiles(this.opts.cacheDir)
+      : await lsTreeBlobs(this.opts.cacheDir);
     const seenUrls = new Set<string>();
     const changed: string[] = [];
 
