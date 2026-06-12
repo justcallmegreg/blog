@@ -42,7 +42,16 @@ a:hover { text-decoration: underline; }
 pre { padding: 1rem; overflow-x: auto; border: 1px solid var(--fg-dim); }
 img { max-width: 100%; }
 
-.cursor { display: inline-block; width: 0.6ch; background: var(--fg); animation: blink 1s steps(1) infinite; }
+/* Fallout-style block cursor: a solid green character-cell rectangle. */
+.cursor {
+  display: inline-block;
+  width: 1ch;
+  height: 1.1em;
+  margin-left: 0.05em;
+  background: var(--fg);
+  vertical-align: text-bottom;
+  animation: blink 1s steps(1) infinite;
+}
 @keyframes blink { 50% { opacity: 0; } }
 
 .post-list { list-style: none; padding: 0; margin: 0; }
