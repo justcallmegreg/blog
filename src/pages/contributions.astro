@@ -30,7 +30,6 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
         {data.repos.map((r) => (
           <li class="repo">
             <a class="repo-name" href={r.url}>{r.name}</a>
-            {r.fork && <span class="repo-tag">fork</span>}
             {r.language && <span class="repo-lang">{r.language}</span>}
             <div class="repo-desc">{r.description || '—'}</div>
           </li>

@@ -116,20 +116,16 @@ async function fetchOwnedRepos(user: string, token?: string): Promise<Repo[]> {
     token
   );
   return (data as any[])
-    .filter((r) => !r.private)
+    .filter((r) => !r.fork && !r.private) // only original (non-fork) public repos
     .map((r) => ({
       name: r.name,
       description: r.description ?? '',
       url: r.html_url,
       language: r.language,
       stars: r.stargazers_count ?? 0,
-      fork: !!r.fork,
+      fork: false,
     }))
-    // original repos first, then by stars
-    .sort(
-      (a, b) =>
-        Number(a.fork) - Number(b.fork) || b.stars - a.stars || a.name.localeCompare(b.name)
-    );
+    .sort((a, b) => b.stars - a.stars || a.name.localeCompare(b.name));
 }
 
 async function fetchRecentPRs(
