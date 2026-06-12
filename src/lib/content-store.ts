@@ -1,0 +1,135 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
+import { cloneRepo, fetchReset, lsTreeBlobs } from './git';
+import { parsePostPath } from './paths';
+import { parseFrontmatter } from './frontmatter';
+import { renderMarkdown } from './markdown';
+
+export interface Post {
+  url: string;
+  urlPrefix: string;
+  year: string;
+  month: string;
+  day: string;
+  date: string;
+  slug: string;
+  title: string;
+  description?: string;
+  draft: boolean;
+  html: string;
+  blobHash: string;
+}
+
+export interface ContentStoreOptions {
+  repo: string;
+  branch: string;
+  subdir: string;
+  cacheDir: string;
+  token?: string;
+}
+
+export class ContentStore {
+  private index = new Map<string, Post>();
+  private started = false;
+
+  constructor(private opts: ContentStoreOptions) {}
+
+  private contentRoot(): string {
+    return this.opts.subdir
+      ? join(this.opts.cacheDir, this.opts.subdir)
+      : this.opts.cacheDir;
+  }
+
+  /** Repo-relative path -> content-root-relative path, or null if outside subdir. */
+  private toContentRel(repoRel: string): string | null {
+    if (!this.opts.subdir) return repoRel;
+    const prefix = `${this.opts.subdir.replace(/\/$/, '')}/`;
+    return repoRel.startsWith(prefix) ? repoRel.slice(prefix.length) : null;
+  }
+
+  async start(): Promise<void> {
+    if (this.started) return;
+    this.started = true;
+    if (!existsSync(join(this.opts.cacheDir, '.git'))) {
+      await cloneRepo({
+        repo: this.opts.repo,
+        branch: this.opts.branch,
+        dir: this.opts.cacheDir,
+        token: this.opts.token,
+      });
+    }
+    await this.reindex();
+  }
+
+  /** git fetch + reset, then reindex. Returns content-root-relative paths that changed. */
+  async sync(): Promise<string[]> {
+    await fetchReset({ dir: this.opts.cacheDir, branch: this.opts.branch, token: this.opts.token });
+    return this.reindex();
+  }
+
+  private async reindex(): Promise<string[]> {
+    const blobs = await lsTreeBlobs(this.opts.cacheDir);
+    const seenUrls = new Set<string>();
+    const changed: string[] = [];
+
+    for (const [repoRel, hash] of blobs) {
+      const contentRel = this.toContentRel(repoRel);
+      if (contentRel === null) continue;
+      const info = parsePostPath(contentRel);
+      if (!info) continue;
+      seenUrls.add(info.url);
+      const existing = this.index.get(info.url);
+      if (existing && existing.blobHash === hash) continue;
+
+      const raw = readFileSync(join(this.contentRoot(), contentRel), 'utf8');
+      try {
+        const { data, content } = parseFrontmatter(raw);
+        const html = await renderMarkdown(content, info.urlPrefix);
+        this.index.set(info.url, {
+          url: info.url,
+          urlPrefix: info.urlPrefix,
+          year: info.year,
+          month: info.month,
+          day: info.day,
+          date: info.date,
+          slug: info.slug,
+          title: data.title ?? info.slug,
+          description: data.description,
+          draft: data.draft,
+          html,
+          blobHash: hash,
+        });
+        changed.push(contentRel);
+      } catch (err) {
+        console.warn(`Skipping ${contentRel}: ${(err as Error).message}`);
+      }
+    }
+
+    for (const url of [...this.index.keys()]) {
+      if (!seenUrls.has(url)) this.index.delete(url);
+    }
+    return changed;
+  }
+
+  listPosts(): Post[] {
+    return [...this.index.values()]
+      .filter((p) => !p.draft)
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }
+
+  getPost(url: string): Post | undefined {
+    return this.index.get(url);
+  }
+
+  resolveAssetPath(
+    year: string,
+    month: string,
+    day: string,
+    file: string
+  ): string | null {
+    const baseDir = join(this.contentRoot(), year, month, day, 'assets');
+    const full = resolve(baseDir, file);
+    if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
+    return full;
+  }
+}

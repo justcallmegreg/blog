@@ -1,0 +1,12 @@
+services:
+  blog:
+    build: .
+    ports:
+      - "4321:4321"
+    environment:
+      # CONTENT_REPO_TOKEN: "ghp_xxx"   # only for private content repos
+      PORT: "4321"
+      HOST: "0.0.0.0"
+      CONFIG_PATH: /config/config.yaml
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro

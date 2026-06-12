@@ -1,0 +1,49 @@
+---
+// Web Audio click feedback on link/button activation. Default ON, mutable, persisted.
+---
+<button id="sound-toggle" type="button" aria-label="Toggle sound"></button>
+<style>
+  #sound-toggle {
+    position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60;
+    background: transparent; color: var(--fg); border: 1px solid var(--fg-dim);
+    font-family: var(--font); font-size: 16px; cursor: pointer; padding: 0.1rem 0.4rem;
+  }
+</style>
+<script>
+  const KEY = 'blog-sound-muted';
+  const toggle = document.getElementById('sound-toggle') as HTMLButtonElement;
+  let muted = localStorage.getItem(KEY) === '1';
+  let ctx: AudioContext | null = null;
+
+  function render() {
+    toggle.textContent = muted ? '[ SND OFF ]' : '[ SND ON ]';
+    toggle.setAttribute('aria-pressed', String(!muted));
+  }
+  render();
+
+  function blip() {
+    if (muted) return;
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.06);
+  }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest('a, button') && !t.closest('#sound-toggle')) blip();
+  });
+
+  toggle.addEventListener('click', () => {
+    muted = !muted;
+    localStorage.setItem(KEY, muted ? '1' : '0');
+    render();
+  });
+</script>

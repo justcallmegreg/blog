@@ -1,0 +1,21 @@
+---
+import Terminal from '../layouts/Terminal.astro';
+import MatrixRain from '../components/MatrixRain.astro';
+import { ensureStarted } from '../lib/store-singleton';
+import { getConfig } from '../lib/config';
+
+const cfg = getConfig();
+const store = await ensureStarted();
+const posts = store.listPosts();
+---
+<Terminal>
+  {cfg.effects.matrixRain && <MatrixRain slot="background" />}
+  <h1>&gt; {cfg.site.title}<span class="cursor"> </span></h1>
+  {cfg.site.description && <p>{cfg.site.description}</p>}
+  <ul class="post-list">
+    {posts.map((p) => (
+      <li>&gt; {p.date.replace(/-/g, '.')}  <a href={p.url}>{p.title}</a></li>
+    ))}
+    {posts.length === 0 && <li>&gt; no log entries found.</li>}
+  </ul>
+</Terminal>

@@ -1,0 +1,41 @@
+---
+// Reveals already-rendered slotted HTML character-by-character over text nodes.
+// Without JS (or with reduced motion), the full content is visible immediately.
+---
+<div id="typewriter" data-typewriter><slot /></div>
+<script>
+  const root = document.getElementById('typewriter')!;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes: { node: Text; full: string }[] = [];
+    let n: Node | null;
+    while ((n = walker.nextNode())) {
+      const t = n as Text;
+      nodes.push({ node: t, full: t.data });
+      t.data = '';
+    }
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    cursor.textContent = ' ';
+    root.appendChild(cursor);
+
+    let ni = 0, ci = 0;
+    let done = false;
+    function reveal() {
+      if (ni >= nodes.length) { finish(); return; }
+      const cur = nodes[ni];
+      cur.node.data = cur.full.slice(0, ++ci);
+      if (ci >= cur.full.length) { ni++; ci = 0; }
+    }
+    function finish() {
+      if (done) return;
+      done = true;
+      for (const { node, full } of nodes) node.data = full;
+      cursor.remove();
+      clearInterval(timer);
+    }
+    const timer = setInterval(reveal, 12);
+    root.addEventListener('click', finish);
+  }
+</script>

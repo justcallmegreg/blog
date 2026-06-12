@@ -1,0 +1,17 @@
+site:
+  title: "RobCo Termlink"
+  description: "Personal log"
+  # baseUrl: "https://blog.example.com"   # optional
+content:
+  repo: "https://github.com/you/blog-content.git"
+  branch: "main"
+  subdir: ""                # optional: content lives in a subfolder of the repo
+  syncIntervalSeconds: 300
+effects:
+  matrixRain: true
+  typewriter: true
+  clickSound: true          # default ON; readers get a persisted mute toggle
+
+# The HTTP port/host are set via the PORT and HOST environment variables
+# (see Dockerfile / docker-compose.yml), not in this file. Change the published
+# port through the compose `ports:` mapping.
