@@ -114,13 +114,17 @@ img { max-width: 100%; }
 .topbar-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; }
 .topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { font-size: 1.4rem; }
-/* Centered profile picture: pale, green-tinted monochrome for a CRT/Fallout feel. */
+/* Centered profile picture: pale, green-tinted monochrome for a CRT/Fallout
+   feel. A radial mask fades the edges to transparent so the image "melts" into
+   the dark page instead of sitting in a solid background box. */
 .avatar {
   justify-self: center;
-  height: 52px;
+  height: 104px;
   width: auto;
-  opacity: 0.4;
-  filter: grayscale(1) sepia(1) hue-rotate(65deg) saturate(2.2) brightness(1.05);
+  opacity: 0.5;
+  filter: grayscale(1) sepia(1) hue-rotate(65deg) saturate(1.8) brightness(1.05);
+  -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 72%);
+  mask-image: radial-gradient(circle, #000 38%, transparent 72%);
 }
 .rss-link {
   display: inline-flex;
