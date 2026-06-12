@@ -15,12 +15,16 @@
   let muted = localStorage.getItem(KEY) === '1';
   let ctx: AudioContext | null = null;
 
-  function render() { toggle.textContent = muted ? '[ SND OFF ]' : '[ SND ON ]'; }
+  function render() {
+    toggle.textContent = muted ? '[ SND OFF ]' : '[ SND ON ]';
+    toggle.setAttribute('aria-pressed', String(!muted));
+  }
   render();
 
   function blip() {
     if (muted) return;
     ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
@@ -34,7 +38,7 @@
 
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
-    if (t.closest('a, button') && t.id !== 'sound-toggle') blip();
+    if (t.closest('a, button') && !t.closest('#sound-toggle')) blip();
   });
 
   toggle.addEventListener('click', () => {

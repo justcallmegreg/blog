@@ -37,11 +37,14 @@
   if (reduce) {
     frame();
   } else {
-    let running = true;
-    const loop = () => { if (running) { frame(); requestAnimationFrame(loop); } };
+    let rafId: number | null = null;
+    const loop = () => { frame(); rafId = requestAnimationFrame(loop); };
     document.addEventListener('visibilitychange', () => {
-      running = !document.hidden;
-      if (running) loop();
+      if (document.hidden) {
+        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      } else if (rafId === null) {
+        loop();
+      }
     });
     loop();
   }
