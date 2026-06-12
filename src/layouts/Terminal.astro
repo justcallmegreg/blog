@@ -1,4 +1,5 @@
 ---
+import os from 'node:os';
 import '../styles/theme.css';
 import ClickSound from '../components/ClickSound.astro';
 import CRTGlitch from '../components/CRTGlitch.astro';
@@ -9,6 +10,25 @@ interface Props { title?: string }
 const { title } = Astro.props;
 const cfg = getConfig();
 const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
+
+// Fun "boot handshake" lines (not meant to be precise): the node this container
+// resolved itself to, and where the inbound request came from.
+function hostAddress(): string {
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const ni of list ?? []) {
+      if (ni.family === 'IPv4' && !ni.internal) return ni.address;
+    }
+  }
+  return '127.0.0.1';
+}
+const clean = (ip: string) => ip.replace(/^::ffff:/, '').replace(/^::1$/, '127.0.0.1');
+const hostIp = hostAddress();
+let clientIp = 'UNKNOWN-VAULT';
+try {
+  clientIp = clean(Astro.clientAddress || '') || 'UNKNOWN-VAULT';
+} catch {
+  clientIp = 'UNKNOWN-VAULT';
+}
 
 // Pip-Boy top tab bar. Data-driven so new tabs slot in here later.
 const tabs = [
@@ -38,7 +58,14 @@ function isActive(href: string): boolean {
     <slot name="background" />
     <header class="topbar">
       <div class="topbar-head">
-        <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+        <div class="brand-block">
+          <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+          <div class="conn" id="conn" hidden>
+            <span class="conn-badge">CONNECTED</span>
+            <div class="conn-line">connected to {hostIp}</div>
+            <div class="conn-line">inbound link traced to {clientIp}</div>
+          </div>
+        </div>
         <img class="avatar" src="/profile_picture.png" alt="" aria-hidden="true" />
         <span class="topbar-spacer" aria-hidden="true"></span>
       </div>
@@ -73,9 +100,12 @@ function isActive(href: string): boolean {
         // Remove ONLY the brand's cursor once the title is fully printed (the
         // search box has its own .cursor that must keep blinking).
         const hideCursor = () => brand.querySelector('.cursor')?.remove();
+        // Reveal the "connection" handshake lines once the title is printed.
+        const showConn = () => document.getElementById('conn')?.removeAttribute('hidden');
         if (reduce || sessionStorage.getItem(KEY) === '1') {
           out.textContent = text;
           hideCursor();
+          showConn();
         } else {
           out.textContent = '';
           let i = 0;
@@ -85,6 +115,7 @@ function isActive(href: string): boolean {
               clearInterval(timer);
               sessionStorage.setItem(KEY, '1');
               hideCursor();
+              showConn();
             }
           }, 45);
         }
