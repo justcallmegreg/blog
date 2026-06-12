@@ -14,6 +14,8 @@ effects:
   clickSound: true          # default ON; readers get a persisted mute toggle
   crtGlitch: true                   # periodic light CRT beam-roll (horizontal sweep) on every page
   crtGlitchIntervalSeconds: 15      # roughly how often it sweeps (±jitter)
+  vaultBoy: true                    # decorative Vault Boy GIF in the bottom-right corner
+  vaultBoyLoops: 3                  # number of times the GIF loops, then freezes on its last frame (0 = infinite)
 
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published

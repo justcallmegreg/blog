@@ -24,6 +24,8 @@ const ConfigSchema = z.object({
       clickSound: z.boolean().default(true),
       crtGlitch: z.boolean().default(true),
       crtGlitchIntervalSeconds: z.number().int().positive().default(15),
+      vaultBoy: z.boolean().default(true),
+      vaultBoyLoops: z.number().int().nonnegative().default(3),
     })
     .default({}),
 });

@@ -2,6 +2,7 @@
 import '../styles/theme.css';
 import ClickSound from '../components/ClickSound.astro';
 import CRTGlitch from '../components/CRTGlitch.astro';
+import VaultBoy from '../components/VaultBoy.astro';
 import { getConfig } from '../lib/config';
 
 interface Props { title?: string }
@@ -30,6 +31,7 @@ function isActive(href: string): boolean {
   <body class="crt">
     {cfg.effects.clickSound && <ClickSound />}
     {cfg.effects.crtGlitch && <CRTGlitch intervalSeconds={cfg.effects.crtGlitchIntervalSeconds} />}
+    {cfg.effects.vaultBoy && <VaultBoy />}
     <slot name="background" />
     <header class="topbar">
       <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>

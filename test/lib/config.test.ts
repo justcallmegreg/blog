@@ -38,6 +38,8 @@ content:
       clickSound: true,
       crtGlitch: true,
       crtGlitchIntervalSeconds: 15,
+      vaultBoy: true,
+      vaultBoyLoops: 3,
     });
   });
 
