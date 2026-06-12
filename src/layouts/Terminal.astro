@@ -1,0 +1,26 @@
+---
+import '../styles/theme.css';
+import ClickSound from '../components/ClickSound.astro';
+import { getConfig } from '../lib/config';
+
+interface Props { title?: string }
+const { title } = Astro.props;
+const cfg = getConfig();
+const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    {cfg.site.description && <meta name="description" content={cfg.site.description} />}
+  </head>
+  <body class="crt">
+    {cfg.effects.clickSound && <ClickSound />}
+    <slot name="background" />
+    <main class="container">
+      <slot />
+    </main>
+  </body>
+</html>
