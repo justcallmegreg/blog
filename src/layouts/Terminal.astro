@@ -37,7 +37,11 @@ function isActive(href: string): boolean {
     {cfg.effects.vaultBoy && <VaultBoy />}
     <slot name="background" />
     <header class="topbar">
-      <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+      <div class="topbar-head">
+        <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+        <img class="avatar" src="/profile_picture.png" alt="" aria-hidden="true" />
+        <span class="topbar-spacer" aria-hidden="true"></span>
+      </div>
       <div class="topbar-row">
         <nav class="tabs" aria-label="Primary">
           {tabs.map((t) => (
