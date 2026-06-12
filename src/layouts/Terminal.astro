@@ -11,7 +11,10 @@ const cfg = getConfig();
 const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
 
 // Pip-Boy top tab bar. Data-driven so new tabs slot in here later.
-const tabs = [{ label: 'Blogs', href: '/' }];
+const tabs = [
+  { label: 'Blogs', href: '/' },
+  { label: 'Contributions', href: '/contributions' },
+];
 const path = Astro.url.pathname;
 function isActive(href: string): boolean {
   // The Blogs (root) tab also covers individual post pages (/YYYY/MM/DD/...).
@@ -82,6 +85,17 @@ function isActive(href: string): boolean {
           }, 45);
         }
       }
+    </script>
+    <script>
+      // Snap the active highlight to the clicked tab immediately (the full page
+      // reload also sets it server-side). The click sound fires via ClickSound.
+      const tabEls = document.querySelectorAll('.tabs .tab');
+      tabEls.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabEls.forEach((t) => t.classList.remove('is-active'));
+          tab.classList.add('is-active');
+        });
+      });
     </script>
   </body>
 </html>

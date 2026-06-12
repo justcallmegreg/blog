@@ -16,6 +16,9 @@ effects:
   crtGlitchIntervalSeconds: 15      # roughly how often it sweeps (±jitter)
   vaultBoy: true                    # decorative Vault Boy GIF in the bottom-right corner
   vaultBoyLoops: 3                  # number of times the GIF loops, then freezes on its last frame (0 = infinite)
+github:
+  username: "justcallmegreg"        # GitHub user summarized on the Contributions tab
+  # Optional: set a GITHUB_TOKEN env var to raise API rate limits (not stored here).
 
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published

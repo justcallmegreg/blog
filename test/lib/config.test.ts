@@ -41,6 +41,7 @@ content:
       vaultBoy: true,
       vaultBoyLoops: 3,
     });
+    expect(cfg.github.username).toBe('justcallmegreg');
   });
 
   it('throws a clear error when required fields are missing', () => {

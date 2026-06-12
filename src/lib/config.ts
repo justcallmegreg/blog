@@ -28,6 +28,11 @@ const ConfigSchema = z.object({
       vaultBoyLoops: z.number().int().nonnegative().default(3),
     })
     .default({}),
+  github: z
+    .object({
+      username: z.string().default('justcallmegreg'),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and

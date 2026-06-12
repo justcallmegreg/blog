@@ -1,0 +1,55 @@
+---
+import Terminal from '../layouts/Terminal.astro';
+import { getConfig } from '../lib/config';
+import { getContributionDataCached } from '../lib/github';
+
+const cfg = getConfig();
+const user = cfg.github.username;
+const data = await getContributionDataCached(user, process.env.GITHUB_TOKEN);
+const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
+---
+<Terminal title="Contributions">
+  <h1>&gt; CONTRIBUTIONS<span class="muted"> // </span><a href={`https://github.com/${user}`}>{user}</a></h1>
+
+  {data.error && (
+    <p class="error">&gt; live data unavailable ({data.error}). Showing what we have.</p>
+  )}
+
+  <section class="heatmap" aria-label="Contribution activity, last 6 months">
+    {data.heatmap.map((c) => (
+      <span class={`heat heat-${c.level}`} title={`Week of ${c.weekStart}: ${c.count} PR(s)`}></span>
+    ))}
+  </section>
+  <p class="heatmap-legend muted">&gt; PR activity — last 6 months (older → newer)</p>
+
+  <div class="panes">
+    <section class="pane">
+      <h2 class="pane-title">// REPOSITORIES</h2>
+      {data.repos.length === 0 && <p class="muted">&gt; no public repositories.</p>}
+      <ul class="repo-list">
+        {data.repos.map((r) => (
+          <li class="repo">
+            <a class="repo-name" href={r.url}>{r.name}</a>
+            {r.fork && <span class="repo-tag">fork</span>}
+            {r.language && <span class="repo-lang">{r.language}</span>}
+            <div class="repo-desc">{r.description || '—'}</div>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="pane">
+      <h2 class="pane-title">// CONTRIBUTIONS · LAST 6 MONTHS</h2>
+      {data.prs.length === 0 && <p class="muted">&gt; no pull requests in this window.</p>}
+      <ul class="timeline">
+        {data.prs.map((p) => (
+          <li class="pr">
+            <span class={`status status-${p.status.toLowerCase()}`}>{p.status}</span>
+            <a class="pr-title" href={p.url}>{p.title}</a>
+            <div class="pr-meta">{p.repo}<span class="muted"> · </span>{fmtDate(p.createdAt)}</div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </div>
+</Terminal>
