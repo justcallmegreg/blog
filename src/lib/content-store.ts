@@ -63,7 +63,7 @@ export class ContentStore {
 
   /** git fetch + reset, then reindex. Returns content-root-relative paths that changed. */
   async sync(): Promise<string[]> {
-    await fetchReset({ dir: this.opts.cacheDir, branch: this.opts.branch });
+    await fetchReset({ dir: this.opts.cacheDir, branch: this.opts.branch, token: this.opts.token });
     return this.reindex();
   }
 

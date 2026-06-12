@@ -53,10 +53,11 @@ export async function cloneRepo(opts: CloneOptions): Promise<void> {
 export async function fetchReset(opts: {
   dir: string;
   branch: string;
+  token?: string;
 }): Promise<void> {
-  await git(['fetch', '--depth', '1', 'origin', opts.branch], opts.dir);
-  await git(['reset', '--hard', `origin/${opts.branch}`], opts.dir);
-  await git(['clean', '-fd'], opts.dir);
+  await git(['fetch', '--depth', '1', 'origin', opts.branch], opts.dir, opts.token);
+  await git(['reset', '--hard', `origin/${opts.branch}`], opts.dir, opts.token);
+  await git(['clean', '-fd'], opts.dir, opts.token);
 }
 
 /** Map of repo-relative path -> git blob hash for all tracked files. */

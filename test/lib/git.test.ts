@@ -74,4 +74,16 @@ describe('git operations', () => {
     expect(msg.length).toBeGreaterThan(0);
     expect(msg).not.toContain(token);
   });
+
+  it('scrubs the token from fetch error messages', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fetchfail-'));
+    execFileSync('git', ['init', '-b', 'main'], { cwd: dir, stdio: 'pipe' });
+    execFileSync('git', ['remote', 'add', 'origin', 'https://x-access-token:SECRETTOKEN999@nonexistent.invalid/r.git'], { cwd: dir, stdio: 'pipe' });
+    let msg = '';
+    try {
+      await fetchReset({ dir, branch: 'main', token: 'SECRETTOKEN999' });
+    } catch (e) { msg = (e as Error).message; }
+    expect(msg.length).toBeGreaterThan(0);
+    expect(msg).not.toContain('SECRETTOKEN999');
+  });
 });
