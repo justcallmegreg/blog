@@ -31,7 +31,7 @@ function isActive(href: string): boolean {
     {cfg.effects.crtGlitch && <CRTGlitch intervalSeconds={cfg.effects.crtGlitchIntervalSeconds} />}
     <slot name="background" />
     <header class="topbar">
-      <div class="brand">&gt; {cfg.site.title}<span class="cursor"> </span></div>
+      <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
       <nav class="tabs" aria-label="Primary">
         {tabs.map((t) => (
           <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
@@ -41,5 +41,29 @@ function isActive(href: string): boolean {
     <main class="container">
       <slot />
     </main>
+    <script>
+      // Boot effect: type the brand title out once per session. The full title
+      // is server-rendered (no-JS/SEO safe); we only re-type it when animating.
+      const brand = document.querySelector('.brand[data-text]') as HTMLElement | null;
+      const out = document.getElementById('brand-text');
+      if (brand && out) {
+        const text = brand.dataset.text ?? out.textContent ?? '';
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const KEY = 'brand-typed';
+        if (reduce || sessionStorage.getItem(KEY) === '1') {
+          out.textContent = text;
+        } else {
+          out.textContent = '';
+          let i = 0;
+          const timer = setInterval(() => {
+            out.textContent = text.slice(0, ++i);
+            if (i >= text.length) {
+              clearInterval(timer);
+              sessionStorage.setItem(KEY, '1');
+            }
+          }, 45);
+        }
+      }
+    </script>
   </body>
 </html>
