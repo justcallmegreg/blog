@@ -127,7 +127,9 @@ export class ContentStore {
     day: string,
     file: string
   ): string | null {
-    const baseDir = join(this.contentRoot(), year, month, day, 'assets');
+    // resolve() makes baseDir absolute so the traversal check holds even when
+    // contentRoot/cacheDir is a relative path (e.g. the default './cache').
+    const baseDir = resolve(this.contentRoot(), year, month, day, 'assets');
     const full = resolve(baseDir, file);
     if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
     return full;

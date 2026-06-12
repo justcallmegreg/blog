@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ContentStore } from '../../src/lib/content-store';
 
@@ -96,5 +96,22 @@ describe('ContentStore', () => {
       join(cacheDir, '2026/06/12/assets/d.png')
     );
     expect(store.resolveAssetPath('2026', '06', '12', '../../../etc/passwd')).toBeNull();
+  });
+
+  it('resolves asset paths to an absolute path even when cacheDir is relative', () => {
+    // Regression: a relative cacheDir (e.g. the default './cache') must still
+    // resolve and pass the traversal guard rather than always returning null.
+    const store = new ContentStore({
+      repo: originDir,
+      branch: 'main',
+      subdir: '',
+      cacheDir: './rel-cache',
+    });
+    expect(store.resolveAssetPath('2287', '11', '05', 'reactor.svg')).toBe(
+      resolve('./rel-cache/2287/11/05/assets/reactor.svg')
+    );
+    expect(
+      store.resolveAssetPath('2287', '11', '05', '../../../etc/passwd')
+    ).toBeNull();
   });
 });

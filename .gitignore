@@ -2,6 +2,7 @@ node_modules/
 dist/
 .astro/
 cache/
+config.yaml
 *.local
 .claude/settings.local.json
 .env
