@@ -63,8 +63,12 @@ function isActive(href: string): boolean {
         const text = brand.dataset.text ?? out.textContent ?? '';
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const KEY = 'brand-typed';
+        // Remove ONLY the brand's cursor once the title is fully printed (the
+        // search box has its own .cursor that must keep blinking).
+        const hideCursor = () => brand.querySelector('.cursor')?.remove();
         if (reduce || sessionStorage.getItem(KEY) === '1') {
           out.textContent = text;
+          hideCursor();
         } else {
           out.textContent = '';
           let i = 0;
@@ -73,6 +77,7 @@ function isActive(href: string): boolean {
             if (i >= text.length) {
               clearInterval(timer);
               sessionStorage.setItem(KEY, '1');
+              hideCursor();
             }
           }, 45);
         }
