@@ -111,7 +111,20 @@ img { max-width: 100%; }
   border-bottom: 1px solid var(--fg-dim);
   background: rgba(11, 15, 11, 0.82);
 }
+.topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { font-size: 1.4rem; }
+.rss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex: none;
+}
+.rss-link svg { width: 1.1em; height: 1.1em; }
+.rss-link:hover { text-decoration: underline; }
 .tabs { display: flex; gap: 0.4rem; }
 .tab {
   padding: 0.1rem 1.1rem;

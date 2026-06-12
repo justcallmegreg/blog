@@ -25,13 +25,24 @@ function isActive(href: string): boolean {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     {cfg.site.description && <meta name="description" content={cfg.site.description} />}
+    <link rel="alternate" type="application/rss+xml" title={cfg.site.title} href="/rss.xml" />
   </head>
   <body class="crt">
     {cfg.effects.clickSound && <ClickSound />}
     {cfg.effects.crtGlitch && <CRTGlitch intervalSeconds={cfg.effects.crtGlitchIntervalSeconds} />}
     <slot name="background" />
     <header class="topbar">
-      <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+      <div class="topbar-row">
+        <div class="brand" data-text={cfg.site.title}>&gt; <span class="brand-text" id="brand-text">{cfg.site.title}</span><span class="cursor"> </span></div>
+        <a class="rss-link" href="/rss.xml" aria-label="RSS feed">
+          <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true">
+            <circle cx="6.18" cy="17.82" r="2.18" />
+            <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83C19.56 11.4 12.6 4.44 4 4.44z" />
+            <path d="M4 10.1v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" />
+          </svg>
+          <span>RSS</span>
+        </a>
+      </div>
       <nav class="tabs" aria-label="Primary">
         {tabs.map((t) => (
           <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
