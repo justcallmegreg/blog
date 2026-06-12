@@ -1,0 +1,15 @@
+site:
+  title: "RobCo Termlink"
+  description: "Personal log"
+  # baseUrl: "https://blog.example.com"   # optional
+content:
+  repo: "https://github.com/you/blog-content.git"
+  branch: "main"
+  subdir: ""                # optional: content lives in a subfolder of the repo
+  syncIntervalSeconds: 300
+effects:
+  matrixRain: true
+  typewriter: true
+  clickSound: true          # default ON; readers get a persisted mute toggle
+server:
+  port: 4321
