@@ -32,7 +32,6 @@ content:
     expect(cfg.content.subdir).toBe('');
     expect(cfg.content.syncIntervalSeconds).toBe(300);
     expect(cfg.effects).toEqual({ matrixRain: true, typewriter: true, clickSound: true });
-    expect(cfg.server.port).toBe(4321);
   });
 
   it('throws a clear error when required fields are missing', () => {

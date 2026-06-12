@@ -23,10 +23,11 @@ const ConfigSchema = z.object({
       clickSound: z.boolean().default(true),
     })
     .default({}),
-  server: z
-    .object({ port: z.number().int().positive().default(4321) })
-    .default({}),
 });
+// Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
+// @astrojs/node standalone server), not by this file — see the Dockerfile and
+// docker-compose.yml. In a container you change the published port via the compose
+// `ports:` mapping. There is intentionally no `server` block here.
 
 export type Config = z.infer<typeof ConfigSchema>;
 

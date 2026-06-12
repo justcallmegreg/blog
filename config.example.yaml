@@ -11,5 +11,7 @@ effects:
   matrixRain: true
   typewriter: true
   clickSound: true          # default ON; readers get a persisted mute toggle
-server:
-  port: 4321
+
+# The HTTP port/host are set via the PORT and HOST environment variables
+# (see Dockerfile / docker-compose.yml), not in this file. Change the published
+# port through the compose `ports:` mapping.
