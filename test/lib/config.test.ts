@@ -31,7 +31,14 @@ content:
     expect(cfg.content.branch).toBe('main');
     expect(cfg.content.subdir).toBe('');
     expect(cfg.content.syncIntervalSeconds).toBe(300);
-    expect(cfg.effects).toEqual({ matrixRain: true, typewriter: true, clickSound: true });
+    expect(cfg.effects).toEqual({
+      matrixRain: true,
+      matrixRainDurationSeconds: 7,
+      typewriter: true,
+      clickSound: true,
+      crtGlitch: true,
+      crtGlitchIntervalSeconds: 15,
+    });
   });
 
   it('throws a clear error when required fields are missing', () => {

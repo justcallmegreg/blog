@@ -1,14 +1,27 @@
 ---
-// Falling-glyph canvas backdrop. Renders nothing meaningful without JS.
+// Falling-glyph canvas backdrop. Runs for `durationSeconds` then fades out.
+// Renders nothing meaningful without JS.
+interface Props { durationSeconds?: number }
+const { durationSeconds = 7 } = Astro.props;
 ---
-<canvas id="matrix-rain" aria-hidden="true"></canvas>
+<canvas id="matrix-rain" data-duration={durationSeconds} aria-hidden="true"></canvas>
 <style>
-  #matrix-rain { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.35; }
+  #matrix-rain {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.35;
+    transition: opacity 1.5s ease;
+  }
+  #matrix-rain.matrix-done { opacity: 0; }
 </style>
 <script>
   const canvas = document.getElementById('matrix-rain') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const durationMs = Number(canvas.dataset.duration ?? 7) * 1000;
   const glyphs = 'アイウエオカキクケコ0123456789ABCDEF<>/'.split('');
   let cols: number[] = [];
   const fontSize = 18;
@@ -38,14 +51,29 @@
     frame();
   } else {
     let rafId: number | null = null;
-    const loop = () => { frame(); rafId = requestAnimationFrame(loop); };
+    let done = false;
+    let tick = 0;
+    // tick % 2 → advance the simulation every OTHER frame, halving fall speed.
+    const loop = () => {
+      if (tick++ % 2 === 0) frame();
+      rafId = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    };
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
-      } else if (rafId === null) {
+        stop();
+      } else if (rafId === null && !done) {
         loop();
       }
     });
     loop();
+    // After the configured duration, stop animating and fade the canvas out.
+    setTimeout(() => {
+      done = true;
+      stop();
+      canvas.classList.add('matrix-done');
+    }, durationMs);
   }
 </script>

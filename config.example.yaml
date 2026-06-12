@@ -1,5 +1,5 @@
 site:
-  title: "RobCo Termlink"
+  title: "GregCo Industries Termlink"
   description: "Personal log"
   # baseUrl: "https://blog.example.com"   # optional
 content:
@@ -9,8 +9,11 @@ content:
   syncIntervalSeconds: 300
 effects:
   matrixRain: true
+  matrixRainDurationSeconds: 7      # matrix runs this long on the index, then fades out
   typewriter: true
   clickSound: true          # default ON; readers get a persisted mute toggle
+  crtGlitch: true                   # periodic light CRT beam-roll (horizontal sweep) on every page
+  crtGlitchIntervalSeconds: 15      # roughly how often it sweeps (±jitter)
 
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published

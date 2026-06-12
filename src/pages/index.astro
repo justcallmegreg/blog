@@ -9,9 +9,10 @@ const store = await ensureStarted();
 const posts = store.listPosts();
 ---
 <Terminal>
-  {cfg.effects.matrixRain && <MatrixRain slot="background" />}
-  <h1>&gt; {cfg.site.title}<span class="cursor"> </span></h1>
-  {cfg.site.description && <p>{cfg.site.description}</p>}
+  {cfg.effects.matrixRain && (
+    <MatrixRain slot="background" durationSeconds={cfg.effects.matrixRainDurationSeconds} />
+  )}
+  {cfg.site.description && <p class="lede">{cfg.site.description}</p>}
   <ul class="post-list">
     {posts.map((p) => (
       <li>&gt; {p.date.replace(/-/g, '.')}  <a href={p.url}>{p.title}</a></li>

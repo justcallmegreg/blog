@@ -1,0 +1,68 @@
+---
+// Light, periodic CRT "beam roll": a faint horizontal band sweeps down the
+// screen every `intervalSeconds` (with a little jitter). Purely decorative,
+// pointer-events:none, and disabled under prefers-reduced-motion.
+interface Props { intervalSeconds?: number }
+const { intervalSeconds = 15 } = Astro.props;
+---
+<div id="crt-glitch" data-interval={intervalSeconds} aria-hidden="true">
+  <div class="crt-bar"></div>
+</div>
+<style>
+  #crt-glitch { position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden; }
+  .crt-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 14px;
+    opacity: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(51, 255, 102, 0) 0%,
+      rgba(182, 255, 0, 0.10) 45%,
+      rgba(255, 255, 255, 0.06) 50%,
+      rgba(51, 255, 102, 0) 100%
+    );
+  }
+  .crt-bar.sweep { animation: crt-sweep 0.55s linear; }
+  @keyframes crt-sweep {
+    0%   { transform: translateY(-12vh); opacity: 0; }
+    12%  { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { transform: translateY(102vh); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #crt-glitch { display: none; }
+  }
+</style>
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) {
+    const bar = document.querySelector('#crt-glitch .crt-bar') as HTMLElement;
+    const intervalMs = Number(
+      (document.getElementById('crt-glitch') as HTMLElement).dataset.interval ?? 15
+    ) * 1000;
+
+    bar.addEventListener('animationend', () => bar.classList.remove('sweep'));
+
+    function sweep() {
+      if (!document.hidden) {
+        bar.classList.remove('sweep');
+        // force reflow so re-adding the class restarts the animation
+        void bar.offsetWidth;
+        bar.classList.add('sweep');
+      }
+    }
+
+    function schedule() {
+      // jitter ±40% so it doesn't feel metronomic
+      const jitter = intervalMs * (0.6 + Math.random() * 0.8);
+      setTimeout(() => {
+        sweep();
+        schedule();
+      }, jitter);
+    }
+    schedule();
+  }
+</script>

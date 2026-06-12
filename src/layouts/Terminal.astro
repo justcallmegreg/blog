@@ -1,12 +1,22 @@
 ---
 import '../styles/theme.css';
 import ClickSound from '../components/ClickSound.astro';
+import CRTGlitch from '../components/CRTGlitch.astro';
 import { getConfig } from '../lib/config';
 
 interface Props { title?: string }
 const { title } = Astro.props;
 const cfg = getConfig();
 const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
+
+// Pip-Boy top tab bar. Data-driven so new tabs slot in here later.
+const tabs = [{ label: 'Blogs', href: '/' }];
+const path = Astro.url.pathname;
+function isActive(href: string): boolean {
+  // The Blogs (root) tab also covers individual post pages (/YYYY/MM/DD/...).
+  if (href === '/') return path === '/' || /^\/\d{4}\//.test(path);
+  return path === href || path.startsWith(href + '/');
+}
 ---
 <!doctype html>
 <html lang="en">
@@ -18,7 +28,16 @@ const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
   </head>
   <body class="crt">
     {cfg.effects.clickSound && <ClickSound />}
+    {cfg.effects.crtGlitch && <CRTGlitch intervalSeconds={cfg.effects.crtGlitchIntervalSeconds} />}
     <slot name="background" />
+    <header class="topbar">
+      <div class="brand">&gt; {cfg.site.title}<span class="cursor"> </span></div>
+      <nav class="tabs" aria-label="Primary">
+        {tabs.map((t) => (
+          <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
+        ))}
+      </nav>
+    </header>
     <main class="container">
       <slot />
     </main>
