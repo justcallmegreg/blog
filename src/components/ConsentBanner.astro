@@ -7,17 +7,28 @@ import { getConfig } from '../lib/config';
 
 const cfg = getConfig();
 const email = cfg.privacy.email;
+const analytics = cfg.analytics;
+const analyticsActive = analytics.enabled && analytics.matomoUrl !== '';
 const accepted = Astro.cookies.get('gregco-consent')?.value === '1';
 const show = cfg.privacy.consentBanner && !accepted;
 ---
 {show && (
-  <div id="consent-gate" class="consent-gate" role="dialog" aria-modal="true" aria-label="Data processing consent">
+  <div
+    id="consent-gate"
+    class="consent-gate"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Data processing consent"
+    data-matomo-url={analyticsActive ? analytics.matomoUrl : ''}
+    data-site-id={String(analytics.siteId)}
+  >
     <div class="consent-bar">
       <p class="consent-head">&gt; DATA PROCESSING NOTICE</p>
       <p class="consent-text">
         This site stores a single cookie to remember this choice, and processes any details you
-        submit (contact or CV requests) solely to respond to you — in line with GDPR. No tracking
-        or advertising. You may request erasure of your data at any time{email ? (
+        submit (contact or CV requests) solely to respond to you, plus anonymous, IP-masked
+        analytics so we can improve the site — in line with GDPR. No advertising. You may request
+        erasure of your data at any time{email ? (
           <> — contact <a href={`mailto:${email}`}>{email}</a></>
         ) : ''}. Please accept to continue.
       </p>
@@ -47,6 +58,7 @@ const show = cfg.privacy.consentBanner && !accepted;
 </style>
 
 <script>
+  import { loadMatomo } from '../lib/matomo';
   // ACCEPT is always wired; it no-ops when the gate isn't on the page.
   const gate = document.getElementById('consent-gate');
   const accept = document.getElementById('consent-accept');
@@ -54,6 +66,8 @@ const show = cfg.privacy.consentBanner && !accepted;
     accept.addEventListener('click', () => {
       // ~180 days; SameSite=Lax is fine for a first-party consent flag.
       document.cookie = 'gregco-consent=1; path=/; max-age=15552000; SameSite=Lax';
+      const url = gate.dataset.matomoUrl;
+      if (url) loadMatomo(url, Number(gate.dataset.siteId ?? '1'));
       gate.remove();
     });
   }
