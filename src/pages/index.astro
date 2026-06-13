@@ -2,8 +2,10 @@
 import Terminal from '../layouts/Terminal.astro';
 import MatrixRain from '../components/MatrixRain.astro';
 import Search from '../components/Search.astro';
+import Heatmap from '../components/Heatmap.astro';
 import { ensureStarted } from '../lib/store-singleton';
 import { getConfig } from '../lib/config';
+import { buildHeatmap } from '../lib/heatmap';
 import type { Post } from '../lib/content-store';
 
 const cfg = getConfig();
@@ -41,12 +43,26 @@ const groups = buckets.filter((g) => g.posts.length > 0);
 
 const dot = (date: string) => date.replace(/-/g, '.');
 const searchKey = (p: Post) => `${p.title} ${p.excerpt} ${dot(p.date)}`.toLowerCase();
+
+// Blog posting activity over the last month (one count per post on its day).
+// Noon avoids a timezone shift when parsing the date-only post date.
+const blogHeatmap = buildHeatmap(
+  posts.map((p) => ({ createdAt: `${p.date}T12:00:00` })),
+  now
+);
 ---
 <Terminal>
   {cfg.effects.matrixRain && (
     <MatrixRain slot="background" durationSeconds={cfg.effects.matrixRainDurationSeconds} />
   )}
   {cfg.site.description && <p class="lede">{cfg.site.description}</p>}
+
+  <Heatmap
+    heatmap={blogHeatmap}
+    label="Blog posting activity, last month"
+    unit="post"
+    legend="> posts published — last month (rows: weekday, columns: ISO week)"
+  />
 
   <Search />
 

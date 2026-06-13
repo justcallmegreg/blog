@@ -1,0 +1,31 @@
+---
+import type { Heatmap } from '../lib/heatmap';
+
+interface Props {
+  heatmap: Heatmap;
+  label?: string; // aria-label
+  legend?: string; // caption under the grid
+  unit?: string; // cell tooltip noun, e.g. "contribution" / "post"
+}
+const { heatmap, label = 'Activity heatmap', legend, unit = 'contribution' } = Astro.props;
+---
+<section class="heatmap" aria-label={label}>
+  <div class="heat-row heat-head">
+    <span class="heat-day"></span>
+    {heatmap.weekLabels.map((w) => (
+      <span class="heat-week" title={`ISO week ${w}`}>{w}</span>
+    ))}
+  </div>
+  {heatmap.grid.map((row, d) => (
+    <div class="heat-row">
+      <span class="heat-day">{heatmap.dayLabels[d]}</span>
+      {row.map((c) => (
+        <span
+          class:list={['heat', `heat-${c.level}`, { 'heat-future': c.future }]}
+          title={c.future ? c.date : `${c.date}: ${c.count} ${unit}(s)`}
+        ></span>
+      ))}
+    </div>
+  ))}
+</section>
+{legend && <p class="heatmap-legend muted">{legend}</p>}

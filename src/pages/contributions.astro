@@ -1,5 +1,6 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
+import Heatmap from '../components/Heatmap.astro';
 import { getConfig } from '../lib/config';
 import { getContributionDataCached } from '../lib/github';
 
@@ -15,26 +16,12 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
     <p class="error">&gt; live data unavailable ({data.error}). Showing what we have.</p>
   )}
 
-  <section class="heatmap" aria-label="Contribution activity, last month">
-    <div class="heat-row heat-head">
-      <span class="heat-day"></span>
-      {data.heatmap.weekLabels.map((w) => (
-        <span class="heat-week" title={`ISO week ${w}`}>{w}</span>
-      ))}
-    </div>
-    {data.heatmap.grid.map((row, d) => (
-      <div class="heat-row">
-        <span class="heat-day">{data.heatmap.dayLabels[d]}</span>
-        {row.map((c) => (
-          <span
-            class:list={['heat', `heat-${c.level}`, { 'heat-future': c.future }]}
-            title={c.future ? c.date : `${c.date}: ${c.count} contribution(s)`}
-          ></span>
-        ))}
-      </div>
-    ))}
-  </section>
-  <p class="heatmap-legend muted">&gt; contributions (commits + PRs) — last month (rows: weekday, columns: ISO week)</p>
+  <Heatmap
+    heatmap={data.heatmap}
+    label="Contribution activity, last month"
+    unit="contribution"
+    legend="> contributions (commits + PRs) — last month (rows: weekday, columns: ISO week)"
+  />
 
   <div class="panes">
     <section class="pane">
