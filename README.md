@@ -43,13 +43,46 @@ effects:
   matrixRain: true
   typewriter: true
   clickSound: true
+privacy:
+  email: "you@example.com"    # GDPR data-erasure contact (shown in the consent gate + CV form)
+  consentBanner: true         # first-visit "accept data processing" gate (choice stored in a cookie)
+analytics:
+  enabled: false              # self-hosted Matomo; loads ONLY after a visitor accepts the gate
+  matomoUrl: "https://analytics.example.com"   # your Matomo base URL (no trailing /matomo.php)
+  siteId: 1                   # the Matomo site id for this blog
 ```
 
 For a **private** content repo, pass a read-only token via the `CONTENT_REPO_TOKEN`
 environment variable — never put it in the YAML. The engine splices it into the clone URL.
 
+The contact form and CV requests forward as JSON to webhooks set via the
+`CONTACT_WEBHOOK_URL` / `CV_WEBHOOK_URL` environment variables (also never in the YAML); if
+unset, submissions are logged server-side instead.
+
 The HTTP **port** is controlled by the `PORT` environment variable (and the published port by
 the Docker/compose `ports:` mapping), not by `config.yaml`.
+
+## Analytics & privacy
+
+On the first visit a **GDPR consent gate** asks the visitor to accept data processing; the
+choice is stored in the first-party `gregco-consent` cookie (~180 days) so it isn't asked
+again. Toggle it with `privacy.consentBanner`. The `privacy.email` address is shown in the gate
+and in the Request-CV form as the contact for data-erasure ("right to be forgotten") requests.
+
+Optional **self-hosted [Matomo](https://matomo.org/)** analytics records which pages visitors
+open and **how long they spend on each** (via Matomo's heartbeat timer). It is privacy-respecting
+by design:
+
+- **Disabled by default.** Nothing loads until you set the `analytics` block.
+- **Consent-gated.** The tracking snippet is injected **only after** a visitor clicks **ACCEPT** —
+  visitors who decline (or haven't chosen) are never tracked. (Analytics therefore requires
+  `privacy.consentBanner: true`, since the consent cookie is what unlocks it.)
+- **Stateless engine.** The browser talks directly to your Matomo instance; the blog engine
+  stores and proxies nothing. Matomo runs as a separate container + database on your own host.
+
+Full setup — running Matomo, anonymizing IPs, getting your `siteId`, and pointing the blog at
+it — is in **[docs/analytics-matomo.md](docs/analytics-matomo.md)** (with a
+`docker-compose.matomo.example.yml` to copy).
 
 ## Run with Docker
 
