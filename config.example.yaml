@@ -19,6 +19,11 @@ effects:
 github:
   username: "justcallmegreg"        # GitHub user summarized on the Contributions tab
   # Optional: set a GITHUB_TOKEN env var to raise API rate limits (not stored here).
+contact:
+  enabled: true                     # show the Contact tab + form
+  # Where APPROVE sends the JSON payload — set as the CONTACT_WEBHOOK_URL env
+  # var (it often embeds a secret token, so it is NOT stored here). If unset,
+  # submissions are logged server-side (stage mode) and still report success.
 
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published
