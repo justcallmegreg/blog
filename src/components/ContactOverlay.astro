@@ -61,3 +61,173 @@
     </div>
   </div>
 </div>
+
+<script>
+  const overlay = document.getElementById('contact-overlay') as HTMLElement | null;
+  if (overlay) {
+    const form = document.getElementById('contact-form') as HTMLFormElement;
+    const preview = document.getElementById('contact-preview') as HTMLElement;
+    const previewBody = document.getElementById('preview-body') as HTMLElement;
+    const errorEl = document.getElementById('contact-error') as HTMLElement;
+    const statusEl = document.getElementById('contact-status') as HTMLElement;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const muted = () => localStorage.getItem('blog-sound-muted') === '1';
+
+    interface F { input: HTMLInputElement | HTMLTextAreaElement; text: HTMLElement; box: HTMLElement; }
+    const fields: F[] = ['name', 'email', 'subject', 'message'].map((id) => ({
+      input: document.getElementById('cf-' + id) as HTMLInputElement,
+      text: document.getElementById('cf-' + id + '-text') as HTMLElement,
+      box: (document.getElementById('cf-' + id) as HTMLElement).closest('.field-box') as HTMLElement,
+    }));
+
+    // --- block cursor: mirror text + show cursor only on the focused field ---
+    function sync(f: F) { f.text.textContent = f.input.value; }
+    for (const f of fields) {
+      f.input.addEventListener('input', () => sync(f));
+      f.input.addEventListener('focus', () => f.box.classList.add('is-focused'));
+      f.input.addEventListener('blur', () => f.box.classList.remove('is-focused'));
+      f.input.addEventListener('keydown', (e) => {
+        if (!muted() && (e.key.length === 1 || e.key === 'Backspace')) {
+          document.dispatchEvent(new Event('ui:blip'));
+        }
+      });
+    }
+
+    // --- Web Audio dial-in synth (DTMF burst + handshake screech) ---
+    function dialIn() {
+      if (muted() || reduce) return;
+      let ctx: AudioContext;
+      try { ctx = new AudioContext(); } catch { return; }
+      const t0 = ctx.currentTime;
+      const beep = (freqs: number[], start: number, dur: number) => {
+        for (const fr of freqs) {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = fr;
+          g.gain.setValueAtTime(0.0001, t0 + start);
+          g.gain.exponentialRampToValueAtTime(0.08, t0 + start + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t0 + start); osc.stop(t0 + start + dur + 0.02);
+        }
+      };
+      // four DTMF-ish dial tones
+      const tones = [[697, 1209], [770, 1336], [852, 1477], [941, 1209]];
+      tones.forEach((pair, i) => beep(pair, i * 0.18, 0.12));
+      // handshake screech: short noise burst + warble
+      const screechStart = 0.9;
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.9, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+      const noise = ctx.createBufferSource(); noise.buffer = buffer;
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, t0 + screechStart);
+      ng.gain.exponentialRampToValueAtTime(0.05, t0 + screechStart + 0.05);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + screechStart + 0.85);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.7;
+      noise.connect(bp).connect(ng).connect(ctx.destination);
+      noise.start(t0 + screechStart); noise.stop(t0 + screechStart + 0.9);
+      const warble = ctx.createOscillator(); const wg = ctx.createGain();
+      warble.type = 'square'; warble.frequency.setValueAtTime(1100, t0 + screechStart);
+      warble.frequency.linearRampToValueAtTime(2400, t0 + screechStart + 0.85);
+      wg.gain.setValueAtTime(0.02, t0 + screechStart);
+      wg.gain.exponentialRampToValueAtTime(0.0001, t0 + screechStart + 0.85);
+      warble.connect(wg).connect(ctx.destination);
+      warble.start(t0 + screechStart); warble.stop(t0 + screechStart + 0.9);
+      setTimeout(() => ctx.close().catch(() => {}), 2200);
+    }
+
+    // --- open / close ---
+    function open() {
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      showForm();
+      dialIn();
+      fields.forEach(sync);
+      fields[0].input.focus();
+    }
+    function close() {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      document.querySelector('.tabs .tab.contact-tab')?.classList.remove('is-active');
+    }
+    function showForm() {
+      preview.hidden = true; form.hidden = false;
+      errorEl.hidden = true; statusEl.hidden = true;
+    }
+
+    document.getElementById('contact-close')?.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
+
+    // exposed for the Contact tab (added in the layout)
+    (window as any).openContact = open;
+
+    // --- validation (mirror of server) ---
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    function readInput() {
+      return {
+        name: fields[0].input.value.trim(),
+        email: fields[1].input.value.trim(),
+        subject: fields[2].input.value.trim(),
+        message: fields[3].input.value.trim(),
+        company: (document.getElementById('cf-company') as HTMLInputElement).value,
+      };
+    }
+    function clientError(v: ReturnType<typeof readInput>): string | null {
+      if (!v.name) return 'sender name is required';
+      if (!v.email || !EMAIL_RE.test(v.email)) return 'a valid sender email is required';
+      if (!v.subject) return 'subject is required';
+      if (!v.message) return 'message is required';
+      return null;
+    }
+
+    // --- SEND -> preview with typewriter reveal ---
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = readInput();
+      const err = clientError(v);
+      if (err) { errorEl.textContent = '> ' + err; errorEl.hidden = false; return; }
+      const composed =
+        `FROM: ${v.name} <${v.email}>\n` +
+        `SUBJ: ${v.subject}\n` +
+        `──────────────\n` +
+        `${v.message}`;
+      form.hidden = true; preview.hidden = false; statusEl.hidden = true;
+      typewrite(previewBody, composed);
+    });
+
+    function typewrite(el: HTMLElement, text: string) {
+      if (reduce) { el.textContent = text; return; }
+      el.textContent = '';
+      let i = 0;
+      const timer = setInterval(() => {
+        el.textContent = text.slice(0, ++i);
+        if (i >= text.length) clearInterval(timer);
+      }, 8);
+    }
+
+    document.getElementById('contact-edit')?.addEventListener('click', showForm);
+
+    // --- APPROVE -> POST /api/contact ---
+    document.getElementById('contact-approve')?.addEventListener('click', async () => {
+      const v = readInput();
+      statusEl.hidden = false; statusEl.textContent = '> TRANSMITTING...';
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(v),
+        });
+        if (res.ok) {
+          statusEl.textContent = '> TRANSMISSION SENT';
+          (document.getElementById('contact-approve') as HTMLButtonElement).disabled = true;
+        } else {
+          const data = await res.json().catch(() => ({}));
+          statusEl.textContent = '> TRANSMISSION FAILED: ' + (data.error || res.status);
+        }
+      } catch {
+        statusEl.textContent = '> TRANSMISSION FAILED: network error';
+      }
+    });
+  }
+</script>
