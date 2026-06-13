@@ -1,5 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { parseRepoFullName, prStatus, buildHeatmap } from '../../src/lib/github';
+import { parseRepoFullName, prStatus, buildHeatmap, commitsFromEvents } from '../../src/lib/github';
+
+describe('commitsFromEvents', () => {
+  it('emits one entry per pushed commit (distinct_size) and ignores non-push events', () => {
+    const events = [
+      { type: 'PushEvent', created_at: '2026-06-10T10:00:00Z', payload: { distinct_size: 3 } },
+      { type: 'WatchEvent', created_at: '2026-06-10T11:00:00Z', payload: {} },
+      { type: 'PushEvent', created_at: '2026-06-11T09:00:00Z', payload: { commits: [{}, {}] } },
+    ];
+    const out = commitsFromEvents(events);
+    expect(out).toHaveLength(5); // 3 + 2
+    expect(out.filter((c) => c.createdAt.startsWith('2026-06-10'))).toHaveLength(3);
+  });
+
+  it('defaults to one commit when size is missing, and tolerates junk', () => {
+    expect(commitsFromEvents([{ type: 'PushEvent', created_at: '2026-06-12T00:00:00Z', payload: {} }])).toHaveLength(1);
+    expect(commitsFromEvents([null, {}, { type: 'PushEvent' }])).toHaveLength(0); // no created_at
+  });
+});
 
 describe('parseRepoFullName', () => {
   it('extracts owner/name from a repository_url', () => {

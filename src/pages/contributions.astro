@@ -28,13 +28,13 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
         {row.map((c) => (
           <span
             class:list={['heat', `heat-${c.level}`, { 'heat-future': c.future }]}
-            title={c.future ? c.date : `${c.date}: ${c.count} PR(s)`}
+            title={c.future ? c.date : `${c.date}: ${c.count} contribution(s)`}
           ></span>
         ))}
       </div>
     ))}
   </section>
-  <p class="heatmap-legend muted">&gt; PR activity — last month (rows: weekday, columns: week)</p>
+  <p class="heatmap-legend muted">&gt; contributions (commits + PRs) — last month (rows: weekday, columns: ISO week)</p>
 
   <div class="panes">
     <section class="pane">

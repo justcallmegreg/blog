@@ -167,6 +167,44 @@ async function fetchOwnedRepos(user: string, token?: string): Promise<Repo[]> {
     .sort((a, b) => b.stars - a.stars || a.name.localeCompare(b.name));
 }
 
+/**
+ * Extract one `{createdAt}` per pushed commit from a GitHub public-events page.
+ * Counts commits on branches (PushEvent) regardless of any PR — `distinct_size`
+ * is the number of commits in that push.
+ */
+export function commitsFromEvents(events: unknown[]): { createdAt: string }[] {
+  const out: { createdAt: string }[] = [];
+  for (const ev of events as any[]) {
+    if (ev?.type !== 'PushEvent' || typeof ev.created_at !== 'string') continue;
+    const n =
+      ev.payload?.distinct_size ?? ev.payload?.size ?? ev.payload?.commits?.length ?? 1;
+    for (let i = 0; i < Math.max(1, n); i++) out.push({ createdAt: ev.created_at });
+  }
+  return out;
+}
+
+/** Commit-day list from the user's recent public push events (up to 3 pages). */
+async function fetchRecentCommits(
+  user: string,
+  token?: string
+): Promise<{ createdAt: string }[]> {
+  const out: { createdAt: string }[] = [];
+  try {
+    for (let page = 1; page <= 3; page++) {
+      const events = await ghGet(
+        `/users/${encodeURIComponent(user)}/events/public?per_page=100&page=${page}`,
+        token
+      );
+      if (!Array.isArray(events) || events.length === 0) break;
+      out.push(...commitsFromEvents(events));
+      if (events.length < 100) break;
+    }
+  } catch {
+    // events unreachable/rate-limited → heatmap falls back to PRs only
+  }
+  return out;
+}
+
 async function fetchRecentPRs(
   user: string,
   token: string | undefined,
@@ -194,11 +232,14 @@ export async function getContributionData(
 ): Promise<ContributionData> {
   const since = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
   try {
-    const [repos, prs] = await Promise.all([
+    const [repos, prs, commits] = await Promise.all([
       fetchOwnedRepos(user, token),
       fetchRecentPRs(user, token, since),
+      fetchRecentCommits(user, token),
     ]);
-    return { user, repos, prs, heatmap: buildHeatmap(prs, now), fetchedAt: now.getTime() };
+    // Heatmap = total recent activity: PR-days + commit-days (commits on branches).
+    const activity = [...prs.map((p) => ({ createdAt: p.createdAt })), ...commits];
+    return { user, repos, prs, heatmap: buildHeatmap(activity, now), fetchedAt: now.getTime() };
   } catch (e) {
     return {
       user,
