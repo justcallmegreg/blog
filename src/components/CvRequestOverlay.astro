@@ -165,14 +165,21 @@
 
     async function submitCv() {
       const v = readInput();
-      received.hidden = false; consent.hidden = true; captchaPanel.hidden = true;
+      // Stay on the captcha panel with a transmitting note; only reveal the
+      // RECEIVED screen once the server confirms (avoids a false success that
+      // rolls back to the form on a slow/failed request).
+      captchaMsg.textContent = '> TRANSMITTING…';
+      captchaMsg.hidden = false;
       try {
         const res = await fetch('/api/cv-request', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ ...v, captchaToken }),
         });
-        if (!res.ok) {
+        if (res.ok) {
+          captchaMsg.hidden = true;
+          consent.hidden = true; captchaPanel.hidden = true; received.hidden = false;
+        } else {
           const data = await res.json().catch(() => ({}));
           showConsent();
           errorEl.textContent = '> REQUEST FAILED: ' + (data.error || res.status);

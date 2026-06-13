@@ -45,7 +45,7 @@ export async function handleCvRequest(
   if (!v.ok) return { status: 400, body: { ok: false, error: v.error } };
 
   if (opts.captcha?.active) {
-    const token = (input as CvInput & { captchaToken?: string }).captchaToken;
+    const token = input.captchaToken;
     if (!token || !opts.captcha.consume(token)) {
       return { status: 400, body: { ok: false, error: 'captcha required' } };
     }
@@ -96,6 +96,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     now: new Date(),
     ip,
     webhookUrl: process.env.CV_WEBHOOK_URL,
+    // captchaActive() is driven by the shared `contact.captcha` config toggle —
+    // one switch governs both the contact and CV-request captchas.
     captcha: { active: captchaActive(), consume: (t?: string) => (t ? consumeCaptcha(t) : false) },
   });
 

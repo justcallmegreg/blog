@@ -3,6 +3,8 @@ export interface CvInput {
   email: string;
   company?: string;
   consent?: boolean;
+  // Solved slide-puzzle token; validated by the endpoint, never forwarded.
+  captchaToken?: string;
 }
 
 export interface CvPayload {
