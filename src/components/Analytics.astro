@@ -1,0 +1,20 @@
+---
+// Server-renders the Matomo loader ONLY when analytics is enabled, configured,
+// and the visitor has accepted the consent gate (gregco-consent cookie). The
+// values cross to the client via data- attributes; the script imports the
+// shared loader. Renders nothing otherwise.
+import { getConfig } from '../lib/config';
+
+const a = getConfig().analytics;
+const accepted = Astro.cookies.get('gregco-consent')?.value === '1';
+const active = a.enabled && a.matomoUrl !== '' && accepted;
+---
+{active && (
+  <div id="matomo-config" data-url={a.matomoUrl} data-site={String(a.siteId)} hidden></div>
+)}
+
+<script>
+  import { loadMatomo } from '../lib/matomo';
+  const el = document.getElementById('matomo-config');
+  if (el) loadMatomo(el.dataset.url ?? '', Number(el.dataset.site ?? '1'));
+</script>
