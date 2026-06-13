@@ -44,6 +44,9 @@ content:
     expect(cfg.github.username).toBe('justcallmegreg');
     expect(cfg.contact.enabled).toBe(true);
     expect(cfg.contact.captcha).toBe(true);
+    expect(cfg.social.github).toBe('justcallmegreg');
+    expect(cfg.social.linkedin).toBe('justcallmegreg');
+    expect(cfg.social.medium).toBe('');
   });
 
   it('throws a clear error when required fields are missing', () => {

@@ -39,6 +39,15 @@ const ConfigSchema = z.object({
       captcha: z.boolean().default(true),
     })
     .default({}),
+  // Social links in the top bar. Empty string hides that link. Handles only,
+  // not full URLs.
+  social: z
+    .object({
+      github: z.string().default('justcallmegreg'),
+      linkedin: z.string().default('justcallmegreg'),
+      medium: z.string().default(''),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and

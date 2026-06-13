@@ -140,7 +140,8 @@ img { max-width: 100%; }
   -webkit-mask-image: radial-gradient(circle, #000 38%, transparent 72%);
   mask-image: radial-gradient(circle, #000 38%, transparent 72%);
 }
-.rss-link {
+.social { display: flex; align-items: center; gap: 0.9rem; flex: none; }
+.social-link {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -148,10 +149,9 @@ img { max-width: 100%; }
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
-  flex: none;
 }
-.rss-link svg { width: 1.1em; height: 1.1em; }
-.rss-link:hover { text-decoration: underline; }
+.social-link svg { width: 1.1em; height: 1.1em; }
+.social-link:hover { text-decoration: underline; }
 .tabs { display: flex; gap: 0.4rem; }
 .tab {
   padding: 0.1rem 1.1rem;

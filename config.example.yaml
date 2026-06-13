@@ -25,6 +25,10 @@ contact:
   # Where APPROVE sends the JSON payload — set as the CONTACT_WEBHOOK_URL env
   # var (it often embeds a secret token, so it is NOT stored here). If unset,
   # submissions are logged server-side (stage mode) and still report success.
+social:                             # top-bar social links (handles only; empty string hides a link)
+  github: "justcallmegreg"
+  linkedin: "justcallmegreg"
+  medium: ""                        # e.g. "@justcallmegreg" — shown when set
 
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published
