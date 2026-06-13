@@ -8,12 +8,15 @@
     <button id="cv-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
 
     <form id="cv-consent" class="contact-form" novalidate>
-      <p class="contact-boot">&gt; REQUEST CV // DATA CONSENT</p>
-      <p class="cv-notice">
-        Redistribution of the CV is not permitted. Your details are processed solely to
-        handle this request; under GDPR you may exercise your right to erasure (right to
-        be forgotten) at any time.
-      </p>
+      <p class="contact-boot">&gt; REQUEST CV</p>
+      <div class="cv-consent-box">
+        <p class="cv-consent-head">⚠ DATA CONSENT</p>
+        <p class="cv-notice">
+          Redistribution of the CV is not permitted. Your details are processed solely to
+          handle this request; under GDPR you may exercise your right to erasure (right to
+          be forgotten) at any time.
+        </p>
+      </div>
 
       <label class="field">
         <span class="field-title">NAME</span>
@@ -37,10 +40,15 @@
         </span>
       </label>
 
+      <label class="cv-agree">
+        <input type="checkbox" id="cv-agree" />
+        <span>I have read and consent to the above.</span>
+      </label>
+
       <p class="contact-error" id="cv-error" hidden></p>
       <div class="preview-actions">
         <button class="contact-btn" id="cv-cancel" type="button">CANCEL</button>
-        <button class="contact-btn contact-approve" id="cv-consent-btn" type="submit">CONSENT</button>
+        <button class="contact-btn contact-approve" id="cv-consent-btn" type="submit" disabled>CONSENT</button>
       </div>
     </form>
 
@@ -65,7 +73,20 @@
   </div>
 </div>
 <style>
-  .cv-notice { color: var(--fg-dim); max-width: 60ch; margin: 0 0 1rem; }
+  .cv-consent-box {
+    border: 1px solid var(--accent);
+    background: rgba(60, 255, 120, 0.05);
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem;
+  }
+  .cv-consent-head { color: var(--accent); letter-spacing: 0.08em; margin: 0 0 0.4rem; }
+  .cv-notice { color: var(--fg); max-width: 60ch; margin: 0; }
+  .cv-agree {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin: 0 0 1rem; cursor: pointer; user-select: none;
+  }
+  .cv-agree input { accent-color: var(--accent); width: 1rem; height: 1rem; cursor: pointer; }
+  #cv-consent-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 
 <script>
@@ -76,7 +97,12 @@
     const captchaPanel = document.getElementById('cv-captcha') as HTMLElement;
     const received = document.getElementById('cv-received') as HTMLElement;
     const errorEl = document.getElementById('cv-error') as HTMLElement;
+    const agree = document.getElementById('cv-agree') as HTMLInputElement;
+    const consentBtn = document.getElementById('cv-consent-btn') as HTMLButtonElement;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // CONSENT stays disabled until the visitor ticks the consent box.
+    agree.addEventListener('change', () => { consentBtn.disabled = !agree.checked; });
     const muted = () => localStorage.getItem('blog-sound-muted') === '1';
 
     interface F { input: HTMLInputElement; text: HTMLElement; box: HTMLElement; }
@@ -120,6 +146,8 @@
     function showConsent() { consent.hidden = false; captchaPanel.hidden = true; received.hidden = true; errorEl.hidden = true; }
     function open() {
       overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
+      // Require a fresh, explicit consent on every open.
+      agree.checked = false; consentBtn.disabled = true;
       showConsent(); dialIn(); fields.forEach(sync); fields[0].input.focus();
     }
     function close() { overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true'); }
@@ -135,10 +163,11 @@
         name: fields[0].input.value.trim(),
         email: fields[1].input.value.trim(),
         company: fields[2].input.value.trim(),
-        consent: true,
+        consent: agree.checked,
       };
     }
     function clientError(v: ReturnType<typeof readInput>): string | null {
+      if (!v.consent) return 'consent is required';
       if (!v.name) return 'name is required';
       if (!v.email || !EMAIL_RE.test(v.email)) return 'a valid email is required';
       return null;
