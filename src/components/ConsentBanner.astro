@@ -26,8 +26,9 @@ const show = cfg.privacy.consentBanner && !accepted;
       <p class="consent-head">&gt; DATA PROCESSING NOTICE</p>
       <p class="consent-text">
         This site stores a single cookie to remember this choice, and processes any details you
-        submit (contact or CV requests) solely to respond to you, plus anonymous, IP-masked
-        analytics so we can improve the site — in line with GDPR. No advertising. You may request
+        submit (contact or CV requests) solely to respond to you{analyticsActive ? (
+          <>, plus anonymous, IP-masked analytics so we can improve the site</>
+        ) : ''} — in line with GDPR. {analyticsActive ? 'No advertising.' : 'No tracking or advertising.'} You may request
         erasure of your data at any time{email ? (
           <> — contact <a href={`mailto:${email}`}>{email}</a></>
         ) : ''}. Please accept to continue.

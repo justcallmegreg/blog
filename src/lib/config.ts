@@ -75,6 +75,8 @@ const ConfigSchema = z.object({
     .default({}),
   // Self-hosted Matomo analytics. Loads only after the visitor accepts the
   // consent gate. Disabled + empty by default so nothing loads until configured.
+  // NOTE: analytics requires privacy.consentBanner=true — the cookie that
+  // unlocks analytics is only ever set by the gate's ACCEPT button.
   analytics: z
     .object({
       enabled: z.boolean().default(false),
