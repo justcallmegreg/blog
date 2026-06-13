@@ -67,3 +67,176 @@
 <style>
   .cv-notice { color: var(--fg-dim); max-width: 60ch; margin: 0 0 1rem; }
 </style>
+
+<script>
+  const overlay = document.getElementById('cv-overlay') as HTMLElement | null;
+  const trigger = document.getElementById('request-cv');
+  if (overlay && trigger) {
+    const consent = document.getElementById('cv-consent') as HTMLFormElement;
+    const captchaPanel = document.getElementById('cv-captcha') as HTMLElement;
+    const received = document.getElementById('cv-received') as HTMLElement;
+    const errorEl = document.getElementById('cv-error') as HTMLElement;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const muted = () => localStorage.getItem('blog-sound-muted') === '1';
+
+    interface F { input: HTMLInputElement; text: HTMLElement; box: HTMLElement; }
+    const fields: F[] = ['name', 'email', 'company'].map((id) => ({
+      input: document.getElementById('cv-' + id) as HTMLInputElement,
+      text: document.getElementById('cv-' + id + '-text') as HTMLElement,
+      box: (document.getElementById('cv-' + id) as HTMLElement).closest('.field-box') as HTMLElement,
+    }));
+    function sync(f: F) { f.text.textContent = f.input.value; }
+    for (const f of fields) {
+      f.input.addEventListener('input', () => sync(f));
+      f.input.addEventListener('focus', () => f.box.classList.add('is-focused'));
+      f.input.addEventListener('blur', () => f.box.classList.remove('is-focused'));
+      f.input.addEventListener('keydown', (e) => {
+        if (!muted() && (e.key.length === 1 || e.key === 'Backspace')) {
+          document.dispatchEvent(new Event('ui:blip'));
+        }
+      });
+    }
+
+    function dialIn() {
+      if (muted() || reduce) return;
+      let ctx: AudioContext;
+      try { ctx = new AudioContext(); } catch { return; }
+      const t0 = ctx.currentTime;
+      const beep = (freqs: number[], start: number, dur: number) => {
+        for (const fr of freqs) {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = fr;
+          g.gain.setValueAtTime(0.0001, t0 + start);
+          g.gain.exponentialRampToValueAtTime(0.08, t0 + start + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t0 + start); osc.stop(t0 + start + dur + 0.02);
+        }
+      };
+      [[697, 1209], [770, 1336], [852, 1477], [941, 1209]].forEach((pair, i) => beep(pair, i * 0.18, 0.12));
+      setTimeout(() => ctx.close().catch(() => {}), 1200);
+    }
+
+    function showConsent() { consent.hidden = false; captchaPanel.hidden = true; received.hidden = true; errorEl.hidden = true; }
+    function open() {
+      overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
+      showConsent(); dialIn(); fields.forEach(sync); fields[0].input.focus();
+    }
+    function close() { overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true'); }
+    trigger.addEventListener('click', open);
+    document.getElementById('cv-close')?.addEventListener('click', close);
+    document.getElementById('cv-cancel')?.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    function readInput() {
+      return {
+        name: fields[0].input.value.trim(),
+        email: fields[1].input.value.trim(),
+        company: fields[2].input.value.trim(),
+        consent: true,
+      };
+    }
+    function clientError(v: ReturnType<typeof readInput>): string | null {
+      if (!v.name) return 'name is required';
+      if (!v.email || !EMAIL_RE.test(v.email)) return 'a valid email is required';
+      return null;
+    }
+
+    // CONSENT → captcha
+    consent.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const err = clientError(readInput());
+      if (err) { errorEl.textContent = '> ' + err; errorEl.hidden = false; return; }
+      showCaptcha();
+    });
+
+    // --- captcha slider (mirrors ContactOverlay; cv- ids) ---
+    const puzzleBg = document.getElementById('cv-puzzle-bg') as HTMLImageElement;
+    const puzzlePiece = document.getElementById('cv-puzzle-piece') as HTMLImageElement;
+    const puzzleTrack = document.getElementById('cv-puzzle-track') as HTMLElement;
+    const puzzleHandle = document.getElementById('cv-puzzle-handle') as HTMLElement;
+    const captchaMsg = document.getElementById('cv-captcha-msg') as HTMLElement;
+    let captchaToken: string | null = null;
+    let puzzle: { token: string; pieceSize: number; width: number } | null = null;
+    let dragging = false;
+    let currentX = 0;
+
+    async function submitCv() {
+      const v = readInput();
+      received.hidden = false; consent.hidden = true; captchaPanel.hidden = true;
+      try {
+        const res = await fetch('/api/cv-request', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...v, captchaToken }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showConsent();
+          errorEl.textContent = '> REQUEST FAILED: ' + (data.error || res.status);
+          errorEl.hidden = false;
+        }
+      } catch {
+        showConsent();
+        errorEl.textContent = '> REQUEST FAILED: network error';
+        errorEl.hidden = false;
+      }
+    }
+
+    function maxX() { return puzzle ? puzzle.width - puzzle.pieceSize : 0; }
+    function setX(px: number) {
+      const x = Math.max(0, Math.min(px, maxX()));
+      puzzlePiece.style.transform = `translateX(${x}px)`;
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      puzzleHandle.style.left = (maxX() > 0 ? (x / maxX()) * handleMax : 0) + 'px';
+      return x;
+    }
+
+    async function loadPuzzle() {
+      captchaMsg.hidden = true;
+      puzzleHandle.style.left = '0px';
+      puzzlePiece.style.transform = 'translateX(0px)';
+      currentX = 0;
+      try {
+        const res = await fetch('/api/captcha');
+        const data = await res.json();
+        if (!data.active) { captchaToken = null; submitCv(); return; }
+        puzzle = { token: data.token, pieceSize: data.pieceSize, width: data.width };
+        puzzleBg.src = data.background;
+        puzzlePiece.src = data.piece;
+        puzzlePiece.style.top = data.pieceY + 'px';
+        puzzlePiece.style.width = data.pieceSize + 'px';
+        puzzlePiece.style.height = data.pieceSize + 'px';
+      } catch { captchaToken = null; submitCv(); }
+    }
+    function showCaptcha() { consent.hidden = true; received.hidden = true; captchaPanel.hidden = false; loadPuzzle(); }
+
+    puzzleHandle.addEventListener('pointerdown', (e) => { dragging = true; puzzleHandle.setPointerCapture(e.pointerId); });
+    puzzleHandle.addEventListener('pointermove', (e) => {
+      if (!dragging || !puzzle) return;
+      const rect = puzzleTrack.getBoundingClientRect();
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      const ratio = handleMax > 0 ? Math.max(0, Math.min(1, (e.clientX - rect.left) / handleMax)) : 0;
+      currentX = setX(ratio * maxX());
+    });
+    puzzleHandle.addEventListener('pointerup', async () => {
+      if (!dragging || !puzzle) return;
+      dragging = false;
+      try {
+        const res = await fetch('/api/captcha', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: puzzle.token, x: Math.round(currentX) }),
+        });
+        const data = await res.json();
+        if (data.ok) { captchaToken = puzzle.token; submitCv(); }
+        else { captchaMsg.textContent = '> ACCESS DENIED — RECALIBRATING'; captchaMsg.hidden = false; loadPuzzle(); }
+      } catch { captchaMsg.textContent = '> CHECKPOINT OFFLINE — RETRY'; captchaMsg.hidden = false; }
+    });
+    puzzleHandle.addEventListener('pointercancel', () => { dragging = false; });
+    document.getElementById('cv-captcha-back')?.addEventListener('click', showConsent);
+
+    document.getElementById('cv-acknowledge')?.addEventListener('click', () => { window.location.href = '/'; });
+  }
+</script>
