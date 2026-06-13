@@ -156,10 +156,14 @@ img { max-width: 100%; }
 .tab {
   padding: 0.1rem 1.1rem;
   color: var(--fg);
+  background: transparent;
   border: 1px solid var(--fg-dim);
   border-bottom: none;
+  font: inherit;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  cursor: pointer;
+  line-height: inherit;
 }
 .tab:hover { text-decoration: none; background: rgba(51, 255, 102, 0.12); }
 .tab.is-active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
