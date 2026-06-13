@@ -50,6 +50,19 @@
       <button class="contact-send" id="contact-send" type="submit">SEND</button>
     </form>
 
+    <div class="contact-captcha" id="contact-captcha" hidden>
+      <p class="contact-boot">&gt; SECURITY CHECK — SLIDE THE PIECE INTO THE GAP</p>
+      <div class="puzzle" id="puzzle">
+        <img class="puzzle-bg" id="puzzle-bg" alt="" />
+        <img class="puzzle-piece" id="puzzle-piece" alt="" />
+      </div>
+      <div class="puzzle-track" id="puzzle-track">
+        <div class="puzzle-handle" id="puzzle-handle">&gt;&gt;</div>
+      </div>
+      <p class="contact-error" id="captcha-msg" hidden></p>
+      <button class="contact-btn" id="captcha-back" type="button">&lt; BACK</button>
+    </div>
+
     <div class="contact-preview" id="contact-preview" hidden>
       <p class="contact-boot">&gt; TRANSMISSION PREVIEW</p>
       <pre class="preview-body" id="preview-body"></pre>
