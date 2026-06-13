@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getConfig } from '../../lib/config';
 import { validateContact, buildForwardPayload, type ContactInput } from '../../lib/contact';
+import { captchaActive } from './captcha';
+import { consume as consumeCaptcha } from '../../lib/captcha-store';
 
 interface HandleResult { status: number; body: { ok: boolean; error?: string } }
 
@@ -10,6 +12,7 @@ interface HandleOpts {
   ip: string;
   webhookUrl?: string;
   fetchImpl?: typeof fetch;
+  captcha?: { active: boolean; consume: (token?: string) => boolean };
 }
 
 const RATE_LIMIT = 5;
@@ -47,6 +50,13 @@ export async function handleContact(
     // Honeypot: pretend success, drop silently.
     if (result.spam) return { status: 200, body: { ok: true } };
     return { status: 400, body: { ok: false, error: result.error } };
+  }
+
+  if (opts.captcha?.active) {
+    const token = (input as ContactInput & { captchaToken?: string }).captchaToken;
+    if (!token || !opts.captcha.consume(token)) {
+      return { status: 400, body: { ok: false, error: 'captcha required' } };
+    }
   }
 
   const payload = buildForwardPayload(input, { site: opts.site, now: opts.now });
@@ -94,6 +104,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     now: new Date(),
     ip,
     webhookUrl: process.env.CONTACT_WEBHOOK_URL,
+    captcha: { active: captchaActive(), consume: (t?: string) => (t ? consumeCaptcha(t) : false) },
   });
 
   return new Response(JSON.stringify(result.body), {

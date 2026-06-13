@@ -8,7 +8,12 @@ const good = {
   message: 'Hello there.',
   company: '',
 };
-const ctx = { site: 'GregCo', now: new Date('2026-06-13T00:00:00.000Z'), ip: '1.2.3.4' };
+const ctx = {
+  site: 'GregCo',
+  now: new Date('2026-06-13T00:00:00.000Z'),
+  ip: '1.2.3.4',
+  captcha: { active: false, consume: () => true },
+};
 
 beforeEach(() => __resetRateLimit());
 
@@ -67,5 +72,28 @@ describe('handleContact', () => {
       ...ctx, webhookUrl: 'https://hooks.example/abc', fetchImpl: fetchMock,
     });
     expect(res.status).toBe(502);
+  });
+});
+
+describe('handleContact captcha', () => {
+  const webhook = { webhookUrl: undefined, fetchImpl: () => Promise.resolve({ ok: true } as Response) };
+
+  it('rejects with 400 when captcha is active and the token is missing/invalid', async () => {
+    const res = await handleContact(
+      { ...good, captchaToken: 'bad' },
+      { ...ctx, ...webhook, captcha: { active: true, consume: () => false } }
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/captcha/i);
+  });
+
+  it('accepts when captcha is active and the token is valid', async () => {
+    let consumed = '';
+    const res = await handleContact(
+      { ...good, captchaToken: 'tok-123' },
+      { ...ctx, ...webhook, captcha: { active: true, consume: (t?: string) => { consumed = t ?? ''; return true; } } }
+    );
+    expect(res.status).toBe(200);
+    expect(consumed).toBe('tok-123');
   });
 });
