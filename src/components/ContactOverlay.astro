@@ -83,6 +83,14 @@
     const previewBody = document.getElementById('preview-body') as HTMLElement;
     const errorEl = document.getElementById('contact-error') as HTMLElement;
     const statusEl = document.getElementById('contact-status') as HTMLElement;
+    const captchaPanel = document.getElementById('contact-captcha') as HTMLElement;
+    const puzzleBg = document.getElementById('puzzle-bg') as HTMLImageElement;
+    const puzzlePiece = document.getElementById('puzzle-piece') as HTMLImageElement;
+    const puzzleTrack = document.getElementById('puzzle-track') as HTMLElement;
+    const puzzleHandle = document.getElementById('puzzle-handle') as HTMLElement;
+    const captchaMsg = document.getElementById('captcha-msg') as HTMLElement;
+    let captchaToken: string | null = null;
+    let puzzle: { token: string; pieceSize: number; width: number } | null = null;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const muted = () => localStorage.getItem('blog-sound-muted') === '1';
 
@@ -164,8 +172,11 @@
       document.querySelector('.tabs .tab.contact-tab')?.classList.remove('is-active');
     }
     function showForm() {
-      preview.hidden = true; form.hidden = false;
+      preview.hidden = true; form.hidden = false; captchaPanel.hidden = true;
       errorEl.hidden = true; statusEl.hidden = true;
+    }
+    function showPreviewPane() {
+      form.hidden = true; captchaPanel.hidden = true; preview.hidden = false; statusEl.hidden = true;
     }
 
     document.getElementById('contact-close')?.addEventListener('click', close);
@@ -194,19 +205,89 @@
       return null;
     }
 
-    // --- SEND -> preview with typewriter reveal ---
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
+    function toPreview() {
       const v = readInput();
-      const err = clientError(v);
-      if (err) { errorEl.textContent = '> ' + err; errorEl.hidden = false; return; }
       const composed =
         `FROM: ${v.name} <${v.email}>\n` +
         `SUBJ: ${v.subject}\n` +
         `──────────────\n` +
         `${v.message}`;
-      form.hidden = true; preview.hidden = false; statusEl.hidden = true;
+      showPreviewPane();
       typewrite(previewBody, composed);
+    }
+
+    async function loadPuzzle() {
+      captchaMsg.hidden = true;
+      puzzleHandle.style.left = '0px';
+      puzzlePiece.style.transform = 'translateX(0px)';
+      currentX = 0;
+      try {
+        const res = await fetch('/api/captcha');
+        const data = await res.json();
+        if (!data.active) { captchaToken = null; toPreview(); return; }
+        puzzle = { token: data.token, pieceSize: data.pieceSize, width: data.width };
+        puzzleBg.src = data.background;
+        puzzlePiece.src = data.piece;
+        puzzlePiece.style.top = data.pieceY + 'px';
+        puzzlePiece.style.width = data.pieceSize + 'px';
+        puzzlePiece.style.height = data.pieceSize + 'px';
+      } catch {
+        captchaToken = null; toPreview();
+      }
+    }
+
+    function showCaptcha() {
+      form.hidden = true; preview.hidden = true; captchaPanel.hidden = false;
+      loadPuzzle();
+    }
+
+    let dragging = false;
+    function maxX() { return (puzzle ? puzzle.width - puzzle.pieceSize : 0); }
+    function setX(px: number) {
+      const x = Math.max(0, Math.min(px, maxX()));
+      puzzlePiece.style.transform = `translateX(${x}px)`;
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      puzzleHandle.style.left = (maxX() > 0 ? (x / maxX()) * handleMax : 0) + 'px';
+      return x;
+    }
+    let currentX = 0;
+    function pointerStart(e: PointerEvent) { dragging = true; puzzleHandle.setPointerCapture(e.pointerId); }
+    function pointerMove(e: PointerEvent) {
+      if (!dragging || !puzzle) return;
+      const rect = puzzleTrack.getBoundingClientRect();
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      const ratio = handleMax > 0 ? Math.max(0, Math.min(1, (e.clientX - rect.left) / handleMax)) : 0;
+      currentX = setX(ratio * maxX());
+    }
+    async function pointerEnd() {
+      if (!dragging || !puzzle) return;
+      dragging = false;
+      try {
+        const res = await fetch('/api/captcha', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: puzzle.token, x: Math.round(currentX) }),
+        });
+        const data = await res.json();
+        if (data.ok) { captchaToken = puzzle.token; toPreview(); }
+        else { captchaMsg.textContent = '> ACCESS DENIED — RECALIBRATING'; captchaMsg.hidden = false; loadPuzzle(); }
+      } catch {
+        captchaMsg.textContent = '> CHECKPOINT OFFLINE — RETRY'; captchaMsg.hidden = false;
+      }
+    }
+    puzzleHandle.addEventListener('pointerdown', pointerStart);
+    puzzleHandle.addEventListener('pointermove', pointerMove);
+    puzzleHandle.addEventListener('pointerup', pointerEnd);
+    puzzleHandle.addEventListener('pointercancel', () => { dragging = false; });
+    document.getElementById('captcha-back')?.addEventListener('click', showForm);
+
+    // --- SEND -> captcha step ---
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = readInput();
+      const err = clientError(v);
+      if (err) { errorEl.textContent = '> ' + err; errorEl.hidden = false; return; }
+      showCaptcha();
     });
 
     function typewrite(el: HTMLElement, text: string) {
@@ -229,7 +310,7 @@
         const res = await fetch('/api/contact', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(v),
+          body: JSON.stringify({ ...v, captchaToken }),
         });
         if (res.ok) {
           statusEl.textContent = '> TRANSMISSION SENT';
