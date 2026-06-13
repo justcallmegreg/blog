@@ -36,6 +36,7 @@ const ConfigSchema = z.object({
   contact: z
     .object({
       enabled: z.boolean().default(true),
+      captcha: z.boolean().default(true),
     })
     .default({}),
 });

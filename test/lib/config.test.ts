@@ -43,6 +43,7 @@ content:
     });
     expect(cfg.github.username).toBe('justcallmegreg');
     expect(cfg.contact.enabled).toBe(true);
+    expect(cfg.contact.captcha).toBe(true);
   });
 
   it('throws a clear error when required fields are missing', () => {

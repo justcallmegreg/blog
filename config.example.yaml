@@ -21,6 +21,7 @@ github:
   # Optional: set a GITHUB_TOKEN env var to raise API rate limits (not stored here).
 contact:
   enabled: true                     # show the Contact tab + form
+  captcha: true                     # require the slide-puzzle captcha before sending (needs images in public/puzzles/)
   # Where APPROVE sends the JSON payload — set as the CONTACT_WEBHOOK_URL env
   # var (it often embeds a secret token, so it is NOT stored here). If unset,
   # submissions are logged server-side (stage mode) and still report success.
