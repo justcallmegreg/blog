@@ -66,6 +66,13 @@ const ConfigSchema = z.object({
         .default([]),
     })
     .default({}),
+  // GDPR: a privacy/erasure contact email + the first-visit consent gate.
+  privacy: z
+    .object({
+      email: z.string().default(''),
+      consentBanner: z.boolean().default(true),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and

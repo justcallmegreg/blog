@@ -6,6 +6,7 @@ import CRTGlitch from '../components/CRTGlitch.astro';
 import VaultBoy from '../components/VaultBoy.astro';
 import ContactOverlay from '../components/ContactOverlay.astro';
 import CvRequestOverlay from '../components/CvRequestOverlay.astro';
+import ConsentBanner from '../components/ConsentBanner.astro';
 import { getConfig } from '../lib/config';
 
 interface Props { title?: string }
@@ -168,5 +169,6 @@ function isActive(href: string): boolean {
     </script>
     {cfg.contact.enabled && <ContactOverlay />}
     {cfg.about.enabled && <CvRequestOverlay />}
+    <ConsentBanner />
   </body>
 </html>

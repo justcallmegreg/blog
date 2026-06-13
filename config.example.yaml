@@ -46,3 +46,6 @@ about:
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published
 # port through the compose `ports:` mapping.
+privacy:
+  email: "privacy@example.com"   # shown for GDPR data-erasure requests; empty hides the line
+  consentBanner: true            # first-visit "accept data processing" gate (stored in a cookie)

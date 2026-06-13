@@ -2,6 +2,8 @@
 // Request-CV modal: GDPR consent → slide captcha → received. Hidden until opened
 // by the #request-cv button on the About page. Reuses global terminal/field/
 // puzzle CSS; ids are cv-prefixed to avoid clashing with ContactOverlay.
+import { getConfig } from '../lib/config';
+const privacyEmail = getConfig().privacy.email;
 ---
 <div id="cv-overlay" class="contact-overlay" hidden aria-hidden="true">
   <div class="contact-window" role="dialog" aria-modal="true" aria-label="Request CV">
@@ -16,6 +18,11 @@
           handle this request; under GDPR you may exercise your right to erasure (right to
           be forgotten) at any time.
         </p>
+        {privacyEmail && (
+          <p class="cv-notice cv-erasure">
+            To request erasure, contact <a href={`mailto:${privacyEmail}`}>{privacyEmail}</a>.
+          </p>
+        )}
       </div>
 
       <label class="field">
@@ -81,6 +88,8 @@
   }
   .cv-consent-head { color: var(--accent); letter-spacing: 0.08em; margin: 0 0 0.4rem; }
   .cv-notice { color: var(--fg); max-width: 60ch; margin: 0; }
+  .cv-erasure { margin-top: 0.5rem; }
+  .cv-erasure a { color: var(--accent); }
   .cv-agree {
     display: flex; align-items: center; gap: 0.5rem;
     margin: 0 0 1rem; cursor: pointer; user-select: none;

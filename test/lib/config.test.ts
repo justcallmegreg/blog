@@ -51,6 +51,8 @@ content:
     expect(cfg.about.headline).toBe('');
     expect(cfg.about.bio).toBe('');
     expect(cfg.about.projects).toEqual([]);
+    expect(cfg.privacy.email).toBe('');
+    expect(cfg.privacy.consentBanner).toBe(true);
   });
 
   it('throws a clear error when required fields are missing', () => {
