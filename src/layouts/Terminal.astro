@@ -35,6 +35,7 @@ try {
 const tabs = [
   { label: 'Blogs', href: '/' },
   { label: 'Contributions', href: '/contributions' },
+  ...(cfg.about.enabled ? [{ label: 'About me', href: '/about' }] : []),
 ];
 const path = Astro.url.pathname;
 function isActive(href: string): boolean {

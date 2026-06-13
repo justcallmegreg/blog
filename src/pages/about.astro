@@ -1,0 +1,34 @@
+---
+import Terminal from '../layouts/Terminal.astro';
+import CvRequestOverlay from '../components/CvRequestOverlay.astro';
+import { getConfig } from '../lib/config';
+
+const cfg = getConfig();
+const about = cfg.about;
+if (!about.enabled) return new Response('Not found', { status: 404 });
+const projects = [...about.projects].sort((a, b) => b.end - a.end || b.start - a.start);
+---
+<Terminal title="About">
+  <h1>&gt; ABOUT{about.headline && <span class="muted"> // </span>}{about.headline}</h1>
+  {about.bio && <p class="about-bio">{about.bio}</p>}
+
+  <h2 class="pane-title">// ACHIEVEMENTS</h2>
+  {projects.length === 0 && <p class="muted">&gt; no entries listed.</p>}
+  <ul class="about-projects">
+    {projects.map((p) => (
+      <li class="about-project">
+        <div class="about-years">[ {p.start} – {p.end} ]</div>
+        <div class="about-desc">{p.description}</div>
+        {p.responsibilities && (
+          <div class="about-sub"><span class="muted">responsibilities:</span> {p.responsibilities}</div>
+        )}
+        {p.deliveries && (
+          <div class="about-sub"><span class="muted">deliveries:</span> {p.deliveries}</div>
+        )}
+      </li>
+    ))}
+  </ul>
+
+  <button class="contact-send about-cv-btn" id="request-cv" type="button">▸ REQUEST CV</button>
+  <CvRequestOverlay />
+</Terminal>

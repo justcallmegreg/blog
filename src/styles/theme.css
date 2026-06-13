@@ -310,3 +310,12 @@ img { max-width: 100%; }
 }
 .puzzle-handle:active { cursor: grabbing; }
 .contact-captcha .contact-btn { width: auto; }
+
+/* About page */
+.about-bio { color: var(--fg-dim); max-width: 70ch; }
+.about-projects { list-style: none; padding: 0; margin: 0; }
+.about-project { margin: 0 0 1.25rem; }
+.about-years { color: var(--accent); letter-spacing: 0.05em; }
+.about-desc { margin: 0.1rem 0; }
+.about-sub { color: var(--fg-dim); font-size: 0.95rem; }
+.about-cv-btn { max-width: 16rem; margin-top: 1.5rem; }
