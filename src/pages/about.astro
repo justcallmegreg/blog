@@ -1,6 +1,5 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
-import CvRequestOverlay from '../components/CvRequestOverlay.astro';
 import { getConfig } from '../lib/config';
 
 const cfg = getConfig();
@@ -30,5 +29,4 @@ const projects = [...about.projects].sort((a, b) => b.end - a.end || b.start - a
   </ul>
 
   <button class="contact-send about-cv-btn" id="request-cv" type="button">▸ REQUEST CV</button>
-  <CvRequestOverlay />
 </Terminal>
