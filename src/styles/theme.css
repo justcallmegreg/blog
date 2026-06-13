@@ -236,6 +236,8 @@ img { max-width: 100%; }
   padding: 4vh 1rem; overflow-y: auto;
   background: rgba(11, 15, 11, 0.92);
 }
+/* the explicit display above would otherwise defeat the `hidden` attribute */
+.contact-overlay[hidden] { display: none; }
 .contact-window {
   position: relative; width: 100%; max-width: 720px;
   border: 1px solid var(--fg-dim); padding: 1.5rem 1.5rem 1.75rem;
