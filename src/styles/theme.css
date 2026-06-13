@@ -171,13 +171,16 @@ img { max-width: 100%; }
 .muted { color: var(--fg-dim); }
 .error { color: var(--accent); }
 
-/* Contributions: horizontal Fallout heatmap */
-.heatmap { display: flex; flex-wrap: wrap; gap: 3px; margin: 0.5rem 0 0.25rem; }
-.heat { width: 14px; height: 14px; border: 1px solid var(--fg-dim); background: transparent; }
+/* Contributions: GitHub-style daily heatmap (day rows x week columns) */
+.heatmap { display: flex; flex-direction: column; gap: 3px; margin: 0.5rem 0 0.25rem; }
+.heat-row { display: flex; align-items: center; gap: 3px; }
+.heat-day { width: 3.2ch; font-size: 0.8rem; color: var(--fg-dim); text-align: right; margin-right: 0.3rem; }
+.heat { width: 16px; height: 16px; border: 1px solid var(--fg-dim); background: transparent; }
 .heat-1 { background: rgba(51, 255, 102, 0.25); }
 .heat-2 { background: rgba(51, 255, 102, 0.5); }
 .heat-3 { background: rgba(51, 255, 102, 0.75); }
 .heat-4 { background: var(--fg); }
+.heat-future { border-color: transparent; background: transparent; }
 .heatmap-legend { margin: 0 0 1.5rem; font-size: 0.95rem; }
 
 /* Contributions: two vertical panes */

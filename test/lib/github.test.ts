@@ -27,23 +27,33 @@ describe('prStatus', () => {
 describe('buildHeatmap', () => {
   const now = new Date(2026, 5, 12); // Fri 2026-06-12
 
-  it('produces the requested number of weekly cells, oldest first', () => {
-    const cells = buildHeatmap([], now, 26);
-    expect(cells).toHaveLength(26);
-    // last cell is the current (Monday) week
-    expect(cells[cells.length - 1].weekStart).toBe('2026-06-08');
-    expect(cells.every((c) => c.count === 0 && c.level === 0)).toBe(true);
+  it('returns a 7-row (days) x N-week grid with day labels', () => {
+    const h = buildHeatmap([], now, 5);
+    expect(h.dayLabels).toHaveLength(7);
+    expect(h.dayLabels[0]).toBe('MON');
+    expect(h.weeks).toBe(5);
+    expect(h.grid).toHaveLength(7);
+    expect(h.grid.every((row) => row.length === 5)).toBe(true);
+    // empty input -> all zero
+    expect(h.grid.flat().every((c) => c.count === 0 && c.level === 0)).toBe(true);
   });
 
-  it('buckets PRs into their Monday-based week and scales the level', () => {
+  it('places a PR on its own day cell and scales the level', () => {
     const prs = [
-      { createdAt: '2026-06-10T10:00:00Z' }, // week of 06-08
-      { createdAt: '2026-06-11T10:00:00Z' }, // week of 06-08
-      { createdAt: '2026-06-09T10:00:00Z' }, // week of 06-08  -> 3 in that week
+      { createdAt: '2026-06-10T10:00:00' }, // Wed 06-10
+      { createdAt: '2026-06-10T14:00:00' }, // Wed 06-10 -> 2 that day
     ];
-    const cells = buildHeatmap(prs, now, 26);
-    const thisWeek = cells.find((c) => c.weekStart === '2026-06-08')!;
-    expect(thisWeek.count).toBe(3);
-    expect(thisWeek.level).toBe(2); // 1<=,<=3 -> level 2
+    const h = buildHeatmap(prs, now, 5);
+    const cell = h.grid.flat().find((c) => c.date === '2026-06-10')!;
+    expect(cell.count).toBe(2);
+    expect(cell.level).toBe(2); // 1<count<=3 -> level 2
+  });
+
+  it('flags dates after today as future', () => {
+    const h = buildHeatmap([], now, 5);
+    const future = h.grid.flat().filter((c) => c.date > '2026-06-12');
+    expect(future.length).toBeGreaterThan(0); // the rest of the current week
+    expect(future.every((c) => c.future)).toBe(true);
+    expect(h.grid.flat().filter((c) => c.date <= '2026-06-12').every((c) => !c.future)).toBe(true);
   });
 });
