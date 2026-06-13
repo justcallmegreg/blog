@@ -221,6 +221,8 @@
         if (res.ok) {
           statusEl.textContent = '> TRANSMISSION SENT';
           (document.getElementById('contact-approve') as HTMLButtonElement).disabled = true;
+          // close the overlay and return to the blog index
+          setTimeout(() => { window.location.href = '/'; }, 1200);
         } else {
           const data = await res.json().catch(() => ({}));
           statusEl.textContent = '> TRANSMISSION FAILED: ' + (data.error || res.status);
