@@ -7,7 +7,7 @@
     <button id="contact-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
 
     <form id="contact-form" class="contact-form" novalidate>
-      <p class="contact-boot" id="contact-boot">&gt; ESTABLISHING UPLINK...</p>
+      <p class="contact-boot" id="contact-boot">&gt; <span id="boot-text">ESTABLISHING UPLINK...</span><span class="cursor boot-cursor"> </span></p>
 
       <!-- honeypot: hidden from humans -->
       <div class="hp" aria-hidden="true">
@@ -101,6 +101,35 @@
       box: (document.getElementById('cf-' + id) as HTMLElement).closest('.field-box') as HTMLElement,
     }));
 
+    // --- boot line: type "ESTABLISHING UPLINK..." then, 2s later, "CONNECTION ESTABLISHED" ---
+    const bootText = document.getElementById('boot-text') as HTMLElement | null;
+    const bootCursor = document.querySelector('#contact-boot .boot-cursor') as HTMLElement | null;
+    let bootTimers: ReturnType<typeof setTimeout>[] = [];
+    function typeBoot(text: string, onDone?: () => void) {
+      if (!bootText) return;
+      bootText.textContent = '';
+      let i = 0;
+      const t = setInterval(() => {
+        bootText.textContent = text.slice(0, ++i);
+        if (i >= text.length) { clearInterval(t); onDone?.(); }
+      }, 45);
+      bootTimers.push(t as unknown as ReturnType<typeof setTimeout>);
+    }
+    function runBoot() {
+      if (!bootText) return;
+      bootTimers.forEach((t) => { clearTimeout(t); clearInterval(t as unknown as ReturnType<typeof setInterval>); });
+      bootTimers = [];
+      if (bootCursor) bootCursor.style.visibility = 'visible';
+      if (reduce) { bootText.textContent = 'CONNECTION ESTABLISHED'; if (bootCursor) bootCursor.style.visibility = 'hidden'; return; }
+      typeBoot('ESTABLISHING UPLINK...', () => {
+        bootTimers.push(
+          setTimeout(() => typeBoot('CONNECTION ESTABLISHED', () => {
+            if (bootCursor) bootCursor.style.visibility = 'hidden';
+          }), 2000)
+        );
+      });
+    }
+
     // --- block cursor: mirror text + show cursor only on the focused field ---
     function sync(f: F) { f.text.textContent = f.input.value; }
     for (const f of fields) {
@@ -163,6 +192,7 @@
       overlay.setAttribute('aria-hidden', 'false');
       showForm();
       dialIn();
+      runBoot();
       fields.forEach(sync);
       fields[0].input.focus();
     }
