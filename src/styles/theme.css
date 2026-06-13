@@ -228,3 +228,55 @@ img { max-width: 100%; }
   .cursor { animation: none; }
   .vaultboy { display: none; }
 }
+
+/* Contact overlay */
+.contact-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 4vh 1rem; overflow-y: auto;
+  background: rgba(11, 15, 11, 0.92);
+}
+.contact-window {
+  position: relative; width: 100%; max-width: 720px;
+  border: 1px solid var(--fg-dim); padding: 1.5rem 1.5rem 1.75rem;
+  background: var(--bg);
+}
+.contact-close {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  background: transparent; color: var(--fg); border: 0; font: inherit; cursor: pointer;
+}
+.contact-boot { color: var(--accent); margin: 0 0 1rem; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.field { display: block; margin: 0 0 1rem; }
+.field-title { display: block; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 0.2rem; }
+.field-box {
+  position: relative; display: flex; align-items: center;
+  border: 1px solid var(--fg-dim); padding: 0.35rem 0.5rem; min-height: 2rem;
+}
+.field-box-area { align-items: stretch; min-height: 12rem; }
+.field-text { white-space: pre; }
+.field-text-area { white-space: pre-wrap; word-break: break-word; flex: 1; }
+.field-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0.35rem 0.5rem; border: 0; resize: none;
+  background: transparent; color: transparent; caret-color: transparent;
+  font: inherit; outline: none;
+}
+.field-input-area { white-space: pre-wrap; }
+/* cursor hidden unless its field is focused (toggled by the .is-focused class) */
+.field-cursor { visibility: hidden; }
+.field-box.is-focused .field-cursor { visibility: visible; }
+
+.contact-error { color: var(--accent); margin: 0.25rem 0 0.75rem; }
+.contact-send, .contact-btn {
+  display: block; width: 100%; padding: 0.4rem; margin-top: 0.5rem;
+  background: transparent; color: var(--fg); border: 1px solid var(--fg-dim);
+  font: inherit; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase;
+}
+.contact-send:hover, .contact-btn:hover { background: rgba(51, 255, 102, 0.12); }
+.preview-body { white-space: pre-wrap; word-break: break-word; border: 1px solid var(--fg-dim); padding: 1rem; margin: 0 0 1rem; }
+.preview-actions { display: flex; gap: 0.75rem; }
+.preview-actions .contact-btn { margin-top: 0; }
+.contact-approve { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.contact-status { color: var(--accent); margin-top: 0.75rem; }

@@ -1,0 +1,63 @@
+---
+// Contact form as an in-page terminal overlay. Hidden until opened by the
+// Contact tab. Behavior is wired in the client script (added next task).
+---
+<div id="contact-overlay" class="contact-overlay" hidden aria-hidden="true">
+  <div class="contact-window" role="dialog" aria-modal="true" aria-label="Contact">
+    <button id="contact-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
+
+    <form id="contact-form" class="contact-form" novalidate>
+      <p class="contact-boot" id="contact-boot">&gt; ESTABLISHING UPLINK...</p>
+
+      <!-- honeypot: hidden from humans -->
+      <div class="hp" aria-hidden="true">
+        <label>Company<input type="text" name="company" id="cf-company" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <label class="field">
+        <span class="field-title">SENDER NAME</span>
+        <span class="field-box" data-field="name">
+          <span class="field-text" id="cf-name-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cf-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="field-title">SENDER EMAIL</span>
+        <span class="field-box" data-field="email">
+          <span class="field-text" id="cf-email-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cf-email" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="320" />
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="field-title">SUBJECT</span>
+        <span class="field-box" data-field="subject">
+          <span class="field-text" id="cf-subject-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cf-subject" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
+        </span>
+      </label>
+
+      <label class="field field-message">
+        <span class="field-title">MESSAGE</span>
+        <span class="field-box field-box-area" data-field="message">
+          <span class="field-text field-text-area" id="cf-message-text"></span><span class="cursor field-cursor"> </span>
+          <textarea class="field-input field-input-area" id="cf-message" autocomplete="off" spellcheck="false" maxlength="5000"></textarea>
+        </span>
+      </label>
+
+      <p class="contact-error" id="contact-error" hidden></p>
+      <button class="contact-send" id="contact-send" type="submit">SEND</button>
+    </form>
+
+    <div class="contact-preview" id="contact-preview" hidden>
+      <p class="contact-boot">&gt; TRANSMISSION PREVIEW</p>
+      <pre class="preview-body" id="preview-body"></pre>
+      <div class="preview-actions">
+        <button class="contact-btn" id="contact-edit" type="button">EDIT</button>
+        <button class="contact-btn contact-approve" id="contact-approve" type="button">APPROVE</button>
+      </div>
+      <p class="contact-status" id="contact-status" hidden></p>
+    </div>
+  </div>
+</div>
