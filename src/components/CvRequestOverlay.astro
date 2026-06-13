@@ -1,4 +1,69 @@
 ---
-// Placeholder — full markup + behavior added in the next task.
+// Request-CV modal: GDPR consent → slide captcha → received. Hidden until opened
+// by the #request-cv button on the About page. Reuses global terminal/field/
+// puzzle CSS; ids are cv-prefixed to avoid clashing with ContactOverlay.
 ---
-<div id="cv-overlay" hidden></div>
+<div id="cv-overlay" class="contact-overlay" hidden aria-hidden="true">
+  <div class="contact-window" role="dialog" aria-modal="true" aria-label="Request CV">
+    <button id="cv-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
+
+    <form id="cv-consent" class="contact-form" novalidate>
+      <p class="contact-boot">&gt; REQUEST CV // DATA CONSENT</p>
+      <p class="cv-notice">
+        Redistribution of the CV is not permitted. Your details are processed solely to
+        handle this request; under GDPR you may exercise your right to erasure (right to
+        be forgotten) at any time.
+      </p>
+
+      <label class="field">
+        <span class="field-title">NAME</span>
+        <span class="field-box" data-field="name">
+          <span class="field-text" id="cv-name-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cv-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-title">EMAIL</span>
+        <span class="field-box" data-field="email">
+          <span class="field-text" id="cv-email-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cv-email" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="320" />
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-title">COMPANY (OPTIONAL)</span>
+        <span class="field-box" data-field="company">
+          <span class="field-text" id="cv-company-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="cv-company" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
+        </span>
+      </label>
+
+      <p class="contact-error" id="cv-error" hidden></p>
+      <div class="preview-actions">
+        <button class="contact-btn" id="cv-cancel" type="button">CANCEL</button>
+        <button class="contact-btn contact-approve" id="cv-consent-btn" type="submit">CONSENT</button>
+      </div>
+    </form>
+
+    <div class="contact-captcha" id="cv-captcha" hidden>
+      <p class="contact-boot">&gt; SECURITY CHECK — SLIDE THE PIECE INTO THE GAP</p>
+      <div class="puzzle" id="cv-puzzle">
+        <img class="puzzle-bg" id="cv-puzzle-bg" alt="" />
+        <img class="puzzle-piece" id="cv-puzzle-piece" alt="" />
+      </div>
+      <div class="puzzle-track" id="cv-puzzle-track">
+        <div class="puzzle-handle" id="cv-puzzle-handle">&gt;&gt;</div>
+      </div>
+      <p class="contact-error" id="cv-captcha-msg" hidden></p>
+      <button class="contact-btn" id="cv-captcha-back" type="button">&lt; BACK</button>
+    </div>
+
+    <div class="contact-preview" id="cv-received" hidden>
+      <p class="contact-boot">&gt; REQUEST RECEIVED</p>
+      <p>Your request has been logged. You will be reached out within <strong>24 hours</strong>.</p>
+      <button class="contact-btn contact-approve" id="cv-acknowledge" type="button">ACKNOWLEDGE</button>
+    </div>
+  </div>
+</div>
+<style>
+  .cv-notice { color: var(--fg-dim); max-width: 60ch; margin: 0 0 1rem; }
+</style>
