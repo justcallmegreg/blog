@@ -73,6 +73,15 @@ const ConfigSchema = z.object({
       consentBanner: z.boolean().default(true),
     })
     .default({}),
+  // Self-hosted Matomo analytics. Loads only after the visitor accepts the
+  // consent gate. Disabled + empty by default so nothing loads until configured.
+  analytics: z
+    .object({
+      enabled: z.boolean().default(false),
+      matomoUrl: z.string().default(''),
+      siteId: z.number().int().default(1),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and

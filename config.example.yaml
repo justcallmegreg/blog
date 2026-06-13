@@ -49,3 +49,7 @@ about:
 privacy:
   email: "privacy@example.com"   # shown for GDPR data-erasure requests; empty hides the line
   consentBanner: true            # first-visit "accept data processing" gate (stored in a cookie)
+analytics:
+  enabled: false                       # set true once Matomo is reachable
+  matomoUrl: "https://analytics.example.com"   # your Matomo base URL (no trailing /matomo.php)
+  siteId: 1                            # the Matomo site id for this blog
