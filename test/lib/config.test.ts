@@ -47,6 +47,10 @@ content:
     expect(cfg.social.github).toBe('justcallmegreg');
     expect(cfg.social.linkedin).toBe('justcallmegreg');
     expect(cfg.social.medium).toBe('');
+    expect(cfg.about.enabled).toBe(true);
+    expect(cfg.about.headline).toBe('');
+    expect(cfg.about.bio).toBe('');
+    expect(cfg.about.projects).toEqual([]);
   });
 
   it('throws a clear error when required fields are missing', () => {

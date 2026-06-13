@@ -48,6 +48,24 @@ const ConfigSchema = z.object({
       medium: z.string().default(''),
     })
     .default({}),
+  about: z
+    .object({
+      enabled: z.boolean().default(true),
+      headline: z.string().default(''),
+      bio: z.string().default(''),
+      projects: z
+        .array(
+          z.object({
+            start: z.number().int(),
+            end: z.number().int(),
+            description: z.string(),
+            responsibilities: z.string().default(''),
+            deliveries: z.string().default(''),
+          })
+        )
+        .default([]),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and

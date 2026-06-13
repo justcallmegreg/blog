@@ -30,6 +30,19 @@ social:                             # top-bar social links (handles only; empty 
   linkedin: "justcallmegreg"
   medium: ""                        # e.g. "@justcallmegreg" — shown when set
 
+about:
+  enabled: true
+  headline: "Greg — software engineer"
+  bio: "Short background summary — who I am, what I work on."
+  projects:
+    - start: 2021
+      end: 2023
+      description: "Confidential project — what it was (no client name)."
+      responsibilities: "What I owned / led."
+      deliveries: "What I shipped / achieved."
+  # CV requests are sent to the CV_WEBHOOK_URL env var (not stored here);
+  # stage-mode logs the request when unset.
+
 # The HTTP port/host are set via the PORT and HOST environment variables
 # (see Dockerfile / docker-compose.yml), not in this file. Change the published
 # port through the compose `ports:` mapping.
