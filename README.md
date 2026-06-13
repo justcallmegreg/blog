@@ -1,9 +1,47 @@
 # Blog Engine
 
-A stateless, containerized Astro SSR blog engine with a RobCo/Pip-Boy terminal aesthetic.
+A stateless, containerized **Astro SSR** blog engine with a RobCo/Pip-Boy terminal aesthetic.
 Content lives in a **separate git repo** organized as `YYYY/MM/DD/<slug>.md` (with a sibling
 `assets/` dir per day). The engine periodically `git pull`s that repo and renders markdown
-live — no rebuild, no restart. New posts go live on the next request after a sync.
+**live** — no rebuild, no restart. New posts go live on the next request after a sync.
+
+One multi-arch image (amd64 + arm64), configured by a single `config.yaml` plus a few
+environment variables for secrets. No database; the only state is an ephemeral clone of the
+content repo and an in-memory render index.
+
+## Features
+
+**Content**
+- Live content from a separate git repo — periodic `git fetch` + re-index of only the files
+  whose git blob hash changed; posts render to HTML once and are held in memory.
+- Markdown with syntax-highlighted code, relative `./assets/...` links rewritten to absolute URLs.
+- Path-derived routing: `2026/06/12/my-post.md` → `/2026/06/12/my-post`. Drafts hidden + 404.
+- **RSS feed** at `/rss.xml`.
+
+**Terminal UI**
+- Timed **Matrix rain** on the index, periodic **CRT beam-roll** glitch, **typewriter** boot
+  title, **click sounds** with a persisted mute toggle, a decorative **Vault Boy** GIF, and a
+  pale profile-picture avatar / favicon.
+- Pip-Boy **tab bar** — Blogs · Contributions · About me · Contact — plus top-right social
+  links (LinkedIn · GitHub · RSS).
+- Fully readable with JavaScript disabled; `prefers-reduced-motion` is respected.
+
+**Pages**
+- **Blogs** (`/`) — posts grouped Today / Yesterday / This week / This month & earlier, each
+  with a teaser; **fuzzy search** with a Fallout-style block cursor + typing sounds; a
+  posting-activity **heatmap**.
+- **Contributions** (`/contributions`) — a GitHub activity **heatmap** (commits *and* PRs, last
+  five weeks), owned repositories, and a recent pull-request timeline.
+- **About me** (`/about`) — a config-driven bio + unnamed (confidential) project list, with a
+  **Request CV** flow: GDPR consent → slide-puzzle captcha → JSON to a webhook → "received".
+- **Contact** — an in-page terminal overlay: dial-in sound, per-field block cursor, a
+  typewriter transmission preview, then a JSON POST to a webhook.
+
+**Privacy & integrity**
+- A **GDPR consent gate** on first visit (choice stored in a cookie) + a configurable
+  data-erasure contact email.
+- A server-validated **slide-puzzle captcha** (no Python dependency) guarding the forms.
+- Optional, consent-gated, **self-hosted Matomo** analytics (page views + time-on-page).
 
 ## Content repo layout
 
@@ -28,39 +66,81 @@ draft: false             # drafts are hidden from the index and 404 on direct hi
 
 ## Configure
 
-Copy `config.example.yaml` to `config.yaml` and edit it:
+Copy `config.example.yaml` to `config.yaml` and edit it. Every block has sensible defaults; the
+only required field is `content.repo`.
 
 ```yaml
 site:
   title: "RobCo Termlink"
   description: "Personal log"
+  # baseUrl: "https://blog.example.com"   # optional, used for absolute links/RSS
+
 content:
   repo: "https://github.com/you/blog-content.git"
   branch: "main"
-  subdir: ""                # optional: content in a subfolder of the repo
+  subdir: ""                # optional: content lives in a subfolder of the repo
   syncIntervalSeconds: 300
-effects:
+
+effects:                    # terminal eye-candy — all optional, all default on (except as noted)
   matrixRain: true
-  typewriter: true
-  clickSound: true
+  matrixRainDurationSeconds: 7    # matrix runs this long on the index, then fades
+  typewriter: true               # type the brand title out on first load
+  clickSound: true               # UI blips; readers get a persisted mute toggle
+  crtGlitch: true                # periodic CRT beam-roll sweep
+  crtGlitchIntervalSeconds: 15
+  vaultBoy: true                 # decorative Vault Boy GIF, bottom-right
+  vaultBoyLoops: 3               # GIF loops N times then freezes (0 = infinite)
+
+github:
+  username: "justcallmegreg"     # GitHub user summarized on the Contributions tab
+
+contact:
+  enabled: true                  # show the Contact tab + overlay
+  captcha: true                  # require the slide-puzzle captcha (needs images in public/puzzles/)
+
+social:                          # top-bar links (handles only; empty string hides a link)
+  github: "justcallmegreg"
+  linkedin: "justcallmegreg"
+  medium: ""                     # e.g. "@justcallmegreg"
+
+about:
+  enabled: true                  # show the About me tab + page
+  headline: "Greg — software engineer"
+  bio: "Short background summary — who I am, what I work on."
+  projects:                      # unnamed for confidentiality; newest-first
+    - start: 2021
+      end: 2023
+      description: "Confidential project — what it was (no client name)."
+      responsibilities: "What I owned / led."
+      deliveries: "What I shipped / achieved."
+
 privacy:
-  email: "you@example.com"    # GDPR data-erasure contact (shown in the consent gate + CV form)
-  consentBanner: true         # first-visit "accept data processing" gate (choice stored in a cookie)
+  email: "you@example.com"       # GDPR data-erasure contact (consent gate + CV form); empty hides it
+  consentBanner: true            # first-visit "accept data processing" gate (choice stored in a cookie)
+
 analytics:
-  enabled: false              # self-hosted Matomo; loads ONLY after a visitor accepts the gate
-  matomoUrl: "https://analytics.example.com"   # your Matomo base URL (no trailing /matomo.php)
-  siteId: 1                   # the Matomo site id for this blog
+  enabled: false                 # self-hosted Matomo; loads ONLY after a visitor accepts the gate
+  matomoUrl: "https://analytics.example.com"   # Matomo base URL (no trailing /matomo.php)
+  siteId: 1                      # the Matomo site id for this blog
 ```
 
-For a **private** content repo, pass a read-only token via the `CONTENT_REPO_TOKEN`
-environment variable — never put it in the YAML. The engine splices it into the clone URL.
+## Environment variables
 
-The contact form and CV requests forward as JSON to webhooks set via the
-`CONTACT_WEBHOOK_URL` / `CV_WEBHOOK_URL` environment variables (also never in the YAML); if
-unset, submissions are logged server-side instead.
+Secrets and runtime settings live in the environment, never in `config.yaml`:
 
-The HTTP **port** is controlled by the `PORT` environment variable (and the published port by
-the Docker/compose `ports:` mapping), not by `config.yaml`.
+| Variable | Purpose |
+|---|---|
+| `CONFIG_PATH` | Path to `config.yaml` (default `./config.yaml`; the Docker image mounts `/config/config.yaml`). |
+| `PORT` / `HOST` | Server bind address (read by the `@astrojs/node` server; default port `4321`). |
+| `CONTENT_REPO_TOKEN` | Read-only token for a **private** content repo; spliced into the clone URL. |
+| `CONTENT_LOCAL_DIR` | Dev mode: serve a local content folder directly instead of cloning (see below). |
+| `CACHE_DIR` | Where the content repo is cloned (ephemeral; defaults to a temp dir). |
+| `GITHUB_TOKEN` | Optional: raises GitHub API rate limits for the Contributions tab. |
+| `CONTACT_WEBHOOK_URL` | Where the Contact form POSTs its JSON. Unset → logged server-side ("stage mode"). |
+| `CV_WEBHOOK_URL` | Where Request-CV POSTs its JSON. Unset → logged server-side. |
+
+Both webhook payloads are plain JSON, so you can wire them to Zapier, a mailer, or your own
+endpoint — the engine itself sends no email and stores no submissions.
 
 ## Analytics & privacy
 
@@ -70,18 +150,17 @@ again. Toggle it with `privacy.consentBanner`. The `privacy.email` address is sh
 and in the Request-CV form as the contact for data-erasure ("right to be forgotten") requests.
 
 Optional **self-hosted [Matomo](https://matomo.org/)** analytics records which pages visitors
-open and **how long they spend on each** (via Matomo's heartbeat timer). It is privacy-respecting
-by design:
+open and **how long they spend on each** (Matomo's heartbeat timer). It is privacy-respecting by
+design:
 
-- **Disabled by default.** Nothing loads until you set the `analytics` block.
-- **Consent-gated.** The tracking snippet is injected **only after** a visitor clicks **ACCEPT** —
-  visitors who decline (or haven't chosen) are never tracked. (Analytics therefore requires
-  `privacy.consentBanner: true`, since the consent cookie is what unlocks it.)
-- **Stateless engine.** The browser talks directly to your Matomo instance; the blog engine
-  stores and proxies nothing. Matomo runs as a separate container + database on your own host.
+- **Disabled by default** — nothing loads until you set the `analytics` block.
+- **Consent-gated** — the tracking snippet loads **only after** a visitor clicks **ACCEPT**;
+  decliners are never tracked. (So analytics requires `privacy.consentBanner: true` — the
+  consent cookie is what unlocks it.)
+- **Stateless engine** — the browser talks directly to your Matomo; the blog stores and proxies
+  nothing. Matomo runs as a separate container + database on your own host.
 
-Full setup — running Matomo, anonymizing IPs, getting your `siteId`, and pointing the blog at
-it — is in **[docs/analytics-matomo.md](docs/analytics-matomo.md)** (with a
+Full setup is in **[docs/analytics-matomo.md](docs/analytics-matomo.md)** (with a
 `docker-compose.matomo.example.yml` to copy).
 
 ## Run with Docker
@@ -132,6 +211,8 @@ npm run build && CONTENT_LOCAL_DIR=../blog-content CONFIG_PATH=./config.yaml npm
 
 ## Develop
 
+Requires Node ≥ 20.3.
+
 ```bash
 npm install
 npm run dev      # local Astro dev server
@@ -143,8 +224,12 @@ npm run build    # production build → dist/server/entry.mjs
 
 A single Node process runs the Astro `@astrojs/node` standalone server. A background worker
 shallow-clones the content repo, then on a timer runs `git fetch` + `git reset --hard` and
-re-indexes only the files whose git blob hash changed. Posts are rendered to HTML once and held
-in an in-memory index that SSR routes read from. The interactive effects (Matrix rain,
-typewriter, click sounds) are client-side islands gated by the config and built as progressive
-enhancement (the site is fully readable with JavaScript disabled, and `prefers-reduced-motion`
-is respected).
+re-indexes only the files whose git blob hash changed; posts are rendered to HTML once and held
+in an in-memory index that SSR routes read from.
+
+The terminal effects (Matrix rain, typewriter, click sounds, CRT glitch, Vault Boy) are
+client-side islands gated by `config.yaml` and built as progressive enhancement. The
+Contributions tab calls the GitHub REST API at request time (cached briefly). The Contact and
+Request-CV flows validate server-side, gate on the slide-puzzle captcha, and forward JSON to
+their webhooks — keeping the engine stateless. Consent-gated Matomo analytics, when enabled,
+loads entirely in the browser.
