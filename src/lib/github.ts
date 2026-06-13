@@ -29,6 +29,7 @@ export interface HeatCell {
 
 export interface Heatmap {
   dayLabels: string[]; // 7 labels, Monday-first
+  weekLabels: string[]; // ISO week number per column (oldest → newest)
   weeks: number;
   grid: HeatCell[][]; // grid[dayRow 0..6][weekCol 0..weeks-1]; dayRow 0 = Monday
 }
@@ -75,6 +76,17 @@ function heatLevel(count: number): number {
 
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
+/** ISO-8601 week number (weeks start Monday; week 1 contains the first Thursday). */
+function isoWeek(d: Date): number {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (date.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+  date.setUTCDate(date.getUTCDate() - dayNum + 3); // Thursday of this week
+  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
+}
+
 /**
  * GitHub-style daily heatmap for the last `weeks` weeks (≈ last month).
  * Rows are days of the week (Monday-first), columns are weeks (oldest → newest).
@@ -110,7 +122,14 @@ export function buildHeatmap(
     }
     grid.push(row);
   }
-  return { dayLabels: DAY_LABELS, weeks, grid };
+
+  const weekLabels: string[] = [];
+  for (let w = 0; w < weeks; w++) {
+    const colMonday = new Date(base.getFullYear(), base.getMonth(), base.getDate() + w * 7);
+    weekLabels.push(String(isoWeek(colMonday)));
+  }
+
+  return { dayLabels: DAY_LABELS, weekLabels, weeks, grid };
 }
 
 // ---- fetching --------------------------------------------------------------

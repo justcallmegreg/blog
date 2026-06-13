@@ -38,6 +38,12 @@ describe('buildHeatmap', () => {
     expect(h.grid.flat().every((c) => c.count === 0 && c.level === 0)).toBe(true);
   });
 
+  it('labels columns with ISO week numbers, last 5 weeks ending this week', () => {
+    const h = buildHeatmap([], now, 5);
+    // 2026-06-12 is in ISO week 24; the five trailing columns are W20..W24
+    expect(h.weekLabels).toEqual(['20', '21', '22', '23', '24']);
+  });
+
   it('places a PR on its own day cell and scales the level', () => {
     const prs = [
       { createdAt: '2026-06-10T10:00:00' }, // Wed 06-10

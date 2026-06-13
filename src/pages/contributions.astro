@@ -16,6 +16,12 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
   )}
 
   <section class="heatmap" aria-label="Contribution activity, last month">
+    <div class="heat-row heat-head">
+      <span class="heat-day"></span>
+      {data.heatmap.weekLabels.map((w) => (
+        <span class="heat-week" title={`ISO week ${w}`}>{w}</span>
+      ))}
+    </div>
     {data.heatmap.grid.map((row, d) => (
       <div class="heat-row">
         <span class="heat-day">{data.heatmap.dayLabels[d]}</span>
