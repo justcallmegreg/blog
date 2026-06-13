@@ -4,6 +4,7 @@ import '../styles/theme.css';
 import ClickSound from '../components/ClickSound.astro';
 import CRTGlitch from '../components/CRTGlitch.astro';
 import VaultBoy from '../components/VaultBoy.astro';
+import ContactOverlay from '../components/ContactOverlay.astro';
 import { getConfig } from '../lib/config';
 
 interface Props { title?: string }
@@ -77,6 +78,9 @@ function isActive(href: string): boolean {
           {tabs.map((t) => (
             <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
           ))}
+          {cfg.contact.enabled && (
+            <button type="button" class="tab contact-tab" id="contact-tab">Contact</button>
+          )}
         </nav>
         <a class="rss-link" href="/rss.xml" aria-label="RSS feed">
           <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true">
@@ -129,11 +133,19 @@ function isActive(href: string): boolean {
       // reload also sets it server-side). The click sound fires via ClickSound.
       const tabEls = document.querySelectorAll('.tabs .tab');
       tabEls.forEach((tab) => {
+        if (tab.id === 'contact-tab') return; // contact-tab has its own handler below
         tab.addEventListener('click', () => {
           tabEls.forEach((t) => t.classList.remove('is-active'));
           tab.classList.add('is-active');
         });
       });
+      const contactTab = document.getElementById('contact-tab');
+      contactTab?.addEventListener('click', () => {
+        tabEls.forEach((t) => t.classList.remove('is-active'));
+        contactTab.classList.add('is-active');
+        (window as any).openContact?.();
+      });
     </script>
+    {cfg.contact.enabled && <ContactOverlay />}
   </body>
 </html>
