@@ -39,6 +39,10 @@ content repo and an in-memory render index.
   **Request CV** flow: GDPR consent → slide-puzzle captcha → JSON to a webhook → "received".
 - **Contact** — an in-page terminal overlay: dial-in sound, per-field block cursor, a
   typewriter transmission preview, then a JSON POST to a webhook.
+- **Newsletter** — a tab + modal to subscribe/unsubscribe to a weekly post-summary digest
+  (config-driven blurb: `summaryDays`, `timezone`, `schedule`); slide-puzzle captcha, a typed
+  "transferring message sequence" status, and a JSON POST routed to the subscribe/unsubscribe
+  webhooks. The Subscribe button carries a localized CRT effect.
 
 **Privacy & integrity**
 - A **GDPR consent gate** on first visit (choice stored in a cookie) + a configurable
@@ -141,6 +145,8 @@ Secrets and runtime settings live in the environment, never in `config.yaml`:
 | `GITHUB_TOKEN` | Optional: raises GitHub API rate limits for the Contributions tab. |
 | `CONTACT_WEBHOOK_URL` | Where the Contact form POSTs its JSON. Unset → logged server-side ("stage mode"). |
 | `CV_WEBHOOK_URL` | Where Request-CV POSTs its JSON. Unset → logged server-side. |
+| `NEWSLETTER_SUBSCRIBE_WEBHOOK_URL` | Where a newsletter **subscribe** POSTs its JSON. Unset → stage-logged. |
+| `NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL` | Where a newsletter **unsubscribe** POSTs its JSON. Unset → stage-logged. |
 
 Both webhook payloads are plain JSON, so you can wire them to Zapier, a mailer, or your own
 endpoint — the engine itself sends no email and stores no submissions.
