@@ -2,6 +2,10 @@
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+# Baked into /version (astro.config.mjs reads SOURCE_COMMIT); .git is not in the
+# build context, so the commit is passed in as a build-arg.
+ARG SOURCE_COMMIT=unknown
+ENV SOURCE_COMMIT=${SOURCE_COMMIT}
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .

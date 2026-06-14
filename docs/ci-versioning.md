@@ -66,13 +66,13 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
 
 ## Checking the running version
 
-The engine serves its version at **`GET /version`** → `{"version":"X.Y.Z"}`. It's baked in from
-`VERSION.txt` at image build time, so it reports the released version of whatever image is
-running:
+The engine serves its build provenance at **`GET /version`**. The version is baked in from
+`VERSION.txt`, and the commit + build timestamp are injected at image build time (the commit
+comes from the `SOURCE_COMMIT` build-arg, which `release.yml` sets to the released commit):
 
 ```bash
 curl -s https://blog.example.com/version
-# {"version":"1.4.0"}
+# {"version":"1.4.0","commit":"<full-sha>","builtAt":"2026-06-14T08:50:20.952Z"}
 ```
 
 ## Notes

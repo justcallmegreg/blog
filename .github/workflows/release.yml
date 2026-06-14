@@ -43,6 +43,7 @@ jobs:
           echo "release $CUR -> $NEXT (mode=$MODE)"
 
       - name: Commit VERSION.txt + tag on main
+        id: commit
         run: |
           set -euo pipefail
           NEXT="${{ steps.ver.outputs.next }}"
@@ -54,6 +55,7 @@ jobs:
           git tag -a "v$NEXT" -m "v$NEXT"
           git push origin HEAD:main
           git push origin "v$NEXT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Image name (lowercased)
         id: img
@@ -79,8 +81,10 @@ jobs:
             ${{ steps.img.outputs.name }}:${{ steps.ver.outputs.minor }}
             ${{ steps.img.outputs.name }}:${{ steps.ver.outputs.major }}
             ${{ steps.img.outputs.name }}:latest
+          build-args: |
+            SOURCE_COMMIT=${{ steps.commit.outputs.sha }}
           labels: |
             org.opencontainers.image.version=${{ steps.ver.outputs.next }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -234,6 +234,7 @@ Request-CV flows validate server-side, gate on the slide-puzzle captcha, and for
 their webhooks — keeping the engine stateless. Consent-gated Matomo analytics, when enabled,
 loads entirely in the browser.
 
-The image's version is baked in from `VERSION.txt` at build time and served at **`GET /version`**
-(`{"version":"X.Y.Z"}`). Versioning/publishing is automated — see
+The image's build provenance is served at **`GET /version`**
+(`{"version":"X.Y.Z","commit":"<sha>","builtAt":"<iso>"}`) — version from `VERSION.txt`, commit
+and timestamp injected at build time. Versioning/publishing is automated — see
 [docs/ci-versioning.md](docs/ci-versioning.md).
