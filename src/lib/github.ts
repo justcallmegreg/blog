@@ -13,6 +13,7 @@ export interface Repo {
   language: string | null;
   stars: number;
   fork: boolean;
+  pushedAt: string; // ISO; last push, used to order newest-first
 }
 
 export type PrStatus = 'OPEN' | 'MERGED' | 'CLOSED';
@@ -82,8 +83,10 @@ async function fetchOwnedRepos(user: string, token?: string): Promise<Repo[]> {
       language: r.language,
       stars: r.stargazers_count ?? 0,
       fork: false,
+      pushedAt: r.pushed_at ?? r.updated_at ?? r.created_at ?? '',
     }))
-    .sort((a, b) => b.stars - a.stars || a.name.localeCompare(b.name));
+    // Newest activity first; tie-break by name for stable ordering.
+    .sort((a, b) => b.pushedAt.localeCompare(a.pushedAt) || a.name.localeCompare(b.name));
 }
 
 /**
@@ -134,13 +137,16 @@ async function fetchRecentPRs(
     `/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`,
     token
   );
-  return (data.items as any[]).map((it) => ({
-    title: it.title,
-    repo: parseRepoFullName(it.repository_url),
-    url: it.html_url,
-    status: prStatus(it),
-    createdAt: it.created_at,
-  }));
+  return (data.items as any[])
+    .map((it) => ({
+      title: it.title,
+      repo: parseRepoFullName(it.repository_url),
+      url: it.html_url,
+      status: prStatus(it),
+      createdAt: it.created_at,
+    }))
+    // Newest first (the search already sorts created desc; make it explicit).
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /** Fetch repos + PRs + heatmap for a user. Never throws; errors land on `.error`. */
