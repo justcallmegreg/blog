@@ -26,6 +26,12 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          # The version-bump commit/tag is pushed to the protected `main`. The
+          # default GITHUB_TOKEN (github-actions[bot]) is NOT an admin and can't
+          # bypass the branch ruleset, and a personal repo can't add the Actions
+          # app to the bypass list. So push as the repo owner via a PAT
+          # (RELEASE_TOKEN, contents:write) — the owner is an admin and bypasses.
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Compute next release version
         id: ver

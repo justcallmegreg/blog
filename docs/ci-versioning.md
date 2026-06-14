@@ -45,24 +45,26 @@ GitHub → **Settings → Branches → Add branch ruleset** (or classic protecti
 - **Require branches to be up to date before merging** — this is the "rebase" rule: when `main`
   moves, the PR must be updated, which re-runs `version.yml` and recomputes the version against
   the new base.
-- **Bypass list:** add **`github-actions[bot]`** (or the "GitHub Actions" app) so `release.yml`
-  can push the version-bump commit + tag to protected `main` with the built-in `GITHUB_TOKEN`.
+- **Bypass list:** the `release.yml` job pushes the version-bump commit + tag to the protected
+  `main`, so the pushing actor must bypass the ruleset.
+  - **On an organization repo:** add the **"GitHub Actions"** app to the ruleset bypass list and
+    keep `release.yml`'s checkout on the built-in `GITHUB_TOKEN`.
+  - **On a personal (user) repo:** GitHub does **not** allow adding the Actions app to a ruleset
+    bypass ("integration must be part of the owner organization"). Instead, the **repo owner
+    (an admin) bypasses**, so `release.yml` pushes *as the owner* via a **`RELEASE_TOKEN`** PAT
+    (this repo is already wired for that — see below). The admin role is in the bypass list.
 
-Classic-protection equivalent for the status check + up-to-date rule:
+### RELEASE_TOKEN (required on personal repos)
+
+`release.yml`'s `Checkout main` step uses `token: ${{ secrets.RELEASE_TOKEN }}`. Create a
+**fine-grained PAT** scoped to this repo with **Contents: read/write**, then store it:
 
 ```bash
-gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
-  -H "Accept: application/vnd.github+json" \
-  -f 'required_status_checks[strict]=true' \
-  -f 'required_status_checks[contexts][]=version-and-build' \
-  -f 'enforce_admins=false' \
-  -f 'required_pull_request_reviews[required_approving_review_count]=0' \
-  -f 'restrictions='
+gh secret set RELEASE_TOKEN --repo <owner>/<repo>   # paste the PAT when prompted
 ```
 
-> If your org forbids letting `github-actions[bot]` bypass protection, create a fine-grained PAT
-> or GitHub App token with `contents: write`, store it as the secret `RELEASE_TOKEN`, and change
-> the `actions/checkout` in `release.yml` to `with: { token: ${{ secrets.RELEASE_TOKEN }} }`.
+Without this secret the release job's push to `main` will fail (the default token can't bypass
+the ruleset). The PAT belongs to an admin, so its push bypasses branch protection.
 
 ## Checking the running version
 
