@@ -24,15 +24,16 @@
     let done = false;
 
     // Accelerate as the reader gets further in, so long posts aren't tedious:
-    // the first 350 chars type at the original pace, the next 500 at 2x, the
-    // next 1000 at 3x, then the rest streams at "lightning" speed. Speed is
-    // scaled by revealing more characters per tick (the 12ms cadence is kept).
+    // the first 255 chars type at the original pace, the next 255 faster, the
+    // next 255 faster still, then the rest streams at "lightning" speed (the
+    // cursor keeps blinking until everything is revealed). Speed is scaled by
+    // revealing more characters per tick (the 12ms cadence is kept).
     const total = nodes.reduce((sum, x) => sum + x.full.length, 0);
-    const lightningStep = Math.max(80, Math.ceil((total - 1850) / 10));
+    const lightningStep = Math.max(80, Math.ceil((total - 765) / 10));
     function stepFor(r: number): number {
-      if (r < 350) return 1;   // as-is
-      if (r < 850) return 2;   // next 500 → 2x
-      if (r < 1850) return 3;  // next 1000 → 3x
+      if (r < 255) return 1;   // normal
+      if (r < 510) return 2;   // next 255 → faster
+      if (r < 765) return 3;   // next 255 → even faster
       return lightningStep;    // the rest → lightning
     }
     function reveal() {
