@@ -5,9 +5,13 @@ Versioning is automated through `VERSION.txt` (a bare `MAJOR.MINOR.PATCH`):
 - **PATCH** — bumped on every commit you push to a PR branch. `version.yml` writes
   `VERSION.txt` and pushes a `chore: set version … [version-bump]` commit, then builds both
   arches to validate (no push).
-- **MINOR** — bumped when a PR is **squash-merged** to `main`. `release.yml` writes the new
-  `VERSION.txt`, tags `vX.Y.0`, and pushes the multi-arch image.
-- **MAJOR** — bumped only when the PR carries a **`major`** label at merge time → `(X+1).0.0`.
+- **MINOR** — the default bump when a PR is **squash-merged** to `main` → `X.(Y+1).0`.
+  `release.yml` writes the new `VERSION.txt`, tags `vX.Y.Z`, and pushes the multi-arch image.
+- **PATCH (release)** — when the PR carries a **`patch`** label at merge time, the merge bumps
+  the patch instead → `X.Y.(Z+1)` (for small fixes that don't warrant a minor).
+- **MAJOR** — when the PR carries a **`major`** label at merge time → `(X+1).0.0`.
+
+(`major` takes precedence over `patch` if both labels are present.)
 
 Released images are pushed to `ghcr.io/<owner>/<repo>` with four tags:
 `X.Y.Z` (immutable) · `X.Y` (newest patch of that minor) · `X` (newest of that major) · `latest`.

@@ -15,6 +15,10 @@ describe('nextVersion', () => {
     expect(nextVersion('0.1.0', 'major')).toBe('1.0.0');
     expect(nextVersion('1.4.2', 'major')).toBe('2.0.0');
   });
+  it('patch-release increments the patch (X.Y.Z -> X.Y.Z+1)', () => {
+    expect(nextVersion('0.4.0', 'patch-release')).toBe('0.4.1');
+    expect(nextVersion('1.2.3', 'patch-release')).toBe('1.2.4');
+  });
   it('rejects an unknown mode', () => {
     expect(() => nextVersion('1.0.0', 'bogus')).toThrow(/unknown mode/);
   });

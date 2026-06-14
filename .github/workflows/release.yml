@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IS_MAJOR: ${{ contains(github.event.pull_request.labels.*.name, 'major') }}
+      IS_PATCH: ${{ contains(github.event.pull_request.labels.*.name, 'patch') }}
     outputs:
       version: ${{ steps.ver.outputs.next }}
       major: ${{ steps.ver.outputs.major }}
@@ -42,7 +43,9 @@ jobs:
         run: |
           set -euo pipefail
           CUR=$(tr -d '[:space:]' < VERSION.txt)
-          if [ "$IS_MAJOR" = "true" ]; then MODE=major; else MODE=minor; fi
+          if [ "$IS_MAJOR" = "true" ]; then MODE=major;
+          elif [ "$IS_PATCH" = "true" ]; then MODE=patch-release;
+          else MODE=minor; fi
           NEXT=$(node scripts/next-version.mjs "$CUR" "$MODE")
           IFS=. read -r MAJ MIN PAT <<< "$NEXT"
           {
