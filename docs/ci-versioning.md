@@ -56,8 +56,12 @@ GitHub → **Settings → Branches → Add branch ruleset** (or classic protecti
 
 ### RELEASE_TOKEN (required on personal repos)
 
-`release.yml`'s `Checkout main` step uses `token: ${{ secrets.RELEASE_TOKEN }}`. Create a
-**fine-grained PAT** scoped to this repo with **Contents: read/write**, then store it:
+Both workflows use it: `release.yml` pushes the version bump/tag to protected `main` as the
+admin (bypassing the ruleset), and `version.yml` pushes the per-commit PATCH bump to the PR
+branch with it so that push **re-triggers** the `version-and-build` check on the bump commit
+(a default-`GITHUB_TOKEN` push wouldn't, leaving the PR head without the required check).
+
+Create a **fine-grained PAT** scoped to this repo with **Contents: read/write**, then store it:
 
 ```bash
 gh secret set RELEASE_TOKEN --repo <owner>/<repo>   # paste the PAT when prompted
