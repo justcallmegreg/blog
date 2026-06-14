@@ -233,3 +233,7 @@ Contributions tab calls the GitHub REST API at request time (cached briefly). Th
 Request-CV flows validate server-side, gate on the slide-puzzle captcha, and forward JSON to
 their webhooks — keeping the engine stateless. Consent-gated Matomo analytics, when enabled,
 loads entirely in the browser.
+
+The image's version is baked in from `VERSION.txt` at build time and served at **`GET /version`**
+(`{"version":"X.Y.Z"}`). Versioning/publishing is automated — see
+[docs/ci-versioning.md](docs/ci-versioning.md).

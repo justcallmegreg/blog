@@ -64,6 +64,17 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
 > or GitHub App token with `contents: write`, store it as the secret `RELEASE_TOKEN`, and change
 > the `actions/checkout` in `release.yml` to `with: { token: ${{ secrets.RELEASE_TOKEN }} }`.
 
+## Checking the running version
+
+The engine serves its version at **`GET /version`** → `{"version":"X.Y.Z"}`. It's baked in from
+`VERSION.txt` at image build time, so it reports the released version of whatever image is
+running:
+
+```bash
+curl -s https://blog.example.com/version
+# {"version":"1.4.0"}
+```
+
 ## Notes
 
 - **Fork PRs** skip the auto-bump (the token is read-only on forks) but still build-validate.
