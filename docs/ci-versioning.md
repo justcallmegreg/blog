@@ -13,6 +13,11 @@ Versioning is automated through `VERSION.txt` (a bare `MAJOR.MINOR.PATCH`):
 
 (`major` takes precedence over `patch` if both labels are present.)
 
+Release bumps are computed from the **last published `vX.Y.Z` tag**, not the PR's
+`VERSION.txt` — the per-commit PATCH previews inflate `VERSION.txt`, and that
+inflation would otherwise leak into a `patch` release (minor/major reset the patch,
+so they were never affected).
+
 Released images are pushed to `ghcr.io/<owner>/<repo>` with four tags:
 `X.Y.Z` (immutable) · `X.Y` (newest patch of that minor) · `X` (newest of that major) · `latest`.
 

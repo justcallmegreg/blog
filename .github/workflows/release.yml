@@ -42,7 +42,13 @@ jobs:
         id: ver
         run: |
           set -euo pipefail
-          CUR=$(tr -d '[:space:]' < VERSION.txt)
+          # Base the release on the last published tag (the real release history),
+          # NOT VERSION.txt — PR-preview commits bump VERSION.txt's patch, and that
+          # inflation would otherwise leak into a patch-release (minor/major reset
+          # the patch so they were unaffected). Fall back to VERSION.txt for the
+          # very first release, when no tags exist yet.
+          CUR=$(git tag -l 'v*.*.*' | sed 's/^v//' | sort -V | tail -1)
+          CUR=${CUR:-$(tr -d '[:space:]' < VERSION.txt)}
           if [ "$IS_MAJOR" = "true" ]; then MODE=major;
           elif [ "$IS_PATCH" = "true" ]; then MODE=patch-release;
           else MODE=minor; fi
