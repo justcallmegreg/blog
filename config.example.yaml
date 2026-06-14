@@ -19,6 +19,9 @@ effects:
 github:
   username: "justcallmegreg"        # GitHub user summarized on the Contributions tab
   # Optional: set a GITHUB_TOKEN env var to raise API rate limits (not stored here).
+  cache:
+    enabled: true                   # cache contribution data on local disk (per instance)
+    ttlSeconds: 1800                # serve cached; refresh in the background once older than this
 contact:
   enabled: true                     # show the Contact tab + form
   captcha: true                     # require the slide-puzzle captcha before sending (needs images in public/puzzles/)

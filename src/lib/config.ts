@@ -31,6 +31,13 @@ const ConfigSchema = z.object({
   github: z
     .object({
       username: z.string().default('justcallmegreg'),
+      // On-disk cache for the Contributions tab (per instance, under CACHE_DIR).
+      cache: z
+        .object({
+          enabled: z.boolean().default(true),
+          ttlSeconds: z.number().int().default(1800),
+        })
+        .default({}),
     })
     .default({}),
   contact: z
