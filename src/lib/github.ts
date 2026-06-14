@@ -184,6 +184,9 @@ export async function getContributionData(
 export interface ContributionCacheOpts {
   enabled: boolean;
   ttlMs: number;
+  // After a cold fetch errors, don't retry for this long (avoids hammering the
+  // GitHub API / exhausting the rate limit during an outage).
+  errorTtlMs: number;
   cacheDir: string;
   now: () => number;
   fetch: (user: string, token?: string) => Promise<ContributionData>;
@@ -194,6 +197,7 @@ function defaultCacheOpts(): ContributionCacheOpts {
   return {
     enabled: c.enabled,
     ttlMs: c.ttlSeconds * 1000,
+    errorTtlMs: 60_000,
     cacheDir: join(process.env.CACHE_DIR ?? './cache', 'contributions'),
     now: () => Date.now(),
     fetch: getContributionData,
@@ -224,7 +228,7 @@ function writeDiskCache(file: string, data: ContributionData): void {
 }
 
 function isFresh(data: ContributionData, o: ContributionCacheOpts): boolean {
-  return !data.error && o.now() - data.fetchedAt < o.ttlMs;
+  return data.error == null && o.now() - data.fetchedAt < o.ttlMs;
 }
 
 const memMirror = new Map<string, ContributionData>();
@@ -278,7 +282,12 @@ export async function getContributionDataCached(
     return disk;
   }
 
-  // Cold cache: block once. Don't persist errors (so the next open retries).
+  // Cold cache (no file). If a recent cold fetch errored, serve that error
+  // without re-hitting the API for errorTtlMs — an outage shouldn't hammer the
+  // rate limit. (Errors live only in memory; they're never written to disk.)
+  if (mem && mem.error != null && o.now() - mem.fetchedAt < o.errorTtlMs) return mem;
+
+  // Block once, fetch, persist (don't write errors so the next open retries).
   const data = await o.fetch(user, token);
   memMirror.set(user, data);
   if (!data.error) writeDiskCache(file, data);

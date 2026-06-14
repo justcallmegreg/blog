@@ -69,6 +69,16 @@ describe('getContributionDataCached — disk SWR', () => {
     expect(written.fetchedAt).toBe(NOW - 5000);
   });
 
+  it('cold error: backs off — serves the cached error without refetching within errorTtlMs', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(sample('u', NOW, { error: 'boom' }));
+    const d1 = await getContributionDataCached('u', undefined, base(fetchFn, { errorTtlMs: 60000 }));
+    expect(d1.error).toBe('boom');
+    const d2 = await getContributionDataCached('u', undefined, base(fetchFn, { errorTtlMs: 60000 }));
+    expect(d2.error).toBe('boom');
+    expect(fetchFn).toHaveBeenCalledTimes(1); // second call served the cached error, no refetch
+    expect(existsSync(join(dir, 'u.json'))).toBe(false); // errors never written to disk
+  });
+
   it('single-flight: two stale reads trigger only one refresh', async () => {
     writeFileSync(join(dir, 'u.json'), JSON.stringify(sample('u', NOW - 5000)));
     let resolve!: (v: ContributionData) => void;
