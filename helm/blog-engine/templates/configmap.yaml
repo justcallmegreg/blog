@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "blog-engine.fullname" . }}
+  labels:
+    {{- include "blog-engine.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- $config := deepCopy .Values.config -}}
+    {{- if and .Values.matomo.enabled .Values.matomo.ingress.host (hasKey $config "analytics") -}}
+    {{- if not $config.analytics.matomoUrl -}}
+    {{- $_ := set $config.analytics "matomoUrl" (printf "https://%s" .Values.matomo.ingress.host) -}}
+    {{- end -}}
+    {{- end -}}
+    {{ $config | toYaml | nindent 4 }}

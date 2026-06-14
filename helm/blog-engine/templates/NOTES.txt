@@ -1,0 +1,18 @@
+{{ .Chart.Name }} deployed as release "{{ .Release.Name }}".
+
+Reach the blog:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+  kubectl port-forward svc/{{ include "blog-engine.fullname" . }} 8080:{{ .Values.service.port }}
+  then open http://localhost:8080  (version probe: /version)
+{{- end }}
+
+Captcha note: the slide-puzzle captcha + rate-limiter are in-memory per pod.
+With replicaCount > 1 ({{ .Values.replicaCount }}), enable sticky routing at the
+ingress (e.g. nginx: nginx.ingress.kubernetes.io/affinity: cookie) or run a
+single replica, or captcha verification may hit a different pod and fail.
+{{- if .Values.matomo.enabled }}
+
+Matomo is enabled — see its notes; then set config.analytics.enabled=true and siteId.
+{{- end }}
