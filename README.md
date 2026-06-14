@@ -1,5 +1,8 @@
 # Blog Engine
 
+[![Release](https://img.shields.io/github/v/release/justcallmegreg/blog?sort=semver&label=release)](https://github.com/justcallmegreg/blog/releases)
+[![Release pipeline](https://github.com/justcallmegreg/blog/actions/workflows/release.yml/badge.svg)](https://github.com/justcallmegreg/blog/actions/workflows/release.yml)
+
 A stateless, containerized **Astro SSR** blog engine with a RobCo/Pip-Boy terminal aesthetic.
 Content lives in a **separate git repo** organized as `YYYY/MM/DD/<slug>.md` (with a sibling
 `assets/` dir per day). The engine periodically `git pull`s that repo and renders markdown
