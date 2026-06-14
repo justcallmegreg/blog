@@ -141,7 +141,7 @@ Secrets and runtime settings live in the environment, never in `config.yaml`:
 | `PORT` / `HOST` | Server bind address (read by the `@astrojs/node` server; default port `4321`). |
 | `CONTENT_REPO_TOKEN` | Read-only token for a **private** content repo; spliced into the clone URL. |
 | `CONTENT_LOCAL_DIR` | Dev mode: serve a local content folder directly instead of cloning (see below). |
-| `CACHE_DIR` | Where the content repo is cloned (ephemeral; defaults to a temp dir). |
+| `CACHE_DIR` | Where the content repo is cloned + the Contributions cache is stored (ephemeral; defaults to a temp dir). |
 | `GITHUB_TOKEN` | Optional: raises GitHub API rate limits for the Contributions tab. |
 | `CONTACT_WEBHOOK_URL` | Where the Contact form POSTs its JSON. Unset → logged server-side ("stage mode"). |
 | `CV_WEBHOOK_URL` | Where Request-CV POSTs its JSON. Unset → logged server-side. |
@@ -150,6 +150,10 @@ Secrets and runtime settings live in the environment, never in `config.yaml`:
 
 Both webhook payloads are plain JSON, so you can wire them to Zapier, a mailer, or your own
 endpoint — the engine itself sends no email and stores no submissions.
+
+The Contributions tab caches the GitHub data on local disk under `CACHE_DIR/contributions/`
+(stale-while-revalidate; tunable via `github.cache.enabled` / `github.cache.ttlSeconds`), so the
+tab opens fast and survives restarts — each instance keeps its own cache.
 
 ## Analytics & privacy
 
