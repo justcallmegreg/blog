@@ -4,6 +4,16 @@ Deploys the stateless blog engine, with an optional self-hosted Matomo + MariaDB
 
 ## Install
 
+From the published OCI artifact on GHCR (pushed by the release workflow):
+
+```bash
+helm install blog oci://ghcr.io/OWNER/charts/blog-engine --version X.Y.Z \
+  --set image.repository=ghcr.io/OWNER/REPO \
+  -f my-values.yaml
+```
+
+Or from a local checkout of this repo:
+
 ```bash
 helm dependency build helm/blog-engine
 helm install blog helm/blog-engine \
