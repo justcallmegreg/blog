@@ -95,6 +95,7 @@ jobs:
           version: v3.14.4
 
       - name: Package + push Helm chart to GHCR (OCI)
+        id: chart
         run: |
           set -euo pipefail
           NEXT="${{ steps.ver.outputs.next }}"
@@ -105,4 +106,25 @@ jobs:
           helm package helm/blog-engine --version "$NEXT" --app-version "$NEXT" -d /tmp/chart
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
           helm push "/tmp/chart/blog-engine-${NEXT}.tgz" "oci://ghcr.io/${OWNER}/charts"
+          {
+            echo "tgz=/tmp/chart/blog-engine-${NEXT}.tgz"
+            echo "repo=ghcr.io/${OWNER}/charts/blog-engine"
+          } >> "$GITHUB_OUTPUT"
           echo "Published chart: oci://ghcr.io/${OWNER}/charts/blog-engine:${NEXT}"
+
+      - name: GitHub Release (attach chart .tgz)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.next }}
+          name: v${{ steps.ver.outputs.next }}
+          generate_release_notes: true
+          append_body: true
+          files: ${{ steps.chart.outputs.tgz }}
+          body: |
+            **Container image:** `${{ steps.img.outputs.name }}:${{ steps.ver.outputs.next }}`
+            **Helm chart (OCI):** `oci://${{ steps.chart.outputs.repo }}:${{ steps.ver.outputs.next }}`
+
+            Install the chart:
+            ```
+            helm install blog oci://${{ steps.chart.outputs.repo }} --version ${{ steps.ver.outputs.next }}
+            ```
