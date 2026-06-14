@@ -5,7 +5,7 @@
 
 ## Summary
 
-A Helm umbrella chart, `helm/gregco-blog`, that deploys the stateless blog engine
+A Helm umbrella chart, `helm/blog-engine`, that deploys the stateless blog engine
 (Deployment + Service + optional Ingress, config via ConfigMap, secrets via Secret) and,
 optionally (`matomo.enabled`), a **hand-rolled local Matomo + MariaDB subchart** using the same
 official images as the project's `docker-compose.matomo.example.yml`. Probes use the engine's
@@ -43,7 +43,7 @@ sticky routing (ingress cookie affinity) when running more than one replica.
 ## Chart layout
 
 ```
-helm/gregco-blog/
+helm/blog-engine/
   Chart.yaml                 # type: application; appVersion tracks the app; dep → matomo (condition)
   values.yaml
   templates/
@@ -160,7 +160,7 @@ matomo:
 
 ## Testing
 
-- **`helm lint helm/gregco-blog`** — passes (umbrella + subchart).
+- **`helm lint helm/blog-engine`** — passes (umbrella + subchart).
 - **`helm template`** rendered in three configurations, each asserted with `grep`/`yaml` checks:
   1. defaults → blog Deployment/Service/ConfigMap/Secret/PDB present; **no** Matomo resources;
      probes hit `/version`; Service has `sessionAffinity: ClientIP`.
@@ -170,13 +170,13 @@ matomo:
      host; **no** chart-managed Secret; Deployment `envFrom` references `mysecret`.
 - **`kubeconform`** (if installed) over the rendered manifests for schema validity; otherwise note
   it as a CI/cluster-side check.
-- A `helm/gregco-blog/README.md` with install/usage + the captcha-affinity caveat; a documented
+- A `helm/blog-engine/README.md` with install/usage + the captcha-affinity caveat; a documented
   `helm install --dry-run` walkthrough. (No live cluster in this environment.)
 
 ## Files
 
-- Create: the chart tree above under `helm/gregco-blog/` (umbrella templates + `charts/matomo/`),
-  `helm/gregco-blog/README.md`, and `test/helm/render.test.ts` (or a bash script run from CI)
+- Create: the chart tree above under `helm/blog-engine/` (umbrella templates + `charts/matomo/`),
+  `helm/blog-engine/README.md`, and `test/helm/render.test.ts` (or a bash script run from CI)
   that shells out to `helm template`/`helm lint` and asserts the three render configurations.
 - Modify: top-level `README.md` (a short "Deploy with Helm" pointer).
 
