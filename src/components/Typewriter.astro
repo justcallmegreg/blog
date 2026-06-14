@@ -20,13 +20,30 @@
     cursor.textContent = ' ';
     root.appendChild(cursor);
 
-    let ni = 0, ci = 0;
+    let ni = 0, ci = 0, revealed = 0;
     let done = false;
+
+    // Accelerate as the reader gets further in, so long posts aren't tedious:
+    // the first 350 chars type at the original pace, the next 500 at 2x, the
+    // next 1000 at 3x, then the rest streams at "lightning" speed. Speed is
+    // scaled by revealing more characters per tick (the 12ms cadence is kept).
+    const total = nodes.reduce((sum, x) => sum + x.full.length, 0);
+    const lightningStep = Math.max(80, Math.ceil((total - 1850) / 10));
+    function stepFor(r: number): number {
+      if (r < 350) return 1;   // as-is
+      if (r < 850) return 2;   // next 500 → 2x
+      if (r < 1850) return 3;  // next 1000 → 3x
+      return lightningStep;    // the rest → lightning
+    }
     function reveal() {
-      if (ni >= nodes.length) { finish(); return; }
-      const cur = nodes[ni];
-      cur.node.data = cur.full.slice(0, ++ci);
-      if (ci >= cur.full.length) { ni++; ci = 0; }
+      let step = stepFor(revealed);
+      while (step-- > 0) {
+        if (ni >= nodes.length) { finish(); return; }
+        const cur = nodes[ni];
+        cur.node.data = cur.full.slice(0, ++ci);
+        revealed++;
+        if (ci >= cur.full.length) { ni++; ci = 0; }
+      }
     }
     function finish() {
       if (done) return;
