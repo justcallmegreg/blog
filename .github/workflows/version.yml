@@ -1,0 +1,57 @@
+name: pr-version-and-validate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+concurrency:
+  group: pr-version-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  version-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Compute + commit PATCH bump
+        # Skip on fork PRs: GITHUB_TOKEN is read-only there and can't push.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          set -euo pipefail
+          BASE=$(git show origin/main:VERSION.txt | tr -d '[:space:]')   # X.Y.0
+          PATCH=$(git rev-list --count --invert-grep --grep='\[version-bump\]' origin/main..HEAD)
+          NEXT=$(node scripts/next-version.mjs "$BASE" patch "$PATCH")   # -> X.Y.PATCH
+          CUR=$(tr -d '[:space:]' < VERSION.txt 2>/dev/null || echo "")
+          echo "current=$CUR next=$NEXT"
+          if [ "$CUR" != "$NEXT" ]; then
+            echo "$NEXT" > VERSION.txt
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add VERSION.txt
+            git commit -m "chore: set version $NEXT [version-bump] [skip ci]"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          fi
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build both arches (validate, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
