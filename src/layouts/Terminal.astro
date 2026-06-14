@@ -168,16 +168,40 @@ function isActive(href: string): boolean {
         });
       });
       const contactTab = document.getElementById('contact-tab');
+      // Contact opens a modal rather than navigating, so remember which tab was
+      // active and restore it (highlight + focus) when the modal closes.
+      let ctPrevActive: Element | null = null;
       contactTab?.addEventListener('click', () => {
+        ctPrevActive = document.querySelector('.tabs .tab.is-active');
         tabEls.forEach((t) => t.classList.remove('is-active'));
         contactTab.classList.add('is-active');
         (window as any).openContact?.();
       });
+      document.addEventListener('contact:closed', () => {
+        contactTab?.classList.remove('is-active');
+        if (ctPrevActive) {
+          ctPrevActive.classList.add('is-active');
+          (ctPrevActive as HTMLElement).focus?.();
+        }
+        ctPrevActive = null;
+      });
       const newsletterTab = document.getElementById('newsletter-tab');
+      // Newsletter opens a modal rather than navigating, so remember which tab
+      // was active and restore it (highlight + focus) when the modal closes.
+      let nlPrevActive: Element | null = null;
       newsletterTab?.addEventListener('click', () => {
+        nlPrevActive = document.querySelector('.tabs .tab.is-active');
         tabEls.forEach((t) => t.classList.remove('is-active'));
         newsletterTab.classList.add('is-active');
-        (window as any).openNewsletter?.(newsletterTab);
+        (window as any).openNewsletter?.();
+      });
+      document.addEventListener('newsletter:closed', () => {
+        newsletterTab?.classList.remove('is-active');
+        if (nlPrevActive) {
+          nlPrevActive.classList.add('is-active');
+          (nlPrevActive as HTMLElement).focus?.();
+        }
+        nlPrevActive = null;
       });
     </script>
     {cfg.contact.enabled && <ContactOverlay />}

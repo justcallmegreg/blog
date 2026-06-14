@@ -199,7 +199,9 @@
     function close() {
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
-      document.querySelector('.tabs .tab.contact-tab')?.classList.remove('is-active');
+      // The Contact tab is a modal trigger, not a page — let the tab bar drop its
+      // active highlight and restore the tab the user was on before opening.
+      document.dispatchEvent(new CustomEvent('contact:closed'));
     }
     function showForm() {
       preview.hidden = true; form.hidden = false; captchaPanel.hidden = true;

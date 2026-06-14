@@ -151,19 +151,15 @@ const noticeText = noticeParts.join(' ');
     }
 
     function showForm() { form.hidden = false; captchaPanel.hidden = true; statusPanel.hidden = true; errorEl.hidden = true; }
-    // Remember the control that opened the modal (the Newsletter tab) so we can
-    // hand focus back to it on close — the tab bar stays keyboard-navigable.
-    let opener: HTMLElement | null = null;
-    function open(trigger?: HTMLElement) {
-      opener = trigger ?? (document.activeElement as HTMLElement | null);
+    function open() {
       overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
       showForm(); dialIn(); sync(); typeNotice(); input.focus();
     }
     function close() {
       overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true');
-      // Restore focus to the tab the user opened the modal from.
-      if (opener && typeof opener.focus === 'function') opener.focus();
-      opener = null;
+      // The Newsletter tab is a modal trigger, not a page — let the tab bar drop
+      // its active highlight and restore the tab the user was on before opening.
+      document.dispatchEvent(new CustomEvent('newsletter:closed'));
     }
     (window as any).openNewsletter = open;
     document.getElementById('nl-close')?.addEventListener('click', close);
