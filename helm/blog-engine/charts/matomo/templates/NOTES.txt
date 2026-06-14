@@ -1,0 +1,12 @@
+Matomo + MariaDB deployed.
+
+First-run setup (one-time web wizard):
+  1. Reach Matomo (port-forward or its ingress host: {{ .Values.ingress.host }}).
+     kubectl port-forward svc/{{ include "matomo.fullname" . }} 8080:{{ .Values.service.port }}
+  2. Complete the install wizard. Database settings:
+       host:     {{ include "matomo.mariadb.fullname" . }}
+       database: {{ .Values.mariadb.auth.database }}
+       user:     {{ .Values.mariadb.auth.username }}
+       password: (from secret {{ include "matomo.mariadb.secretName" . }})
+  3. Administration -> Privacy -> Anonymize data: mask IPs (>= 2 bytes).
+  4. Add the blog as a website to get its siteId; set blog `config.analytics.siteId`.

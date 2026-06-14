@@ -1,0 +1,41 @@
+# Defaults for the Matomo subchart. Overridden under `matomo:` in the umbrella values.
+enabled: false
+
+image:
+  repository: matomo
+  tag: "5"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+
+persistence:
+  size: 5Gi
+  storageClass: ""
+
+resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  host: analytics.example.com
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+
+mariadb:
+  image:
+    repository: mariadb
+    tag: "11"
+    pullPolicy: IfNotPresent
+  persistence:
+    size: 8Gi
+    storageClass: ""
+  resources: {}
+  auth:
+    existingSecret: ""
+    rootPassword: "change-me-root"
+    database: matomo
+    username: matomo
+    password: "change-me"

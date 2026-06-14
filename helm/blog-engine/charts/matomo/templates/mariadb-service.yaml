@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "matomo.mariadb.fullname" . }}
+  labels:
+    app.kubernetes.io/name: matomo-mariadb
+    {{- include "matomo.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+      targetPort: mysql
+      name: mysql
+  selector:
+    app.kubernetes.io/name: matomo-mariadb
+    app.kubernetes.io/instance: {{ .Release.Name }}
