@@ -9,3 +9,5 @@ config.yaml
 .env.*
 !.env.example
 .DS_Store
+docker-compose.matomo.yml
+helm/blog-engine/charts/*.tgz

@@ -1,0 +1,6 @@
+dependencies:
+- name: matomo
+  repository: file://./charts/matomo
+  version: 0.1.0
+digest: sha256:da982cdbb3733bdf048570a5383d1e30b60f5a431af18f1554149fdba8dd15ba
+generated: "2026-06-14T11:42:45.529571+02:00"

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: blog-engine
+description: Stateless containerized Astro SSR blog engine, with optional self-hosted Matomo analytics
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: matomo
+    version: 0.1.0
+    repository: "file://./charts/matomo"
+    condition: matomo.enabled

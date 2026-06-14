@@ -1,0 +1,100 @@
+# -- Blog engine image (defaults to the chart appVersion when tag is empty).
+image:
+  repository: ghcr.io/OWNER/REPO
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  # ClientIP keeps a visitor on the pod that issued their captcha. Behind an
+  # ingress this is best-effort — prefer ingress cookie affinity at scale.
+  sessionAffinity: ClientIP
+
+ingress:
+  enabled: false
+  className: ""
+  host: blog.example.com
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# -- Rendered verbatim into /config/config.yaml. This IS the engine config.
+config:
+  site:
+    title: "Blog Engine"
+    description: "Personal log"
+  content:
+    repo: "https://github.com/you/blog-content.git"
+    branch: "main"
+    syncIntervalSeconds: 300
+  analytics:
+    enabled: false
+    matomoUrl: ""
+    siteId: 1
+
+secrets:
+  create: true
+  existingSecret: ""
+  data:
+    CONTENT_REPO_TOKEN: ""
+    CONTACT_WEBHOOK_URL: ""
+    CV_WEBHOOK_URL: ""
+    GITHUB_TOKEN: ""
+
+# -- Optional Matomo + MariaDB subchart (see charts/matomo/values.yaml).
+matomo:
+  enabled: false
+  image:
+    repository: matomo
+    tag: "5"
+  persistence:
+    size: 5Gi
+  ingress:
+    enabled: false
+    host: analytics.example.com
+  mariadb:
+    auth:
+      rootPassword: "change-me-root"
+      database: matomo
+      username: matomo
+      password: "change-me"
+    persistence:
+      size: 8Gi
