@@ -79,3 +79,171 @@ const n = getConfig().newsletter;
   @keyframes nl-sweep { 0% { left: -45%; } 60%, 100% { left: 130%; } }
   @keyframes nl-glow { 0%, 100% { box-shadow: 0 0 4px var(--accent); } 50% { box-shadow: 0 0 16px var(--accent); } }
 </style>
+
+<script>
+  const overlay = document.getElementById('nl-overlay') as HTMLElement | null;
+  if (overlay) {
+    const form = document.getElementById('nl-form') as HTMLFormElement;
+    const captchaPanel = document.getElementById('nl-captcha') as HTMLElement;
+    const statusPanel = document.getElementById('nl-status') as HTMLElement;
+    const errorEl = document.getElementById('nl-error') as HTMLElement;
+    const statusLine = document.getElementById('nl-status-line') as HTMLElement;
+    const resultEl = document.getElementById('nl-result') as HTMLElement;
+    const doneBtn = document.getElementById('nl-done') as HTMLButtonElement;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const muted = () => localStorage.getItem('blog-sound-muted') === '1';
+
+    const input = document.getElementById('nl-email') as HTMLInputElement;
+    const text = document.getElementById('nl-email-text') as HTMLElement;
+    const box = input.closest('.field-box') as HTMLElement;
+    const sync = () => { text.textContent = input.value; };
+    input.addEventListener('input', sync);
+    input.addEventListener('focus', () => box.classList.add('is-focused'));
+    input.addEventListener('blur', () => box.classList.remove('is-focused'));
+    input.addEventListener('keydown', (e) => {
+      if (!muted() && (e.key.length === 1 || e.key === 'Backspace')) document.dispatchEvent(new Event('ui:blip'));
+    });
+
+    function dialIn() {
+      if (muted() || reduce) return;
+      let ctx: AudioContext;
+      try { ctx = new AudioContext(); } catch { return; }
+      const t0 = ctx.currentTime;
+      const beep = (freqs: number[], start: number, dur: number) => {
+        for (const fr of freqs) {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = fr;
+          g.gain.setValueAtTime(0.0001, t0 + start);
+          g.gain.exponentialRampToValueAtTime(0.08, t0 + start + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t0 + start); osc.stop(t0 + start + dur + 0.02);
+        }
+      };
+      [[697, 1209], [770, 1336], [852, 1477], [941, 1209]].forEach((pair, i) => beep(pair, i * 0.18, 0.12));
+      setTimeout(() => ctx.close().catch(() => {}), 1200);
+    }
+
+    function showForm() { form.hidden = false; captchaPanel.hidden = true; statusPanel.hidden = true; errorEl.hidden = true; }
+    function open() {
+      overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
+      showForm(); dialIn(); sync(); input.focus();
+    }
+    function close() { overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true'); }
+    (window as any).openNewsletter = open;
+    document.getElementById('nl-close')?.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let action: 'subscribe' | 'unsubscribe' = 'subscribe';
+    function start(a: 'subscribe' | 'unsubscribe') {
+      const email = input.value.trim();
+      if (!email || !EMAIL_RE.test(email)) { errorEl.textContent = '> a valid email is required'; errorEl.hidden = false; return; }
+      action = a;
+      showCaptcha();
+    }
+    document.getElementById('nl-subscribe')?.addEventListener('click', () => start('subscribe'));
+    document.getElementById('nl-unsubscribe')?.addEventListener('click', () => start('unsubscribe'));
+
+    // --- captcha slider (mirrors Contact/CV; nl- ids) ---
+    const puzzleBg = document.getElementById('nl-puzzle-bg') as HTMLImageElement;
+    const puzzlePiece = document.getElementById('nl-puzzle-piece') as HTMLImageElement;
+    const puzzleTrack = document.getElementById('nl-puzzle-track') as HTMLElement;
+    const puzzleHandle = document.getElementById('nl-puzzle-handle') as HTMLElement;
+    const captchaMsg = document.getElementById('nl-captcha-msg') as HTMLElement;
+    let captchaToken: string | null = null;
+    let puzzle: { token: string; pieceSize: number; width: number } | null = null;
+    let dragging = false;
+    let currentX = 0;
+
+    function typeLine(t: string): Promise<void> {
+      return new Promise((resolve) => {
+        if (reduce) { statusLine.textContent = t; resolve(); return; }
+        statusLine.textContent = '';
+        let i = 0;
+        const timer = setInterval(() => {
+          statusLine.textContent = t.slice(0, ++i);
+          if (i >= t.length) { clearInterval(timer); resolve(); }
+        }, 45);
+      });
+    }
+
+    function fail(msg: string) {
+      showForm();
+      errorEl.textContent = '> REQUEST FAILED: ' + msg;
+      errorEl.hidden = false;
+    }
+
+    async function submit() {
+      form.hidden = true; captchaPanel.hidden = true; statusPanel.hidden = false;
+      resultEl.hidden = true; doneBtn.hidden = true;
+      await typeLine('TRANSFERRING MESSAGE SEQUENCE...');
+      try {
+        const res = await fetch('/api/newsletter', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: input.value.trim(), action, captchaToken }),
+        });
+        if (!res.ok) { const d = await res.json().catch(() => ({})); fail(d.error || String(res.status)); return; }
+        await typeLine('SEQUENCE TRANSFERRED...');
+        resultEl.textContent = action === 'subscribe'
+          ? '> SUBSCRIBED — a confirmation email is on its way'
+          : '> UNSUBSCRIBED — you have been removed';
+        resultEl.hidden = false; doneBtn.hidden = false;
+      } catch { fail('network error'); }
+    }
+
+    function maxX() { return puzzle ? puzzle.width - puzzle.pieceSize : 0; }
+    function setX(px: number) {
+      const x = Math.max(0, Math.min(px, maxX()));
+      puzzlePiece.style.transform = `translateX(${x}px)`;
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      puzzleHandle.style.left = (maxX() > 0 ? (x / maxX()) * handleMax : 0) + 'px';
+      return x;
+    }
+    async function loadPuzzle() {
+      captchaMsg.hidden = true;
+      puzzleHandle.style.left = '0px';
+      puzzlePiece.style.transform = 'translateX(0px)';
+      currentX = 0;
+      try {
+        const res = await fetch('/api/captcha');
+        const data = await res.json();
+        if (!data.active) { captchaToken = null; submit(); return; }
+        puzzle = { token: data.token, pieceSize: data.pieceSize, width: data.width };
+        puzzleBg.src = data.background;
+        puzzlePiece.src = data.piece;
+        puzzlePiece.style.top = data.pieceY + 'px';
+        puzzlePiece.style.width = data.pieceSize + 'px';
+        puzzlePiece.style.height = data.pieceSize + 'px';
+      } catch { captchaToken = null; submit(); }
+    }
+    function showCaptcha() { form.hidden = true; statusPanel.hidden = true; captchaPanel.hidden = false; loadPuzzle(); }
+
+    puzzleHandle.addEventListener('pointerdown', (e) => { dragging = true; puzzleHandle.setPointerCapture(e.pointerId); });
+    puzzleHandle.addEventListener('pointermove', (e) => {
+      if (!dragging || !puzzle) return;
+      const rect = puzzleTrack.getBoundingClientRect();
+      const handleMax = puzzleTrack.clientWidth - puzzleHandle.offsetWidth;
+      const ratio = handleMax > 0 ? Math.max(0, Math.min(1, (e.clientX - rect.left) / handleMax)) : 0;
+      currentX = setX(ratio * maxX());
+    });
+    puzzleHandle.addEventListener('pointerup', async () => {
+      if (!dragging || !puzzle) return;
+      dragging = false;
+      try {
+        const res = await fetch('/api/captcha', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: puzzle.token, x: Math.round(currentX) }),
+        });
+        const data = await res.json();
+        if (data.ok) { captchaToken = puzzle.token; submit(); }
+        else { captchaMsg.textContent = '> ACCESS DENIED — RECALIBRATING'; captchaMsg.hidden = false; loadPuzzle(); }
+      } catch { captchaMsg.textContent = '> CHECKPOINT OFFLINE — RETRY'; captchaMsg.hidden = false; }
+    });
+    puzzleHandle.addEventListener('pointercancel', () => { dragging = false; });
+    document.getElementById('nl-captcha-back')?.addEventListener('click', showForm);
+    doneBtn.addEventListener('click', () => { window.location.href = '/'; });
+  }
+</script>
