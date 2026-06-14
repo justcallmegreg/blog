@@ -15,22 +15,26 @@ permissions:
   pull-requests: read
 
 jobs:
-  release:
+  # 1) Bump VERSION.txt + tag on main, expose the version + image name.
+  prepare:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
       IS_MAJOR: ${{ contains(github.event.pull_request.labels.*.name, 'major') }}
+    outputs:
+      version: ${{ steps.ver.outputs.next }}
+      major: ${{ steps.ver.outputs.major }}
+      minor: ${{ steps.ver.outputs.minor }}
+      sha: ${{ steps.commit.outputs.sha }}
+      image: ${{ steps.img.outputs.name }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-          # The version-bump commit/tag is pushed to the protected `main`. The
-          # default GITHUB_TOKEN (github-actions[bot]) is NOT an admin and can't
-          # bypass the branch ruleset, and a personal repo can't add the Actions
-          # app to the bypass list. So push as the repo owner via a PAT
-          # (RELEASE_TOKEN, contents:write) — the owner is an admin and bypasses.
+          # Push the version-bump commit/tag to protected main as the repo owner
+          # (admin → bypasses the ruleset); the default GITHUB_TOKEN can't.
           token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Compute next release version
@@ -67,7 +71,25 @@ jobs:
         id: img
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
+  # 2) Build each arch on a NATIVE runner (no QEMU) and push by digest (untagged).
+  build:
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout main (bumped)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -76,24 +98,77 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build + push multi-arch with moving tags
+      - name: Build + push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ steps.img.outputs.name }}:${{ steps.ver.outputs.next }}
-            ${{ steps.img.outputs.name }}:${{ steps.ver.outputs.minor }}
-            ${{ steps.img.outputs.name }}:${{ steps.ver.outputs.major }}
-            ${{ steps.img.outputs.name }}:latest
+          platforms: ${{ matrix.platform }}
           build-args: |
-            SOURCE_COMMIT=${{ steps.commit.outputs.sha }}
+            SOURCE_COMMIT=${{ needs.prepare.outputs.sha }}
           labels: |
-            org.opencontainers.image.version=${{ steps.ver.outputs.next }}
-            org.opencontainers.image.revision=${{ steps.commit.outputs.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
+          outputs: type=image,name=${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Export digest
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Artifact-safe platform name
+        id: pname
+        run: echo "name=$(echo '${{ matrix.platform }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ steps.pname.outputs.name }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # 3) Merge the per-arch digests into the moving tags, push the chart, cut the Release.
+  merge:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (bumped)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest with moving tags
+        working-directory: /tmp/digests
+        run: |
+          set -euo pipefail
+          IMAGE='${{ needs.prepare.outputs.image }}'
+          docker buildx imagetools create \
+            -t "$IMAGE:${{ needs.prepare.outputs.version }}" \
+            -t "$IMAGE:${{ needs.prepare.outputs.minor }}" \
+            -t "$IMAGE:${{ needs.prepare.outputs.major }}" \
+            -t "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
+          docker buildx imagetools inspect "$IMAGE:${{ needs.prepare.outputs.version }}"
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -104,10 +179,10 @@ jobs:
         id: chart
         run: |
           set -euo pipefail
-          NEXT="${{ steps.ver.outputs.next }}"
+          NEXT="${{ needs.prepare.outputs.version }}"
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
-          # Version the chart + its appVersion to the release, so `helm install`
-          # defaults the image tag (image.tag -> .Chart.AppVersion) to this version.
+          # Version the chart + appVersion to the release so `helm install` defaults
+          # the image tag (image.tag -> .Chart.AppVersion) to this version.
           helm dependency build helm/blog-engine
           helm package helm/blog-engine --version "$NEXT" --app-version "$NEXT" -d /tmp/chart
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -116,21 +191,20 @@ jobs:
             echo "tgz=/tmp/chart/blog-engine-${NEXT}.tgz"
             echo "repo=ghcr.io/${OWNER}/charts/blog-engine"
           } >> "$GITHUB_OUTPUT"
-          echo "Published chart: oci://ghcr.io/${OWNER}/charts/blog-engine:${NEXT}"
 
       - name: GitHub Release (attach chart .tgz)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.ver.outputs.next }}
-          name: v${{ steps.ver.outputs.next }}
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name: v${{ needs.prepare.outputs.version }}
           generate_release_notes: true
           append_body: true
           files: ${{ steps.chart.outputs.tgz }}
           body: |
-            **Container image:** `${{ steps.img.outputs.name }}:${{ steps.ver.outputs.next }}`
-            **Helm chart (OCI):** `oci://${{ steps.chart.outputs.repo }}:${{ steps.ver.outputs.next }}`
+            **Container image:** `${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.version }}` (linux/amd64 + linux/arm64)
+            **Helm chart (OCI):** `oci://${{ steps.chart.outputs.repo }}:${{ needs.prepare.outputs.version }}`
 
             Install the chart:
             ```
-            helm install blog oci://${{ steps.chart.outputs.repo }} --version ${{ steps.ver.outputs.next }}
+            helm install blog oci://${{ steps.chart.outputs.repo }} --version ${{ needs.prepare.outputs.version }}
             ```
