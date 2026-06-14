@@ -125,6 +125,7 @@ img { max-width: 100%; }
   font-size: 0.78rem;
 }
 .conn-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-os { opacity: 0.6; }
 @keyframes conn-fade { from { opacity: 0; } to { opacity: 1; } }
 .topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { font-size: 1.4rem; }
