@@ -5,6 +5,7 @@ import ClickSound from '../components/ClickSound.astro';
 import CRTGlitch from '../components/CRTGlitch.astro';
 import VaultBoy from '../components/VaultBoy.astro';
 import ContactOverlay from '../components/ContactOverlay.astro';
+import NewsletterOverlay from '../components/NewsletterOverlay.astro';
 import CvRequestOverlay from '../components/CvRequestOverlay.astro';
 import ConsentBanner from '../components/ConsentBanner.astro';
 import Analytics from '../components/Analytics.astro';
@@ -87,6 +88,9 @@ function isActive(href: string): boolean {
           {cfg.contact.enabled && (
             <button type="button" class="tab contact-tab" id="contact-tab">Contact</button>
           )}
+          {cfg.newsletter.enabled && (
+            <button type="button" class="tab newsletter-tab" id="newsletter-tab">Newsletter</button>
+          )}
         </nav>
         <div class="social">
           {cfg.social.linkedin && (
@@ -157,7 +161,7 @@ function isActive(href: string): boolean {
       // reload also sets it server-side). The click sound fires via ClickSound.
       const tabEls = document.querySelectorAll('.tabs .tab');
       tabEls.forEach((tab) => {
-        if (tab.id === 'contact-tab') return; // contact-tab has its own handler below
+        if (tab.id === 'contact-tab' || tab.id === 'newsletter-tab') return; // own handlers below
         tab.addEventListener('click', () => {
           tabEls.forEach((t) => t.classList.remove('is-active'));
           tab.classList.add('is-active');
@@ -169,8 +173,15 @@ function isActive(href: string): boolean {
         contactTab.classList.add('is-active');
         (window as any).openContact?.();
       });
+      const newsletterTab = document.getElementById('newsletter-tab');
+      newsletterTab?.addEventListener('click', () => {
+        tabEls.forEach((t) => t.classList.remove('is-active'));
+        newsletterTab.classList.add('is-active');
+        (window as any).openNewsletter?.();
+      });
     </script>
     {cfg.contact.enabled && <ContactOverlay />}
+    {cfg.newsletter.enabled && <NewsletterOverlay />}
     {cfg.about.enabled && <CvRequestOverlay />}
     <ConsentBanner />
     <Analytics />

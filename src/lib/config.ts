@@ -84,6 +84,16 @@ const ConfigSchema = z.object({
       siteId: z.number().int().default(1),
     })
     .default({}),
+  // Newsletter subscribe/unsubscribe. Forwards to the NEWSLETTER_SUBSCRIBE_WEBHOOK_URL /
+  // NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL env vars; reuses the contact captcha.
+  newsletter: z
+    .object({
+      enabled: z.boolean().default(true),
+      summaryDays: z.number().int().default(7),
+      timezone: z.string().default(''),
+      schedule: z.string().default(''),
+    })
+    .default({}),
 });
 // Note: the HTTP port/host are controlled by the PORT/HOST env vars (read by the
 // @astrojs/node standalone server), not by this file — see the Dockerfile and
