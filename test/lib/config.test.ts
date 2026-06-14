@@ -42,6 +42,8 @@ content:
       vaultBoyLoops: 3,
     });
     expect(cfg.github.username).toBe('justcallmegreg');
+    expect(cfg.github.cache.enabled).toBe(true);
+    expect(cfg.github.cache.ttlSeconds).toBe(1800);
     expect(cfg.contact.enabled).toBe(true);
     expect(cfg.contact.captcha).toBe(true);
     expect(cfg.social.github).toBe('justcallmegreg');

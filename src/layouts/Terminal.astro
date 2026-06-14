@@ -177,7 +177,7 @@ function isActive(href: string): boolean {
       newsletterTab?.addEventListener('click', () => {
         tabEls.forEach((t) => t.classList.remove('is-active'));
         newsletterTab.classList.add('is-active');
-        (window as any).openNewsletter?.();
+        (window as any).openNewsletter?.(newsletterTab);
       });
     </script>
     {cfg.contact.enabled && <ContactOverlay />}
