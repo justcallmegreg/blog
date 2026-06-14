@@ -53,3 +53,11 @@ analytics:
   enabled: false                       # set true once Matomo is reachable
   matomoUrl: "https://analytics.example.com"   # your Matomo base URL (no trailing /matomo.php)
   siteId: 1                            # the Matomo site id for this blog
+newsletter:
+  enabled: true
+  summaryDays: 7                       # "best posts from the last N days"
+  timezone: "CET (Europe/Budapest)"    # shown in the modal blurb
+  schedule: "every Monday ~09:00"      # shown in the modal blurb
+  # Subscribe/unsubscribe POST to the NEWSLETTER_SUBSCRIBE_WEBHOOK_URL /
+  # NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL env vars (not stored here). Stage-mode
+  # logs the request when a URL is unset. Captcha reuses contact.captcha.

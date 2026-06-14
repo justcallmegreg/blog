@@ -56,6 +56,10 @@ content:
     expect(cfg.analytics.enabled).toBe(false);
     expect(cfg.analytics.matomoUrl).toBe('');
     expect(cfg.analytics.siteId).toBe(1);
+    expect(cfg.newsletter.enabled).toBe(true);
+    expect(cfg.newsletter.summaryDays).toBe(7);
+    expect(cfg.newsletter.timezone).toBe('');
+    expect(cfg.newsletter.schedule).toBe('');
   });
 
   it('throws a clear error when required fields are missing', () => {
