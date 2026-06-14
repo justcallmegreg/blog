@@ -2,9 +2,11 @@ import { buildHeatmap, ymd, type Heatmap } from './heatmap';
 // Re-exported for existing consumers/tests that import these from this module.
 export { buildHeatmap } from './heatmap';
 export type { Heatmap, HeatCell } from './heatmap';
+import { mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { getConfig } from './config';
 
 const API = 'https://api.github.com';
-const TTL_MS = 30 * 60 * 1000; // cache GitHub data for 30 minutes
 
 export interface Repo {
   name: string;
@@ -177,21 +179,118 @@ export async function getContributionData(
   }
 }
 
-const cache = new Map<string, ContributionData>();
+// ---- disk-backed stale-while-revalidate cache --------------------------------
 
-/** Cached wrapper: serves data for up to TTL_MS; refetches successful data only. */
+export interface ContributionCacheOpts {
+  enabled: boolean;
+  ttlMs: number;
+  cacheDir: string;
+  now: () => number;
+  fetch: (user: string, token?: string) => Promise<ContributionData>;
+}
+
+function defaultCacheOpts(): ContributionCacheOpts {
+  const c = getConfig().github.cache;
+  return {
+    enabled: c.enabled,
+    ttlMs: c.ttlSeconds * 1000,
+    cacheDir: join(process.env.CACHE_DIR ?? './cache', 'contributions'),
+    now: () => Date.now(),
+    fetch: getContributionData,
+  };
+}
+
+function cachePath(dir: string, user: string): string {
+  return join(dir, `${user.replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
+}
+
+function readDiskCache(file: string): ContributionData | null {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as ContributionData;
+  } catch {
+    return null;
+  }
+}
+
+function writeDiskCache(file: string, data: ContributionData): void {
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    const tmp = `${file}.tmp`;
+    writeFileSync(tmp, JSON.stringify(data));
+    renameSync(tmp, file); // atomic replace
+  } catch {
+    // best-effort: a failed write just means the next read is a miss
+  }
+}
+
+function isFresh(data: ContributionData, o: ContributionCacheOpts): boolean {
+  return !data.error && o.now() - data.fetchedAt < o.ttlMs;
+}
+
+const memMirror = new Map<string, ContributionData>();
+const refreshing = new Map<string, Promise<void>>();
+
+function backgroundRefresh(
+  user: string,
+  token: string | undefined,
+  o: ContributionCacheOpts,
+  file: string
+): void {
+  if (refreshing.has(user)) return; // single-flight
+  const p = (async () => {
+    try {
+      const data = await o.fetch(user, token);
+      if (!data.error) {
+        writeDiskCache(file, data);
+        memMirror.set(user, data);
+      }
+    } catch {
+      // keep the existing file/mirror on failure
+    } finally {
+      refreshing.delete(user);
+    }
+  })();
+  refreshing.set(user, p);
+}
+
+/**
+ * Disk stale-while-revalidate cache: serves the cached file instantly (even when
+ * stale) and refreshes in the background; only a cold (no-file) cache blocks to
+ * fetch. Per instance (file under CACHE_DIR). `opts` is an injectable test seam.
+ */
 export async function getContributionDataCached(
   user: string,
-  token?: string
+  token?: string,
+  opts?: Partial<ContributionCacheOpts>
 ): Promise<ContributionData> {
-  const hit = cache.get(user);
-  if (hit && !hit.error && Date.now() - hit.fetchedAt < TTL_MS) return hit;
-  const data = await getContributionData(user, token);
-  // Cache errors briefly too (short TTL via fetchedAt) to avoid hammering on failure.
-  cache.set(user, data);
+  const o = { ...defaultCacheOpts(), ...opts };
+  if (!o.enabled) return o.fetch(user, token);
+
+  const mem = memMirror.get(user);
+  if (mem && isFresh(mem, o)) return mem;
+
+  const file = cachePath(o.cacheDir, user);
+  const disk = readDiskCache(file);
+  if (disk) {
+    memMirror.set(user, disk);
+    if (isFresh(disk, o)) return disk;
+    backgroundRefresh(user, token, o, file); // serve stale now, refresh for next time
+    return disk;
+  }
+
+  // Cold cache: block once. Don't persist errors (so the next open retries).
+  const data = await o.fetch(user, token);
+  memMirror.set(user, data);
+  if (!data.error) writeDiskCache(file, data);
   return data;
 }
 
 export function __clearGithubCache(): void {
-  cache.clear();
+  memMirror.clear();
+  refreshing.clear();
+}
+
+/** Test helper: resolves once any in-flight background refresh for `user` settles. */
+export async function __contribRefreshSettled(user: string): Promise<void> {
+  await refreshing.get(user);
 }
