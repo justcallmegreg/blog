@@ -4,6 +4,7 @@ description: Stateless containerized Astro SSR blog engine, with optional self-h
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+icon: https://raw.githubusercontent.com/justcallmegreg/blog/main/public/favicon-180.png
 dependencies:
   - name: matomo
     version: 0.1.0
