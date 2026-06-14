@@ -21,6 +21,13 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
+          # Push the bump with a PAT (not the default GITHUB_TOKEN): a PAT push
+          # re-triggers this workflow on the bump commit, so the required
+          # `version-and-build` check lands on the PR head (GITHUB_TOKEN pushes
+          # don't trigger runs). The re-run is idempotent (PATCH excludes
+          # [version-bump] commits → no new commit) and cancel-in-progress
+          # collapses it to one build. Falls back to the default token on forks.
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Fetch main
         run: git fetch origin main
@@ -40,7 +47,7 @@ jobs:
             git config user.name  "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add VERSION.txt
-            git commit -m "chore: set version $NEXT [version-bump] [skip ci]"
+            git commit -m "chore: set version $NEXT [version-bump]"
             git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
           fi
 
