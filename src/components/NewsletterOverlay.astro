@@ -1,0 +1,81 @@
+---
+// Newsletter subscribe/unsubscribe modal: form → slide captcha → typed transfer
+// status. Opened via window.openNewsletter() from the Newsletter tab. Reuses the
+// global terminal/field/puzzle CSS; ids are nl-prefixed to avoid clashing with
+// the Contact/CV overlays.
+import { getConfig } from '../lib/config';
+const n = getConfig().newsletter;
+---
+<div id="nl-overlay" class="contact-overlay" hidden aria-hidden="true">
+  <div class="contact-window" role="dialog" aria-modal="true" aria-label="Newsletter">
+    <button id="nl-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
+
+    <form id="nl-form" class="contact-form" novalidate>
+      <p class="contact-boot">&gt; WEEKLY DISPATCH // SUBSCRIPTION</p>
+      <p class="nl-notice">
+        Subscribe to the weekly summary of the best posts from the last <strong>{n.summaryDays}</strong> days{n.schedule ? (
+          <> — issues arrive <strong>{n.schedule}</strong></>
+        ) : ''}{n.timezone ? (
+          <> (<strong>{n.timezone}</strong>)</>
+        ) : ''}.
+      </p>
+
+      <label class="field">
+        <span class="field-title">EMAIL</span>
+        <span class="field-box" data-field="email">
+          <span class="field-text" id="nl-email-text"></span><span class="cursor field-cursor"> </span>
+          <input class="field-input" id="nl-email" type="text" inputmode="email" autocomplete="off" spellcheck="false" maxlength="320" />
+        </span>
+      </label>
+
+      <p class="contact-error" id="nl-error" hidden></p>
+      <div class="preview-actions">
+        <button class="contact-btn nl-ghost" id="nl-unsubscribe" type="button">UNSUBSCRIBE</button>
+        <button class="contact-btn contact-approve nl-crt" id="nl-subscribe" type="button">SUBSCRIBE</button>
+      </div>
+    </form>
+
+    <div class="contact-captcha" id="nl-captcha" hidden>
+      <p class="contact-boot">&gt; SECURITY CHECK — SLIDE THE PIECE INTO THE GAP</p>
+      <div class="puzzle" id="nl-puzzle">
+        <img class="puzzle-bg" id="nl-puzzle-bg" alt="" />
+        <img class="puzzle-piece" id="nl-puzzle-piece" alt="" />
+      </div>
+      <div class="puzzle-track" id="nl-puzzle-track">
+        <div class="puzzle-handle" id="nl-puzzle-handle">&gt;&gt;</div>
+      </div>
+      <p class="contact-error" id="nl-captcha-msg" hidden></p>
+      <button class="contact-btn" id="nl-captcha-back" type="button">&lt; BACK</button>
+    </div>
+
+    <div class="contact-preview" id="nl-status" hidden>
+      <p class="contact-boot">&gt; <span id="nl-status-line"></span><span class="cursor nl-status-cursor"> </span></p>
+      <p class="nl-result" id="nl-result" hidden></p>
+      <button class="contact-btn contact-approve" id="nl-done" type="button" hidden>CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .nl-notice { color: var(--fg-dim); max-width: 60ch; margin: 0 0 1rem; }
+  .nl-result { color: var(--accent); margin: 0.5rem 0 1rem; }
+  /* Unsubscribe: quiet ghost button. */
+  .nl-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  /* Subscribe: localized CRT effect — scanlines + a periodic beam sweep + glow. */
+  .nl-crt { position: relative; overflow: hidden; }
+  @media (prefers-reduced-motion: no-preference) {
+    .nl-crt { animation: nl-glow 2.2s ease-in-out infinite; }
+    .nl-crt::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+      mix-blend-mode: multiply;
+    }
+    .nl-crt::after {
+      content: ""; position: absolute; top: 0; left: -45%; width: 45%; height: 100%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+      animation: nl-sweep 2.8s linear infinite;
+    }
+  }
+  @keyframes nl-sweep { 0% { left: -45%; } 60%, 100% { left: 130%; } }
+  @keyframes nl-glow { 0%, 100% { box-shadow: 0 0 4px var(--accent); } 50% { box-shadow: 0 0 16px var(--accent); } }
+</style>
