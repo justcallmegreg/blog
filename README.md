@@ -188,6 +188,13 @@ re-syncs on a timer. No volumes are required for content.
 > (`https://github.com/you/blog-content.git`) works. A host `file://` path does **not** — the
 > container can't see your host filesystem. To serve a local folder, use dev mode below.
 
+## Deploy with Helm
+
+A Helm chart lives in [`helm/blog-engine`](helm/blog-engine/) — a stateless blog Deployment
+(HA-ready, `/version` probes, config via ConfigMap, secrets via Secret) with an optional
+self-hosted Matomo + MariaDB subchart (`--set matomo.enabled=true`). See its
+[README](helm/blog-engine/README.md), including the captcha/affinity note for multi-replica setups.
+
 ## Dev mode (serve a local content folder)
 
 To preview your local content repo in the container **without pushing or committing**, mount
