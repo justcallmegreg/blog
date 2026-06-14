@@ -5,6 +5,17 @@
 // the Contact/CV overlays.
 import { getConfig } from '../lib/config';
 const n = getConfig().newsletter;
+
+// Engaging blurb, typed out (with a block cursor) when the modal opens. Built as
+// plain text so the typewriter can reveal it character-by-character; config
+// values are inlined. Server-rendered in full for no-JS / SEO.
+const noticeParts = [
+  `Tune your terminal to the GregCo frequency. Once a week we round up the most signal-worthy posts from the last ${n.summaryDays} days — the builds, the breakages, and the lessons worth keeping — and beam them straight to your inbox.`,
+  `No noise, no spam, no tracking; sever the link any time with a single click.`,
+];
+const when = [n.schedule, n.timezone ? `(${n.timezone})` : ''].filter(Boolean).join(' ').trim();
+if (when) noticeParts.push(`Transmissions go out ${when}.`);
+const noticeText = noticeParts.join(' ');
 ---
 <div id="nl-overlay" class="contact-overlay" hidden aria-hidden="true">
   <div class="contact-window" role="dialog" aria-modal="true" aria-label="Newsletter">
@@ -12,13 +23,7 @@ const n = getConfig().newsletter;
 
     <form id="nl-form" class="contact-form" novalidate>
       <p class="contact-boot">&gt; WEEKLY DISPATCH // SUBSCRIPTION</p>
-      <p class="nl-notice">
-        Subscribe to the weekly summary of the best posts from the last <strong>{n.summaryDays}</strong> days{n.schedule ? (
-          <> — issues arrive <strong>{n.schedule}</strong></>
-        ) : ''}{n.timezone ? (
-          <> (<strong>{n.timezone}</strong>)</>
-        ) : ''}.
-      </p>
+      <p class="nl-notice"><span id="nl-notice-text">{noticeText}</span><span class="cursor nl-notice-cursor" hidden> </span></p>
 
       <label class="field">
         <span class="field-title">EMAIL</span>
@@ -124,10 +129,31 @@ const n = getConfig().newsletter;
       setTimeout(() => ctx.close().catch(() => {}), 1200);
     }
 
+    // Type the blurb out with a trailing block cursor each time the modal opens.
+    const noticeEl = document.getElementById('nl-notice-text') as HTMLElement | null;
+    const noticeCursor = document.querySelector('.nl-notice-cursor') as HTMLElement | null;
+    const noticeFull = noticeEl?.textContent ?? '';
+    let noticeTimer: ReturnType<typeof setInterval> | undefined;
+    function typeNotice() {
+      if (!noticeEl) return;
+      if (noticeTimer) clearInterval(noticeTimer);
+      if (reduce) { noticeEl.textContent = noticeFull; if (noticeCursor) noticeCursor.hidden = true; return; }
+      noticeEl.textContent = '';
+      if (noticeCursor) noticeCursor.hidden = false;
+      let i = 0;
+      noticeTimer = setInterval(() => {
+        noticeEl.textContent = noticeFull.slice(0, ++i);
+        if (i >= noticeFull.length) {
+          clearInterval(noticeTimer);
+          if (noticeCursor) noticeCursor.hidden = true;
+        }
+      }, 16);
+    }
+
     function showForm() { form.hidden = false; captchaPanel.hidden = true; statusPanel.hidden = true; errorEl.hidden = true; }
     function open() {
       overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
-      showForm(); dialIn(); sync(); input.focus();
+      showForm(); dialIn(); sync(); typeNotice(); input.focus();
     }
     function close() { overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true'); }
     (window as any).openNewsletter = open;
