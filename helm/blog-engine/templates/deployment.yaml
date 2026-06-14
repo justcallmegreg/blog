@@ -12,7 +12,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ .Values.config | toYaml | sha256sum }}
+        # Includes the matomo host + toggle so the auto-defaulted analytics.matomoUrl
+        # (computed in the ConfigMap) also rolls pods when it changes.
+        checksum/config: {{ list (.Values.config | toYaml) (.Values.matomo.enabled | toString) .Values.matomo.ingress.host | join "|" | sha256sum }}
       labels:
         {{- include "blog-engine.selectorLabels" . | nindent 8 }}
     spec:

@@ -6,11 +6,14 @@ metadata:
     app.kubernetes.io/name: matomo-mariadb
     {{- include "matomo.labels" . | nindent 4 }}
 spec:
-  type: ClusterIP
+  # Headless: this is the StatefulSet's governing Service (serviceName), which
+  # must be clusterIP: None. Matomo resolves the single DB pod via this name.
+  clusterIP: None
   ports:
     - port: 3306
       targetPort: mysql
       name: mysql
+      protocol: TCP
   selector:
     app.kubernetes.io/name: matomo-mariadb
     app.kubernetes.io/instance: {{ .Release.Name }}
