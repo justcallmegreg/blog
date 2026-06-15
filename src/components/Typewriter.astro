@@ -45,6 +45,7 @@
         revealed++;
         if (ci >= cur.full.length) { ni++; ci = 0; }
       }
+      document.dispatchEvent(new Event('ui:type')); // keystroke tick (throttled + 3s-capped in ClickSound)
     }
     function finish() {
       if (done) return;

@@ -143,6 +143,7 @@ const noticeText = noticeParts.join(' ');
       let i = 0;
       noticeTimer = setInterval(() => {
         noticeEl.textContent = noticeFull.slice(0, ++i);
+        document.dispatchEvent(new Event('ui:type')); // keystroke tick (capped in ClickSound)
         if (i >= noticeFull.length) {
           clearInterval(noticeTimer);
           if (noticeCursor) noticeCursor.hidden = true;
@@ -195,6 +196,7 @@ const noticeText = noticeParts.join(' ');
         let i = 0;
         const timer = setInterval(() => {
           statusLine.textContent = t.slice(0, ++i);
+          document.dispatchEvent(new Event('ui:type')); // keystroke tick (capped in ClickSound)
           if (i >= t.length) { clearInterval(timer); resolve(); }
         }, 45);
       });
