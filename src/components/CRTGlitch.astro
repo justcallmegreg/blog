@@ -17,6 +17,8 @@ const { intervalSeconds = 15 } = Astro.props;
     position: fixed; top: 2.4rem; right: 0.5rem; z-index: 60;
     background: transparent; color: var(--fg); border: 1px solid var(--fg-dim);
     font-family: var(--font); font-size: 16px; cursor: pointer; padding: 0.1rem 0.4rem;
+    /* Same fixed width as the sound toggle above it. */
+    min-width: 9.5em; text-align: center;
   }
   .crt-bar {
     position: absolute;

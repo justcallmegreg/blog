@@ -7,6 +7,9 @@
     position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60;
     background: transparent; color: var(--fg); border: 1px solid var(--fg-dim);
     font-family: var(--font); font-size: 16px; cursor: pointer; padding: 0.1rem 0.4rem;
+    /* Fixed width (fits the longest label) so it doesn't jump between states and
+       matches the CRT toggle stacked below it. */
+    min-width: 9.5em; text-align: center;
   }
 </style>
 <script>
