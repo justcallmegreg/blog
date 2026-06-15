@@ -1,39 +1,64 @@
 ---
-// Light, periodic CRT "beam roll": a faint horizontal band sweeps down the
-// screen every `intervalSeconds` (with a little jitter). Purely decorative,
-// pointer-events:none, and disabled under prefers-reduced-motion.
+// Light, periodic CRT "beam roll": a multi-scanline band sweeps down the screen
+// every `intervalSeconds` (with a little jitter). The leading edge is brightest
+// and a phosphor-persistence trail fades out behind it, like a real CRT. Purely
+// decorative, pointer-events:none, disabled under prefers-reduced-motion.
 interface Props { intervalSeconds?: number }
-const { intervalSeconds = 15 } = Astro.props;
+const { intervalSeconds = 30 } = Astro.props;
 ---
 <div id="crt-glitch" data-interval={intervalSeconds} aria-hidden="true">
   <div class="crt-bar"></div>
 </div>
+<button id="crt-toggle" type="button" aria-label="Toggle CRT effect"></button>
 <style>
   #crt-glitch { position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden; }
+  /* Sits directly below the [ SOUND ON/OFF ] toggle (top: 0.5rem). */
+  #crt-toggle {
+    position: fixed; top: 2.4rem; right: 0.5rem; z-index: 60;
+    background: transparent; color: var(--fg); border: 1px solid var(--fg-dim);
+    font-family: var(--font); font-size: 16px; cursor: pointer; padding: 0.1rem 0.4rem;
+    /* Same fixed width as the sound toggle above it. */
+    min-width: 9.5em; text-align: center;
+  }
   .crt-bar {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
-    height: 14px;
+    /* A band ~5 scanlines tall at the lit core, plus a fading phosphor trail. */
+    height: 90px;
     opacity: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(51, 255, 102, 0) 0%,
-      rgba(182, 255, 0, 0.10) 45%,
-      rgba(255, 255, 255, 0.06) 50%,
-      rgba(51, 255, 102, 0) 100%
-    );
+    background-image:
+      /* fine scanline stripes — a bright 1px line every 6px */
+      repeating-linear-gradient(
+        to bottom,
+        rgba(182, 255, 0, 0) 0px,
+        rgba(182, 255, 0, 0) 5px,
+        rgba(182, 255, 0, 0.28) 5px,
+        rgba(182, 255, 0, 0.28) 6px
+      ),
+      /* phosphor body: brightest at the leading edge (bottom), fading upward */
+      linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(182, 255, 0, 0.18) 7%,
+        rgba(51, 255, 102, 0.09) 45%,
+        rgba(51, 255, 102, 0) 100%
+      );
+    /* Fade the whole band toward the top so the trail it already passed
+       gradiently disappears — phosphor persistence. */
+    -webkit-mask-image: linear-gradient(to top, #000 0%, #000 6%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, #000 6%, transparent 100%);
   }
-  .crt-bar.sweep { animation: crt-sweep 0.55s linear; }
+  .crt-bar.sweep { animation: crt-sweep 0.7s linear; }
   @keyframes crt-sweep {
-    0%   { transform: translateY(-12vh); opacity: 0; }
+    0%   { transform: translateY(-14vh); opacity: 0; }
     12%  { opacity: 1; }
     88%  { opacity: 1; }
-    100% { transform: translateY(102vh); opacity: 0; }
+    100% { transform: translateY(104vh); opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    #crt-glitch { display: none; }
+    #crt-glitch, #crt-toggle { display: none; }
   }
 </style>
 <script>
@@ -44,10 +69,26 @@ const { intervalSeconds = 15 } = Astro.props;
       (document.getElementById('crt-glitch') as HTMLElement).dataset.interval ?? 15
     ) * 1000;
 
+    // Visitor toggle (persisted): turn the beam off if it's distracting.
+    const CRT_KEY = 'blog-crt-off';
+    const toggle = document.getElementById('crt-toggle') as HTMLButtonElement;
+    let off = localStorage.getItem(CRT_KEY) === '1';
+    function renderToggle() {
+      toggle.textContent = off ? '[ CRT OFF ]' : '[ CRT ON ]';
+      toggle.setAttribute('aria-pressed', String(off));
+    }
+    renderToggle();
+    toggle.addEventListener('click', () => {
+      off = !off;
+      localStorage.setItem(CRT_KEY, off ? '1' : '0');
+      renderToggle();
+      if (off) bar.classList.remove('sweep'); // kill any in-flight sweep
+    });
+
     bar.addEventListener('animationend', () => bar.classList.remove('sweep'));
 
     function sweep() {
-      if (!document.hidden) {
+      if (!off && !document.hidden) {
         bar.classList.remove('sweep');
         // force reflow so re-adding the class restarts the animation
         void bar.offsetWidth;
