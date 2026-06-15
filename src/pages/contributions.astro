@@ -29,6 +29,7 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
 
   <div class="panes">
     <section class="pane">
+      <CounterWidget value={data.repos.length} label="REPOSITORIES" />
       <h2 class="pane-title">// REPOSITORIES</h2>
       {data.repos.length === 0 && <p class="muted">&gt; no public repositories.</p>}
       <ul class="repo-list">
@@ -43,6 +44,7 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
     </section>
 
     <section class="pane">
+      <CounterWidget value={data.prs.length} label="LAST 6 MONTHS" />
       <h2 class="pane-title">// CONTRIBUTIONS · LAST 6 MONTHS</h2>
       {data.prs.length === 0 && <p class="muted">&gt; no pull requests in this window.</p>}
       <ul class="timeline">
