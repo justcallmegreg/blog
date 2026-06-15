@@ -81,7 +81,7 @@ const postsLast30 = countInWindow(posts.map((p) => p.date), now, 30);
         {g.posts.map((p) => (
           <li class="entry" data-search={searchKey(p)}>
             <a class="entry-title" href={p.url}>{p.title}</a>
-            <div class="entry-meta">{dot(p.date)}</div>
+            {p.date && <div class="entry-meta">{dot(p.date)}</div>}
             {p.excerpt && <p class="entry-teaser">{p.excerpt}</p>}
           </li>
         ))}

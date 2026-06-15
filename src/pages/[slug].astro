@@ -1,13 +1,13 @@
 ---
-import Terminal from '../../../../layouts/Terminal.astro';
-import Typewriter from '../../../../components/Typewriter.astro';
-import { ensureStarted } from '../../../../lib/store-singleton';
-import { getConfig } from '../../../../lib/config';
+import Terminal from '../layouts/Terminal.astro';
+import Typewriter from '../components/Typewriter.astro';
+import { ensureStarted } from '../lib/store-singleton';
+import { getConfig } from '../lib/config';
 
 const cfg = getConfig();
-const { year, month, day, slug } = Astro.params;
+const { slug } = Astro.params;
 const store = await ensureStarted();
-const post = store.getPost(`/${year}/${month}/${day}/${slug}`);
+const post = store.getPost(`/${slug}`);
 
 if (!post || post.draft) {
   return new Response('Not found', { status: 404 });
@@ -17,7 +17,7 @@ if (!post || post.draft) {
   <p><a href="/">&lt; back</a></p>
   <article>
     <h1>{post.title}</h1>
-    <p class="meta">{post.date}</p>
+    {post.date && <p class="meta">{post.date}</p>}
     {cfg.effects.typewriter
       ? <Typewriter><Fragment set:html={post.html} /></Typewriter>
       : <Fragment set:html={post.html} />}
