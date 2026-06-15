@@ -111,6 +111,7 @@
       let i = 0;
       const t = setInterval(() => {
         bootText.textContent = text.slice(0, ++i);
+        document.dispatchEvent(new Event('ui:type')); // keystroke tick (capped in ClickSound)
         if (i >= text.length) { clearInterval(t); onDone?.(); }
       }, 45);
       bootTimers.push(t as unknown as ReturnType<typeof setTimeout>);
@@ -328,6 +329,7 @@
       let i = 0;
       const timer = setInterval(() => {
         el.textContent = text.slice(0, ++i);
+        document.dispatchEvent(new Event('ui:type')); // keystroke tick (capped in ClickSound)
         if (i >= text.length) clearInterval(timer);
       }, 8);
     }

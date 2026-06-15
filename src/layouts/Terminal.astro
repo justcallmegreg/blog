@@ -146,6 +146,7 @@ function isActive(href: string): boolean {
           let i = 0;
           const timer = setInterval(() => {
             out.textContent = text.slice(0, ++i);
+            document.dispatchEvent(new Event('ui:type')); // keystroke tick (capped in ClickSound)
             if (i >= text.length) {
               clearInterval(timer);
               sessionStorage.setItem(KEY, '1');
