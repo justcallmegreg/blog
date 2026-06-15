@@ -5,18 +5,23 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ContentStore } from '../../src/lib/content-store';
 
+const NS = 'justcallmegreg-blog'; // source namespace dir: blogs/{owner}-{repo}/{slug}/index.md
+
 let originDir: string;
 let cacheDir: string;
 
 function git(dir: string, ...args: string[]) {
   execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
 }
-function commitFile(rel: string, body: string) {
-  const full = join(originDir, rel);
+function commitPost(slug: string, body: string, dateISO?: string) {
+  const full = join(originDir, NS, slug, 'index.md');
   mkdirSync(join(full, '..'), { recursive: true });
   writeFileSync(full, body);
   git(originDir, 'add', '-A');
-  git(originDir, 'commit', '-m', rel);
+  const env = dateISO
+    ? { ...process.env, GIT_AUTHOR_DATE: dateISO, GIT_COMMITTER_DATE: dateISO }
+    : process.env;
+  execFileSync('git', ['commit', '-m', slug], { cwd: originDir, stdio: 'pipe', env });
 }
 
 beforeEach(() => {
@@ -26,9 +31,10 @@ beforeEach(() => {
   git(originDir, 'init', '-b', 'main');
   git(originDir, 'config', 'user.email', 't@t.t');
   git(originDir, 'config', 'user.name', 'T');
-  commitFile('2026/06/12/first.md', '---\ntitle: First\n---\nHello');
-  commitFile('2026/06/10/older.md', '---\ntitle: Older\n---\nOld');
-  commitFile('2026/06/11/draft.md', '---\ntitle: Draft\ndraft: true\n---\nWIP');
+  // Dates pinned via frontmatter so ordering is deterministic regardless of commit time.
+  commitPost('first', '---\ntitle: First\ndate: "2026-06-12"\n---\nHello');
+  commitPost('older', '---\ntitle: Older\ndate: "2026-06-10"\n---\nOld');
+  commitPost('draft', '---\ntitle: Draft\ndate: "2026-06-11"\ndraft: true\n---\nWIP');
 });
 
 afterEach(() => {
@@ -53,56 +59,69 @@ describe('ContentStore', () => {
     expect(posts.map((p) => p.slug)).toEqual(['first', 'older']);
     expect(posts[0].date).toBe('2026-06-12');
     expect(posts[0].title).toBe('First');
-    expect(store.getPost('/2026/06/12/first')?.html).toContain('Hello');
-    expect(store.getPost('/2026/06/12/first')?.excerpt).toBe('Hello');
+    expect(posts[0].url).toBe('/first');
+    expect(store.getPost('/first')?.html).toContain('Hello');
+    expect(store.getPost('/first')?.excerpt).toBe('Hello');
   });
 
   it('keeps drafts retrievable by URL but flagged', async () => {
     const store = makeStore();
     await store.start();
-    const draft = store.getPost('/2026/06/11/draft');
+    const draft = store.getPost('/draft');
     expect(draft?.draft).toBe(true);
+  });
+
+  it('derives the published date from git when frontmatter has none', async () => {
+    // A post with no frontmatter date, committed on a fixed date.
+    commitPost('gitdated', '---\ntitle: Git Dated\n---\nbody', '2020-02-03T10:00:00Z');
+    const store = makeStore();
+    await store.start();
+    expect(store.getPost('/gitdated')?.date).toBe('2020-02-03');
   });
 
   it('reindexes only changed files after a sync', async () => {
     const store = makeStore();
     await store.start();
-    const olderHashBefore = store.getPost('/2026/06/10/older')!.blobHash;
+    const olderHashBefore = store.getPost('/older')!.blobHash;
 
-    commitFile('2026/06/12/first.md', '---\ntitle: First v2\n---\nHello again');
-    commitFile('2026/06/13/new.md', '---\ntitle: New\n---\nFresh');
+    commitPost('first', '---\ntitle: First v2\ndate: "2026-06-12"\n---\nHello again');
+    commitPost('new', '---\ntitle: New\ndate: "2026-06-13"\n---\nFresh');
 
     const changed = await store.sync();
     // only the changed and the new file are reprocessed — not the untouched one
-    expect(changed.sort()).toEqual(['2026/06/12/first.md', '2026/06/13/new.md']);
-    expect(store.getPost('/2026/06/12/first')!.title).toBe('First v2');
-    expect(store.getPost('/2026/06/13/new')!.title).toBe('New');
+    expect(changed.sort()).toEqual([
+      `${NS}/first/index.md`,
+      `${NS}/new/index.md`,
+    ]);
+    expect(store.getPost('/first')!.title).toBe('First v2');
+    expect(store.getPost('/new')!.title).toBe('New');
     // untouched post kept its identity (same blob hash, never re-rendered)
-    expect(store.getPost('/2026/06/10/older')!.blobHash).toBe(olderHashBefore);
+    expect(store.getPost('/older')!.blobHash).toBe(olderHashBefore);
   });
 
   it('drops posts whose files were removed', async () => {
     const store = makeStore();
     await store.start();
-    git(originDir, 'rm', '2026/06/10/older.md');
+    git(originDir, 'rm', `${NS}/older/index.md`);
     git(originDir, 'commit', '-m', 'remove older');
     await store.sync();
-    expect(store.getPost('/2026/06/10/older')).toBeUndefined();
+    expect(store.getPost('/older')).toBeUndefined();
   });
 
-  it('resolves asset file paths under the content root with traversal guard', async () => {
+  it('resolves asset file paths by slug under the post folder, with traversal guard', async () => {
     const store = makeStore();
     await store.start();
-    expect(store.resolveAssetPath('2026', '06', '12', 'd.png')).toBe(
-      join(cacheDir, '2026/06/12/assets/d.png')
+    expect(store.resolveAssetPath('first', 'd.png')).toBe(
+      resolve(cacheDir, NS, 'first/assets/d.png')
     );
-    expect(store.resolveAssetPath('2026', '06', '12', '../../../etc/passwd')).toBeNull();
+    expect(store.resolveAssetPath('first', '../../../etc/passwd')).toBeNull();
+    expect(store.resolveAssetPath('no-such-post', 'd.png')).toBeNull();
   });
 
   it('local mode reads a plain directory directly and picks up edits without git', async () => {
     const localDir = mkdtempSync(join(tmpdir(), 'local-content-'));
-    mkdirSync(join(localDir, '2099/01/01'), { recursive: true });
-    writeFileSync(join(localDir, '2099/01/01/hi.md'), '---\ntitle: Hi\n---\nbody');
+    mkdirSync(join(localDir, NS, 'hi'), { recursive: true });
+    writeFileSync(join(localDir, NS, 'hi/index.md'), '---\ntitle: Hi\ndate: "2099-01-01"\n---\nbody');
     const store = new ContentStore({
       repo: 'unused-in-local-mode',
       branch: 'main',
@@ -111,31 +130,38 @@ describe('ContentStore', () => {
       local: true,
     });
     await store.start(); // must NOT attempt a git clone
-    expect(store.getPost('/2099/01/01/hi')?.title).toBe('Hi');
+    expect(store.getPost('/hi')?.title).toBe('Hi');
 
     // edit the file in place (no commit) and re-sync
-    writeFileSync(join(localDir, '2099/01/01/hi.md'), '---\ntitle: Hi v2\n---\nchanged');
+    writeFileSync(join(localDir, NS, 'hi/index.md'), '---\ntitle: Hi v2\ndate: "2099-01-01"\n---\nchanged');
     const changed = await store.sync();
-    expect(changed).toContain('2099/01/01/hi.md');
-    expect(store.getPost('/2099/01/01/hi')?.title).toBe('Hi v2');
+    expect(changed).toContain(`${NS}/hi/index.md`);
+    expect(store.getPost('/hi')?.title).toBe('Hi v2');
 
     rmSync(localDir, { recursive: true, force: true });
   });
 
-  it('resolves asset paths to an absolute path even when cacheDir is relative', () => {
+  it('resolves asset paths to an absolute path even when cacheDir is relative', async () => {
     // Regression: a relative cacheDir (e.g. the default './cache') must still
     // resolve and pass the traversal guard rather than always returning null.
+    const relRoot = './rel-cache-test';
+    mkdirSync(join(relRoot, NS, 'reactor'), { recursive: true });
+    writeFileSync(
+      join(relRoot, NS, 'reactor/index.md'),
+      '---\ntitle: Reactor\ndate: "2287-11-05"\n---\nx'
+    );
     const store = new ContentStore({
-      repo: originDir,
+      repo: 'unused-in-local-mode',
       branch: 'main',
       subdir: '',
-      cacheDir: './rel-cache',
+      cacheDir: relRoot,
+      local: true,
     });
-    expect(store.resolveAssetPath('2287', '11', '05', 'reactor.svg')).toBe(
-      resolve('./rel-cache/2287/11/05/assets/reactor.svg')
+    await store.start();
+    expect(store.resolveAssetPath('reactor', 'reactor.svg')).toBe(
+      resolve(relRoot, NS, 'reactor/assets/reactor.svg')
     );
-    expect(
-      store.resolveAssetPath('2287', '11', '05', '../../../etc/passwd')
-    ).toBeNull();
+    expect(store.resolveAssetPath('reactor', '../../../etc/passwd')).toBeNull();
+    rmSync(relRoot, { recursive: true, force: true });
   });
 });
