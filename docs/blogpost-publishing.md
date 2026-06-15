@@ -6,11 +6,15 @@ source, README, and notes), and the `publish-blogpost` workflow opens a PR in `b
 when the post lands on `main`.
 
 ```
-project repo: blogs/2026/06/15/my-post.md   ──merge to main──▶  PR in blog-content:
-                                                                  blogs/2026/06/15/{owner}-{repo}-my-post.md
+project repo: blogs/my-post/index.md   ──merge to main──▶  PR in blog-content:
+              blogs/my-post/assets/...                      blogs/{owner}-{repo}/my-post/index.md
+                                                            blogs/{owner}-{repo}/my-post/assets/...
 ```
 
-The filename is prefixed with `{owner}-{repo}-` so posts from different repos never collide.
+The post folder is published under a `blogs/{owner}-{repo}/` prefix so posts from different repos
+never collide. The post is served at its **slug** (`/my-post`), and its published **date comes from
+git** — the first commit that added it to `blog-content` — overridable with a `date:` frontmatter
+field.
 
 ## One-time setup
 
@@ -60,12 +64,14 @@ In the engine's `config.yaml`, set `content.subdir: "blogs"` so it serves posts 
 
 - **Trigger:** a push to `main` that touches `blogs/**` (i.e. a merged post).
 - **Detect:** the workflow diffs the push for **added or modified** `blogs/**/*.md` files.
-- **Publish:** one PR per post. The post is copied to
-  `blogs/YYYY/MM/DD/{owner}-{repo}-{slug}.md` and its sibling `assets/` folder is copied
-  alongside. The PR uses a deterministic branch (`blogpost/{owner}-{repo}-{slug}`), so editing a
-  post and re-merging **updates the same PR** instead of opening a duplicate.
+- **Publish:** one PR per post. The whole post folder is copied to
+  `blogs/{owner}-{repo}/{slug}/index.md`, with its sibling `assets/` folder copied alongside under
+  `blogs/{owner}-{repo}/{slug}/assets/`. The PR uses a deterministic branch
+  (`blogpost/{owner}-{repo}-{slug}`), so editing a post and re-merging **updates the same PR**
+  instead of opening a duplicate.
 - **Review:** a human reviews and merges the `blog-content` PR; the engine then syncs and serves
-  the post.
+  the post at `/{slug}`. Its published date is derived from git (the first commit that added it),
+  overridable with a `date:` frontmatter field.
 
 ## Testing it safely
 
@@ -77,9 +83,10 @@ destination path, branch, and PR title for every current post **without opening 
 - **Deletions** of posts in the project repo are **not** propagated to `blog-content`.
 - **Drafts** (`draft: true` frontmatter) are still published — the `blog-content` PR is the
   review gate, and the engine hides drafts from its index regardless.
-- The **display title** comes from the post's frontmatter `title:`; only the slug/URL carries
-  the `owner-repo` prefix, so give every post a `title:`.
-- **Asset collisions:** asset filenames are not namespaced, so two repos publishing on the same
-  day with an identically-named asset would collide. Unlikely; keep asset names specific.
+- The **display title** comes from the post's frontmatter `title:` (falling back to the slug), so
+  give every post a `title:`. The `owner-repo` prefix lives only in the content-repo folder path,
+  not in the URL — the post is served at its bare slug, `/{slug}`.
+- **Slug collisions:** the `blogs/{owner}-{repo}/` prefix namespaces each source repo, so two
+  repos can publish the same slug without colliding. Within one repo, keep slugs unique.
 - **Asset pruning:** the asset copy is additive — assets removed or renamed in the project repo
   are not deleted from `blog-content` on re-publish.
