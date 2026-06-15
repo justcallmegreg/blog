@@ -4,7 +4,7 @@
 [![Release pipeline](https://github.com/justcallmegreg/blog/actions/workflows/release.yml/badge.svg)](https://github.com/justcallmegreg/blog/actions/workflows/release.yml)
 
 A stateless, containerized **Astro SSR** blog engine with a RobCo/Pip-Boy terminal aesthetic.
-Content lives in a **separate git repo** organized as `YYYY/MM/DD/<slug>.md` (with a sibling
+Content lives in a **separate git repo** organized as `blogs/YYYY/MM/DD/<slug>.md` (with a sibling
 `assets/` dir per day). The engine periodically `git pull`s that repo and renders markdown
 **live** — no rebuild, no restart. New posts go live on the next request after a sync.
 
@@ -18,7 +18,7 @@ content repo and an in-memory render index.
 - Live content from a separate git repo — periodic `git fetch` + re-index of only the files
   whose git blob hash changed; posts render to HTML once and are held in memory.
 - Markdown with syntax-highlighted code, relative `./assets/...` links rewritten to absolute URLs.
-- Path-derived routing: `2026/06/12/my-post.md` → `/2026/06/12/my-post`. Drafts hidden + 404.
+- Path-derived routing: `blogs/2026/06/12/my-post.md` → `/2026/06/12/my-post`. Drafts hidden + 404.
 - **RSS feed** at `/rss.xml`.
 
 **Terminal UI**
@@ -60,7 +60,7 @@ blogs/2026/06/12/assets/diagram.png   # referenced from the post as ./assets/dia
 Posts live under `blogs/` (set `content.subdir: "blogs"`), which is stripped when deriving the
 route. The date and slug come from the **path**, not frontmatter: `blogs/2026/06/12/my-post.md`
 is served at `/2026/06/12/my-post`. Relative asset links (`./assets/...`) are rewritten to
-absolute URLs automatically. Posts are published into `blogs/` automatically by the
+absolute URLs automatically. Posts are placed into `blogs/` by the
 [blogpost publishing workflow](docs/blogpost-publishing.md).
 
 Frontmatter (all optional):
@@ -87,7 +87,7 @@ site:
 content:
   repo: "https://github.com/you/blog-content.git"
   branch: "main"
-  subdir: ""                # optional: content lives in a subfolder of the repo
+  subdir: "blogs"           # posts live under blogs/ — the publish workflow places them there
   syncIntervalSeconds: 300
 
 effects:                    # terminal eye-candy — all optional, all default on (except as noted)
