@@ -36,6 +36,31 @@
     osc.stop(ctx.currentTime + 0.06);
   }
 
+  // Dosimeter/Geiger-style tick: a short filtered-noise burst. Counters fire this
+  // (throttled) as they climb, so the count-up sounds like a radiation counter.
+  function geiger() {
+    if (muted) return;
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
+    const frames = Math.max(1, Math.floor(ctx.sampleRate * 0.03));
+    const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < frames; i++) {
+      const env = (1 - i / frames) ** 3; // sharp decay → a click, not a hiss
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 1800;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.3;
+    src.connect(hp).connect(gain).connect(ctx.destination);
+    src.start();
+    src.stop(ctx.currentTime + 0.05);
+  }
+
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t.closest('a, button') && !t.closest('#sound-toggle')) blip();
@@ -44,6 +69,8 @@
   // Other components (e.g. the search box on keystroke) trigger a blip via this
   // event so the mute state stays centralized here.
   document.addEventListener('ui:blip', () => blip());
+  // Counters tick this as they count up.
+  document.addEventListener('ui:geiger', () => geiger());
 
   toggle.addEventListener('click', () => {
     muted = !muted;
