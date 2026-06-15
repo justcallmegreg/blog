@@ -3,6 +3,9 @@ name: publish-blogpost
 on:
   push:
     branches: [main]
+    # Keep this glob in sync with SOURCE_DIR below — the `on:` trigger can't read
+    # env, so if you change SOURCE_DIR you must change this path too (or the
+    # workflow silently never runs).
     paths: ['blogs/**']
   workflow_dispatch:
     inputs:
@@ -107,7 +110,8 @@ jobs:
           dest=".content-repo/$destrel"
           mkdir -p "$(dirname "$dest")"
           cp "$POST" "$dest"
-          # Copy the sibling assets/ folder if the post has one.
+          # Copy the sibling assets/ folder if the post has one. This is additive:
+          # assets removed/renamed upstream are not pruned from the content repo.
           srcassets="$SOURCE_DIR/$dir/assets"
           if [ -d "$srcassets" ]; then
             mkdir -p ".content-repo/$DEST_SUBDIR/$dir/assets"
