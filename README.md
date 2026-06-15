@@ -53,13 +53,15 @@ content repo and an in-memory render index.
 ## Content repo layout
 
 ```
-2026/06/12/my-post.md
-2026/06/12/assets/diagram.png   # referenced from the post as ./assets/diagram.png
+blogs/2026/06/12/my-post.md
+blogs/2026/06/12/assets/diagram.png   # referenced from the post as ./assets/diagram.png
 ```
 
-The date and slug come from the **path**, not frontmatter: `2026/06/12/my-post.md` is served
-at `/2026/06/12/my-post`. Relative asset links (`./assets/...`) are rewritten to absolute URLs
-automatically.
+Posts live under `blogs/` (set `content.subdir: "blogs"`), which is stripped when deriving the
+route. The date and slug come from the **path**, not frontmatter: `blogs/2026/06/12/my-post.md`
+is served at `/2026/06/12/my-post`. Relative asset links (`./assets/...`) are rewritten to
+absolute URLs automatically. Posts are published into `blogs/` automatically by the
+[blogpost publishing workflow](docs/blogpost-publishing.md).
 
 Frontmatter (all optional):
 
