@@ -1,0 +1,148 @@
+name: publish-blogpost
+
+on:
+  push:
+    branches: [main]
+    paths: ['blogs/**']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print what would be published without opening PRs'
+        type: boolean
+        default: false
+
+# Only the project repo is read with GITHUB_TOKEN; the content repo is written
+# with CONTENT_PR_TOKEN (a fine-grained PAT), so no write perms are needed here.
+permissions:
+  contents: read
+
+# ---- EDIT THESE when copying this workflow into another project repo ----
+env:
+  CONTENT_REPO: justcallmegreg/blog-content   # destination repo (owner/name)
+  CONTENT_BRANCH: main                         # base branch for the PR
+  SOURCE_DIR: blogs                            # where posts live in THIS repo
+  DEST_SUBDIR: blogs                           # where posts go in the content repo
+# -------------------------------------------------------------------------
+
+jobs:
+  # 1) Find the posts added/modified by this push and emit them as a JSON array.
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      posts: ${{ steps.changed.outputs.posts }}
+      count: ${{ steps.changed.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect added/modified posts
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ZERO=0000000000000000000000000000000000000000
+          # On manual dispatch (or a first/forced push with a zero "before"), fall
+          # back to every post currently under SOURCE_DIR; otherwise diff the push.
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "$ZERO" ]; then
+            mapfile -t files < <(find "$SOURCE_DIR" -type f -name '*.md' 2>/dev/null | sort)
+          else
+            mapfile -t files < <(git diff --name-only --diff-filter=AM "$BEFORE" "$AFTER" -- "$SOURCE_DIR" | sort -u)
+          fi
+          # Keep markdown posts, drop anything under an assets/ folder.
+          posts=()
+          for f in "${files[@]:-}"; do
+            case "$f" in
+              *.md)
+                case "$f" in */assets/*) ;; *) posts+=("$f") ;; esac
+                ;;
+            esac
+          done
+          if [ "${#posts[@]}" -eq 0 ]; then
+            json='[]'
+          else
+            json=$(printf '%s\n' "${posts[@]}" | jq -R . | jq -cs .)
+          fi
+          count=$(printf '%s' "$json" | jq 'length')
+          echo "posts=$json" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "found $count post(s): $json"
+
+  # 2) One PR per post in the content repo (re-merges update the same branch/PR).
+  publish:
+    needs: detect
+    if: needs.detect.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        post: ${{ fromJSON(needs.detect.outputs.posts) }}
+    steps:
+      - name: Checkout project repo (source post + assets)
+        uses: actions/checkout@v4
+
+      - name: Checkout content repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CONTENT_REPO }}
+          ref: ${{ env.CONTENT_BRANCH }}
+          token: ${{ secrets.CONTENT_PR_TOKEN }}
+          path: .content-repo
+          fetch-depth: 0
+
+      - name: Compute destination + copy files
+        id: prep
+        env:
+          POST: ${{ matrix.post }}
+        run: |
+          set -euo pipefail
+          rel="${POST#"$SOURCE_DIR"/}"          # YYYY/MM/DD/slug.md
+          dir="$(dirname "$rel")"               # YYYY/MM/DD
+          base="$(basename "$rel" .md)"         # slug
+          prefix="${GITHUB_REPOSITORY//\//-}-"  # owner-repo-
+          destrel="$DEST_SUBDIR/$dir/$prefix$base.md"
+          dest=".content-repo/$destrel"
+          mkdir -p "$(dirname "$dest")"
+          cp "$POST" "$dest"
+          # Copy the sibling assets/ folder if the post has one.
+          srcassets="$SOURCE_DIR/$dir/assets"
+          if [ -d "$srcassets" ]; then
+            mkdir -p ".content-repo/$DEST_SUBDIR/$dir/assets"
+            cp -R "$srcassets/." ".content-repo/$DEST_SUBDIR/$dir/assets/"
+          fi
+          {
+            echo "slug=$base"
+            echo "destrel=$destrel"
+            echo "branch=blogpost/$prefix$base"
+          } >> "$GITHUB_OUTPUT"
+          echo "publish $POST -> $destrel (branch blogpost/$prefix$base)"
+
+      - name: Dry-run summary (open no PR)
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "DRY RUN — would open a PR:"
+          echo "  branch: ${{ steps.prep.outputs.branch }}"
+          echo "  dest:   ${{ steps.prep.outputs.destrel }}"
+          echo "  title:  Publish: ${{ steps.prep.outputs.slug }} (from ${{ github.repository }})"
+
+      - name: Create/update PR in content repo
+        if: ${{ !inputs.dry_run }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CONTENT_PR_TOKEN }}
+          path: .content-repo
+          branch: ${{ steps.prep.outputs.branch }}
+          base: ${{ env.CONTENT_BRANCH }}
+          add-paths: ${{ env.DEST_SUBDIR }}
+          commit-message: "blog: publish ${{ steps.prep.outputs.slug }} from ${{ github.repository }}"
+          title: "Publish: ${{ steps.prep.outputs.slug }} (from ${{ github.repository }})"
+          delete-branch: true
+          body: |
+            Automated blogpost publication from [`${{ github.repository }}`](${{ github.server_url }}/${{ github.repository }}).
+
+            - Source: `${{ matrix.post }}`
+            - Destination: `${{ steps.prep.outputs.destrel }}`
+            - Origin commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
