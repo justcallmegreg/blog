@@ -5,7 +5,7 @@ site:
 content:
   repo: "https://github.com/you/blog-content.git"
   branch: "main"
-  subdir: ""                # optional: content lives in a subfolder of the repo
+  subdir: "blogs"           # posts live under blogs/ — the publish workflow places them there
   syncIntervalSeconds: 300
 effects:
   matrixRain: true
