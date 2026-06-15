@@ -1,7 +1,8 @@
 ---
-// Light, periodic CRT "beam roll": a faint horizontal band sweeps down the
-// screen every `intervalSeconds` (with a little jitter). Purely decorative,
-// pointer-events:none, and disabled under prefers-reduced-motion.
+// Light, periodic CRT "beam roll": a multi-scanline band sweeps down the screen
+// every `intervalSeconds` (with a little jitter). The leading edge is brightest
+// and a phosphor-persistence trail fades out behind it, like a real CRT. Purely
+// decorative, pointer-events:none, disabled under prefers-reduced-motion.
 interface Props { intervalSeconds?: number }
 const { intervalSeconds = 15 } = Astro.props;
 ---
@@ -15,22 +16,37 @@ const { intervalSeconds = 15 } = Astro.props;
     left: 0;
     right: 0;
     top: 0;
-    height: 14px;
+    /* A band ~5 scanlines tall at the lit core, plus a fading phosphor trail. */
+    height: 90px;
     opacity: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(51, 255, 102, 0) 0%,
-      rgba(182, 255, 0, 0.10) 45%,
-      rgba(255, 255, 255, 0.06) 50%,
-      rgba(51, 255, 102, 0) 100%
-    );
+    background-image:
+      /* fine scanline stripes — a bright 1px line every 6px */
+      repeating-linear-gradient(
+        to bottom,
+        rgba(182, 255, 0, 0) 0px,
+        rgba(182, 255, 0, 0) 5px,
+        rgba(182, 255, 0, 0.28) 5px,
+        rgba(182, 255, 0, 0.28) 6px
+      ),
+      /* phosphor body: brightest at the leading edge (bottom), fading upward */
+      linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(182, 255, 0, 0.18) 7%,
+        rgba(51, 255, 102, 0.09) 45%,
+        rgba(51, 255, 102, 0) 100%
+      );
+    /* Fade the whole band toward the top so the trail it already passed
+       gradiently disappears — phosphor persistence. */
+    -webkit-mask-image: linear-gradient(to top, #000 0%, #000 6%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, #000 6%, transparent 100%);
   }
-  .crt-bar.sweep { animation: crt-sweep 0.55s linear; }
+  .crt-bar.sweep { animation: crt-sweep 0.7s linear; }
   @keyframes crt-sweep {
-    0%   { transform: translateY(-12vh); opacity: 0; }
+    0%   { transform: translateY(-14vh); opacity: 0; }
     12%  { opacity: 1; }
     88%  { opacity: 1; }
-    100% { transform: translateY(102vh); opacity: 0; }
+    100% { transform: translateY(104vh); opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
     #crt-glitch { display: none; }
