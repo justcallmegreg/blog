@@ -1,6 +1,7 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
 import Heatmap from '../components/Heatmap.astro';
+import CounterWidget from '../components/CounterWidget.astro';
 import { getConfig } from '../lib/config';
 import { getContributionDataCached } from '../lib/github';
 
@@ -16,12 +17,15 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
     <p class="error">&gt; live data unavailable ({data.error}). Showing what we have.</p>
   )}
 
-  <Heatmap
-    heatmap={data.heatmap}
-    label="Contribution activity, last month"
-    unit="contribution"
-    legend="> contributions (commits + PRs) — last month (rows: weekday, columns: ISO week)"
-  />
+  <div class="heat-block">
+    <Heatmap
+      heatmap={data.heatmap}
+      label="Contribution activity, last month"
+      unit="contribution"
+      legend="> contributions (commits + PRs) — last month (rows: weekday, columns: ISO week)"
+    />
+    <CounterWidget value={data.prs.length} label="CONTRIB // LAST 6 MO" />
+  </div>
 
   <div class="panes">
     <section class="pane">

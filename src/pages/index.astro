@@ -3,9 +3,11 @@ import Terminal from '../layouts/Terminal.astro';
 import MatrixRain from '../components/MatrixRain.astro';
 import Search from '../components/Search.astro';
 import Heatmap from '../components/Heatmap.astro';
+import CounterWidget from '../components/CounterWidget.astro';
 import { ensureStarted } from '../lib/store-singleton';
 import { getConfig } from '../lib/config';
 import { buildHeatmap } from '../lib/heatmap';
+import { countInWindow } from '../lib/counter';
 import type { Post } from '../lib/content-store';
 
 const cfg = getConfig();
@@ -50,6 +52,9 @@ const blogHeatmap = buildHeatmap(
   posts.map((p) => ({ createdAt: `${p.date}T12:00:00` })),
   now
 );
+
+// Posts published in the last 30 days (one per post on its date).
+const postsLast30 = countInWindow(posts.map((p) => p.date), now, 30);
 ---
 <Terminal>
   {cfg.effects.matrixRain && (
@@ -57,12 +62,15 @@ const blogHeatmap = buildHeatmap(
   )}
   {cfg.site.description && <p class="lede">{cfg.site.description}</p>}
 
-  <Heatmap
-    heatmap={blogHeatmap}
-    label="Blog posting activity, last month"
-    unit="post"
-    legend="> posts published — last month (rows: weekday, columns: ISO week)"
-  />
+  <div class="heat-block">
+    <Heatmap
+      heatmap={blogHeatmap}
+      label="Blog posting activity, last month"
+      unit="post"
+      legend="> posts published — last month (rows: weekday, columns: ISO week)"
+    />
+    <CounterWidget value={postsLast30} label="POSTS // LAST 30 DAYS" />
+  </div>
 
   <Search />
 
