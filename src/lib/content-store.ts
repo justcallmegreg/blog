@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { cloneRepo, fetchReset, lsTreeBlobs } from './git';
+import { cloneRepo, fetchReset, lsTreeBlobs, firstAddedDate } from './git';
+import { pickPublishedDate } from './post-date';
 import { listLocalFiles } from './local-files';
 import { parsePostPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
@@ -9,11 +10,9 @@ import { renderMarkdown, extractExcerpt } from './markdown';
 export interface Post {
   url: string;
   urlPrefix: string;
-  year: string;
-  month: string;
-  day: string;
   date: string;
   slug: string;
+  contentDir: string;
   title: string;
   description?: string;
   excerpt: string;
@@ -98,14 +97,15 @@ export class ContentStore {
         const { data, content } = parseFrontmatter(raw);
         const html = await renderMarkdown(content, info.urlPrefix);
         const excerpt = extractExcerpt(content) || data.description || '';
+        const gitDate = this.opts.local
+          ? null
+          : await firstAddedDate(this.opts.cacheDir, repoRel);
         this.index.set(info.url, {
           url: info.url,
           urlPrefix: info.urlPrefix,
-          year: info.year,
-          month: info.month,
-          day: info.day,
-          date: info.date,
+          date: pickPublishedDate(data.date, gitDate),
           slug: info.slug,
+          contentDir: info.contentDir,
           title: data.title ?? info.slug,
           description: data.description,
           excerpt,
@@ -135,15 +135,12 @@ export class ContentStore {
     return this.index.get(url);
   }
 
-  resolveAssetPath(
-    year: string,
-    month: string,
-    day: string,
-    file: string
-  ): string | null {
+  resolveAssetPath(slug: string, file: string): string | null {
+    const post = this.index.get(`/${slug}`);
+    if (!post) return null;
     // resolve() makes baseDir absolute so the traversal check holds even when
     // contentRoot/cacheDir is a relative path (e.g. the default './cache').
-    const baseDir = resolve(this.contentRoot(), year, month, day, 'assets');
+    const baseDir = resolve(this.contentRoot(), post.contentDir, 'assets');
     const full = resolve(baseDir, file);
     if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
     return full;

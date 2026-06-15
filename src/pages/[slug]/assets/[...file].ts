@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { readFile, stat } from 'node:fs/promises';
 import { extname } from 'node:path';
-import { ensureStarted } from '../../../../../lib/store-singleton';
+import { ensureStarted } from '../../../lib/store-singleton';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -14,11 +14,11 @@ const MIME: Record<string, string> = {
 };
 
 export const GET: APIRoute = async ({ params }) => {
-  const { year, month, day, file } = params;
-  if (!year || !month || !day || !file) return new Response('Not found', { status: 404 });
+  const { slug, file } = params;
+  if (!slug || !file) return new Response('Not found', { status: 404 });
 
   const store = await ensureStarted();
-  const path = store.resolveAssetPath(year, month, day, file);
+  const path = store.resolveAssetPath(slug, file);
   if (!path) return new Response('Forbidden', { status: 403 });
 
   try {

@@ -4,8 +4,8 @@
 [![Release pipeline](https://github.com/justcallmegreg/blog/actions/workflows/release.yml/badge.svg)](https://github.com/justcallmegreg/blog/actions/workflows/release.yml)
 
 A stateless, containerized **Astro SSR** blog engine with a RobCo/Pip-Boy terminal aesthetic.
-Content lives in a **separate git repo** organized as `blogs/YYYY/MM/DD/<slug>.md` (with a sibling
-`assets/` dir per day). The engine periodically `git pull`s that repo and renders markdown
+Content lives in a **separate git repo** organized as `blogs/{owner}-{repo}/{slug}/index.md` (with a
+sibling `assets/` dir per post). The engine periodically `git pull`s that repo and renders markdown
 **live** — no rebuild, no restart. New posts go live on the next request after a sync.
 
 One multi-arch image (amd64 + arm64), configured by a single `config.yaml` plus a few
@@ -18,7 +18,7 @@ content repo and an in-memory render index.
 - Live content from a separate git repo — periodic `git fetch` + re-index of only the files
   whose git blob hash changed; posts render to HTML once and are held in memory.
 - Markdown with syntax-highlighted code, relative `./assets/...` links rewritten to absolute URLs.
-- Path-derived routing: `blogs/2026/06/12/my-post.md` → `/2026/06/12/my-post`. Drafts hidden + 404.
+- Path-derived routing: a post's URL is its slug, `/my-post`. Drafts hidden + 404.
 - **RSS feed** at `/rss.xml`.
 
 **Terminal UI**
@@ -53,14 +53,15 @@ content repo and an in-memory render index.
 ## Content repo layout
 
 ```
-blogs/2026/06/12/my-post.md
-blogs/2026/06/12/assets/diagram.png   # referenced from the post as ./assets/diagram.png
+blogs/{owner}-{repo}/my-post/index.md
+blogs/{owner}-{repo}/my-post/assets/diagram.png   # referenced from the post as ./assets/diagram.png
 ```
 
-Posts live under `blogs/` (set `content.subdir: "blogs"`), which is stripped when deriving the
-route. The date and slug come from the **path**, not frontmatter: `blogs/2026/06/12/my-post.md`
-is served at `/2026/06/12/my-post`. Relative asset links (`./assets/...`) are rewritten to
-absolute URLs automatically. Posts are placed into `blogs/` by the
+Posts live in a per-source, per-post folder (`content.subdir: "blogs"`). The URL is the **slug**:
+`blogs/justcallmegreg-blog/my-post/index.md` is served at `/my-post`. Relative asset links
+(`./assets/...`) resolve under `/my-post/assets/...`. The **published date is derived from git** —
+the first commit that added the post to the content repo — and can be overridden with a `date:`
+field in frontmatter. Posts are placed into `blogs/{owner}-{repo}/` automatically by the
 [blogpost publishing workflow](docs/blogpost-publishing.md).
 
 Frontmatter (all optional):
@@ -69,6 +70,7 @@ Frontmatter (all optional):
 ---
 title: "My Post Title"   # display title (falls back to the slug)
 description: "..."       # used for the <meta description>
+date: "2026-06-12"       # optional: overrides the git-derived published date
 draft: false             # drafts are hidden from the index and 404 on direct hit
 ---
 ```
@@ -77,11 +79,14 @@ draft: false             # drafts are hidden from the index and 404 on direct hi
 
 You don't have to commit posts to the content repo by hand. A reusable GitHub Action —
 [`.github/workflows/publish-blogpost.yml`](.github/workflows/publish-blogpost.yml) — watches a
-**project** repo, and when a post under `blogs/**` is merged to `main` it opens a pull request in
-your `blog-content` repo with the post (renamed `{owner}-{repo}-{slug}.md` to avoid collisions)
-plus its `assets/`. So you can draft a post inside any project's own repo (for example with a
-Claude *blogpost-creator* skill that draws on that project's source, README, and notes), merge it
-there, and just review the auto-opened PR in `blog-content`.
+**project** repo where you author a post as `blogs/{slug}/index.md` (plus its
+`blogs/{slug}/assets/`), and when it's merged to `main` it opens a pull request in your
+`blog-content` repo that copies the whole post folder to `blogs/{owner}-{repo}/{slug}/` (the
+`{owner}-{repo}` prefix keeps posts from different repos from colliding). The post is served at its
+slug, `/{slug}`, and its published date comes from git — the first commit that added it to
+`blog-content` — overridable with a `date:` frontmatter field. So you can draft a post inside any
+project's own repo (for example with a Claude *blogpost-creator* skill that draws on that project's
+source, README, and notes), merge it there, and just review the auto-opened PR in `blog-content`.
 
 The workflow is **self-contained**, so it doubles as a copy-paste template. To adopt it in your
 own repo:
@@ -98,7 +103,7 @@ own repo:
 Test it safely first with **Actions → Run workflow → `dry_run: true`**, which prints the
 destination path, branch, and PR title for each post **without opening any PR**. The full
 walkthrough — PAT scopes, one-PR-per-post behavior, and caveats (deletions not propagated, drafts
-still published, asset naming) — is in **[docs/blogpost-publishing.md](docs/blogpost-publishing.md)**.
+still published, slug collisions) — is in **[docs/blogpost-publishing.md](docs/blogpost-publishing.md)**.
 
 ## Configure
 

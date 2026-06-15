@@ -43,9 +43,13 @@ const tabs = [
   ...(cfg.about.enabled ? [{ label: 'About me', href: '/about' }] : []),
 ];
 const path = Astro.url.pathname;
+const nonRootTabs = tabs.filter((t) => t.href !== '/').map((t) => t.href);
 function isActive(href: string): boolean {
-  // The Blogs (root) tab also covers individual post pages (/YYYY/MM/DD/...).
-  if (href === '/') return path === '/' || /^\/\d{4}\//.test(path);
+  // The Blogs (root) tab covers the index and individual post pages (now /{slug}),
+  // i.e. any path that isn't one of the other tabs.
+  if (href === '/') {
+    return path === '/' || !nonRootTabs.some((h) => path === h || path.startsWith(h + '/'));
+  }
   return path === href || path.startsWith(href + '/');
 }
 ---

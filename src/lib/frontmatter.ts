@@ -5,6 +5,7 @@ const FrontmatterSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   draft: z.boolean().default(false),
+  date: z.string().optional(),
 });
 
 export type PostFrontmatter = z.infer<typeof FrontmatterSchema>;
