@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { applyToken, cloneRepo, fetchReset, lsTreeBlobs } from '../../src/lib/git';
+import { applyToken, cloneRepo, fetchReset, firstAddedDate, lsTreeBlobs } from '../../src/lib/git';
 
 let originDir: string;
 let workDir: string;
@@ -85,5 +85,33 @@ describe('git operations', () => {
     } catch (e) { msg = (e as Error).message; }
     expect(msg.length).toBeGreaterThan(0);
     expect(msg).not.toContain('SECRETTOKEN999');
+  });
+});
+
+describe('firstAddedDate', () => {
+  it('returns the date the file was first committed', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gitdate-'));
+    const env = {
+      ...process.env,
+      GIT_AUTHOR_DATE: '2021-03-04T10:00:00Z',
+      GIT_COMMITTER_DATE: '2021-03-04T10:00:00Z',
+    };
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['config', 'user.email', 't@t'], { cwd: dir });
+    execFileSync('git', ['config', 'user.name', 'T'], { cwd: dir });
+    writeFileSync(join(dir, 'post.md'), 'hello');
+    execFileSync('git', ['add', 'post.md'], { cwd: dir });
+    execFileSync('git', ['commit', '-q', '-m', 'add'], { cwd: dir, env });
+    writeFileSync(join(dir, 'post.md'), 'hello again');
+    execFileSync('git', ['commit', '-qam', 'edit'], {
+      cwd: dir,
+      env: { ...process.env, GIT_COMMITTER_DATE: '2022-09-09T10:00:00Z', GIT_AUTHOR_DATE: '2022-09-09T10:00:00Z' },
+    });
+    expect(await firstAddedDate(dir, 'post.md')).toBe('2021-03-04');
+  });
+  it('returns null for an unknown file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gitdate-'));
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    expect(await firstAddedDate(dir, 'nope.md')).toBeNull();
   });
 });

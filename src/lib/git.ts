@@ -35,16 +35,7 @@ export interface CloneOptions {
 export async function cloneRepo(opts: CloneOptions): Promise<void> {
   const url = applyToken(opts.repo, opts.token);
   await git(
-    [
-      'clone',
-      '--depth',
-      '1',
-      '--branch',
-      opts.branch,
-      '--single-branch',
-      url,
-      opts.dir,
-    ],
+    ['clone', '--branch', opts.branch, '--single-branch', url, opts.dir],
     undefined,
     opts.token,
   );
@@ -55,7 +46,7 @@ export async function fetchReset(opts: {
   branch: string;
   token?: string;
 }): Promise<void> {
-  await git(['fetch', '--depth', '1', 'origin', opts.branch], opts.dir, opts.token);
+  await git(['fetch', 'origin', opts.branch], opts.dir, opts.token);
   await git(['reset', '--hard', `origin/${opts.branch}`], opts.dir, opts.token);
   await git(['clean', '-fd'], opts.dir, opts.token);
 }
@@ -75,4 +66,19 @@ export async function lsTreeBlobs(dir: string): Promise<Map<string, string>> {
     if (meta[1] === 'blob') map.set(path, meta[2]);
   }
   return map;
+}
+
+/** Date (YYYY-MM-DD) of the first commit that added `repoRelPath`, or null. */
+export async function firstAddedDate(dir: string, repoRelPath: string): Promise<string | null> {
+  if (!existsSync(dir)) return null;
+  try {
+    const out = await git(
+      ['log', '--diff-filter=A', '--reverse', '--format=%cI', '--', repoRelPath],
+      dir
+    );
+    const first = out.split('\n').find((l) => l.trim());
+    return first ? first.slice(0, 10) : null;
+  } catch {
+    return null;
+  }
 }
