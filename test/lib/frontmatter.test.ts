@@ -18,4 +18,13 @@ describe('parseFrontmatter', () => {
   it('throws on wrong field types', () => {
     expect(() => parseFrontmatter(`---\ntitle: 5\n---\nbody`)).toThrow(/title/);
   });
+
+  it('parses an optional date string', () => {
+    const { data } = parseFrontmatter('---\ntitle: T\ndate: "2026-01-02"\n---\nbody');
+    expect(data.date).toBe('2026-01-02');
+  });
+  it('leaves date undefined when absent', () => {
+    const { data } = parseFrontmatter('---\ntitle: T\n---\nbody');
+    expect(data.date).toBeUndefined();
+  });
 });
