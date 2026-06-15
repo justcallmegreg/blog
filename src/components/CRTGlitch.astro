@@ -4,7 +4,7 @@
 // and a phosphor-persistence trail fades out behind it, like a real CRT. Purely
 // decorative, pointer-events:none, disabled under prefers-reduced-motion.
 interface Props { intervalSeconds?: number }
-const { intervalSeconds = 15 } = Astro.props;
+const { intervalSeconds = 30 } = Astro.props;
 ---
 <div id="crt-glitch" data-interval={intervalSeconds} aria-hidden="true">
   <div class="crt-bar"></div>
