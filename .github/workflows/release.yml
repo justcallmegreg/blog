@@ -70,7 +70,14 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add VERSION.txt
-          git commit -m "chore(release): v$NEXT [version-bump] [skip ci]"
+          # The merged PR may already carry NEXT in VERSION.txt (version.yml's
+          # per-commit preview bump), leaving nothing to commit — tag the merge
+          # commit directly instead of failing on an empty commit.
+          if git diff --cached --quiet; then
+            echo "VERSION.txt already at $NEXT — tagging the current commit"
+          else
+            git commit -m "chore(release): v$NEXT [version-bump] [skip ci]"
+          fi
           git tag -a "v$NEXT" -m "v$NEXT"
           git push origin HEAD:main
           git push origin "v$NEXT"
