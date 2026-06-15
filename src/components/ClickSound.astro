@@ -16,7 +16,7 @@
   let ctx: AudioContext | null = null;
 
   function render() {
-    toggle.textContent = muted ? '[ SND OFF ]' : '[ SND ON ]';
+    toggle.textContent = muted ? '[ SOUND OFF ]' : '[ SOUND ON ]';
     toggle.setAttribute('aria-pressed', String(!muted));
   }
   render();
