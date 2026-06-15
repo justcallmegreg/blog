@@ -73,6 +73,33 @@ draft: false             # drafts are hidden from the index and 404 on direct hi
 ---
 ```
 
+## Publish posts from a project repo (GitHub Action template)
+
+You don't have to commit posts to the content repo by hand. A reusable GitHub Action —
+[`.github/workflows/publish-blogpost.yml`](.github/workflows/publish-blogpost.yml) — watches a
+**project** repo, and when a post under `blogs/**` is merged to `main` it opens a pull request in
+your `blog-content` repo with the post (renamed `{owner}-{repo}-{slug}.md` to avoid collisions)
+plus its `assets/`. So you can draft a post inside any project's own repo (for example with a
+Claude *blogpost-creator* skill that draws on that project's source, README, and notes), merge it
+there, and just review the auto-opened PR in `blog-content`.
+
+The workflow is **self-contained**, so it doubles as a copy-paste template. To adopt it in your
+own repo:
+
+1. **Copy** `.github/workflows/publish-blogpost.yml` into your project repo (under
+   `.github/workflows/`).
+2. **Edit the `env:` block** at the top — set `CONTENT_REPO` to your `owner/blog-content`,
+   plus `CONTENT_BRANCH` and `SOURCE_DIR` / `DEST_SUBDIR` (both default to `blogs`). If you change
+   `SOURCE_DIR`, update the `on.push.paths` glob to match (the trigger can't read `env`).
+3. **Add a `CONTENT_PR_TOKEN` secret** to the project repo — a fine-grained PAT scoped to
+   `blog-content` with **Contents: write** + **Pull requests: write**.
+4. **Point the engine at `blogs/`** — set `content.subdir: "blogs"` so it serves the published posts.
+
+Test it safely first with **Actions → Run workflow → `dry_run: true`**, which prints the
+destination path, branch, and PR title for each post **without opening any PR**. The full
+walkthrough — PAT scopes, one-PR-per-post behavior, and caveats (deletions not propagated, drafts
+still published, asset naming) — is in **[docs/blogpost-publishing.md](docs/blogpost-publishing.md)**.
+
 ## Configure
 
 Copy `config.example.yaml` to `config.yaml` and edit it. Every block has sensible defaults; the
