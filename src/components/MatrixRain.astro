@@ -2,7 +2,7 @@
 // Falling-glyph canvas backdrop. Runs for `durationSeconds` then fades out.
 // Renders nothing meaningful without JS.
 interface Props { durationSeconds?: number }
-const { durationSeconds = 7 } = Astro.props;
+const { durationSeconds = 3 } = Astro.props;
 ---
 <canvas id="matrix-rain" data-duration={durationSeconds} aria-hidden="true"></canvas>
 <style>
@@ -21,7 +21,12 @@ const { durationSeconds = 7 } = Astro.props;
   const canvas = document.getElementById('matrix-rain') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const durationMs = Number(canvas.dataset.duration ?? 7) * 1000;
+  const durationMs = Number(canvas.dataset.duration ?? 3) * 1000;
+
+  // Show the intro rain only once per visitor: persist a flag so it isn't
+  // replayed on every page load (the server skips rendering it when this is
+  // set). ~180 days; SameSite=Lax, first-party.
+  document.cookie = 'gregco-matrix=1; path=/; max-age=15552000; SameSite=Lax';
   const glyphs = 'アイウエオカキクケコ0123456789ABCDEF<>/'.split('');
   let cols: number[] = [];
   const fontSize = 18;

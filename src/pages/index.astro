@@ -11,6 +11,9 @@ import { countInWindow } from '../lib/counter';
 import type { Post } from '../lib/content-store';
 
 const cfg = getConfig();
+// Play the intro matrix rain only once per visitor: skip rendering it once the
+// client has set the `gregco-matrix` cookie (set the first time it plays).
+const matrixSeen = Astro.cookies.get('gregco-matrix')?.value === '1';
 const store = await ensureStarted();
 const posts = store.listPosts();
 
@@ -57,7 +60,7 @@ const blogHeatmap = buildHeatmap(
 const postsLast30 = countInWindow(posts.map((p) => p.date), now, 30);
 ---
 <Terminal>
-  {cfg.effects.matrixRain && (
+  {cfg.effects.matrixRain && !matrixSeen && (
     <MatrixRain slot="background" durationSeconds={cfg.effects.matrixRainDurationSeconds} />
   )}
   {cfg.site.description && <p class="lede">{cfg.site.description}</p>}

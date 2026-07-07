@@ -33,7 +33,7 @@ content:
     expect(cfg.content.syncIntervalSeconds).toBe(300);
     expect(cfg.effects).toEqual({
       matrixRain: true,
-      matrixRainDurationSeconds: 7,
+      matrixRainDurationSeconds: 3,
       typewriter: true,
       clickSound: true,
       crtGlitch: true,

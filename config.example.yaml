@@ -9,7 +9,7 @@ content:
   syncIntervalSeconds: 300
 effects:
   matrixRain: true
-  matrixRainDurationSeconds: 7      # matrix runs this long on the index, then fades out
+  matrixRainDurationSeconds: 3      # matrix runs this long on the index, then fades out (shown once per visitor)
   typewriter: true
   clickSound: true          # default ON; readers get a persisted mute toggle
   crtGlitch: true                   # periodic light CRT beam-roll (horizontal sweep) on every page

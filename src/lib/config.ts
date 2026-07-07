@@ -19,7 +19,7 @@ const ConfigSchema = z.object({
   effects: z
     .object({
       matrixRain: z.boolean().default(true),
-      matrixRainDurationSeconds: z.number().int().positive().default(7),
+      matrixRainDurationSeconds: z.number().int().positive().default(3),
       typewriter: z.boolean().default(true),
       clickSound: z.boolean().default(true),
       crtGlitch: z.boolean().default(true),
