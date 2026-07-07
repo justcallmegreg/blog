@@ -10,8 +10,12 @@ export function applyToken(repo: string, token: string | undefined): string {
 }
 
 async function git(args: string[], cwd?: string, redact?: string): Promise<string> {
+  // When operating inside an existing repo, mark it a safe.directory so git's
+  // "dubious ownership" check can't abort us in containers where the cache dir
+  // is owned by a different user (e.g. cloned as root, served as non-root).
+  const full = cwd ? ['-c', `safe.directory=${cwd}`, ...args] : args;
   try {
-    const { stdout } = await run('git', args, { cwd, maxBuffer: 1024 * 1024 * 64 });
+    const { stdout } = await run('git', full, { cwd, maxBuffer: 1024 * 1024 * 64 });
     return stdout;
   } catch (err) {
     if (redact && err instanceof Error) {
