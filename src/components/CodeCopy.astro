@@ -1,0 +1,44 @@
+---
+// Adds a "copy" button to each syntax-highlighted code block. Progressive
+// enhancement: with JavaScript off the code is still fully readable, just
+// without the button. Mermaid diagrams (pre.mermaid, not pre.shiki) are skipped.
+---
+<script>
+  const COPY_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H10V7h9v14z"/></svg>';
+
+  document.querySelectorAll<HTMLPreElement>('pre.shiki').forEach((pre) => {
+    if (pre.closest('.code-block')) return; // already wrapped
+
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    pre.parentNode?.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    btn.innerHTML = COPY_ICON + '<span>copy</span>';
+    const label = btn.querySelector('span')!;
+
+    btn.addEventListener('click', async () => {
+      // textContent excludes the CSS line-number pseudo-elements, so the copy is
+      // clean code; drop the trailing newline shiki leaves behind.
+      const code = (pre.querySelector('code')?.textContent ?? '').replace(/\n$/, '');
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.classList.add('copied');
+        label.textContent = 'copied';
+      } catch {
+        label.textContent = 'error';
+      }
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        label.textContent = 'copy';
+      }, 1500);
+    });
+
+    wrap.appendChild(btn);
+  });
+</script>

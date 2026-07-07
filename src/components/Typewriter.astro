@@ -7,7 +7,15 @@
   const root = document.getElementById('typewriter')!;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!reduce) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    // Skip text inside mermaid diagram blocks: their source must stay intact so
+    // the Mermaid runtime can render it (and typing out raw diagram source that
+    // then flips to an SVG would look broken).
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) =>
+        (node as Text).parentElement?.closest('pre.mermaid, .copy-btn')
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    });
     const nodes: { node: Text; full: string }[] = [];
     let n: Node | null;
     while ((n = walker.nextNode())) {

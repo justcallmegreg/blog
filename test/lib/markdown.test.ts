@@ -55,6 +55,27 @@ describe('renderMarkdown', () => {
     expect(html).toContain('shiki');
   });
 
+  it('routes language-less fences through shiki too, with .line spans', async () => {
+    const html = await renderMarkdown('```\nplain line one\nplain line two\n```', '/2026/06/12');
+    expect(html).toContain('class="shiki');
+    expect(html).toContain('class="line"');
+  });
+
+  it('turns a mermaid fence into a <pre class="mermaid"> with the raw source', async () => {
+    const src = 'C4Context\n    Person(a, "A", "desc")\n    Rel(a, b, "x")';
+    const html = await renderMarkdown('```mermaid\n' + src + '\n```', '/2026/06/12');
+    expect(html).toContain('class="mermaid"');
+    expect(html).toContain('C4Context');
+    expect(html).toContain('Person(a,');
+  });
+
+  it('does not send mermaid blocks through the shiki highlighter', async () => {
+    const html = await renderMarkdown('```mermaid\nC4Context\n```', '/2026/06/12');
+    // the mermaid block must not be wrapped in a shiki <pre>
+    expect(html).not.toMatch(/<pre class="shiki[^"]*"[^>]*>[^]*C4Context/);
+    expect(html).not.toContain('language-mermaid');
+  });
+
   it('opens external links in a new tab with a safe rel', async () => {
     const html = await renderMarkdown('[ext](https://example.com/page)', '/2026/06/12');
     expect(html).toContain('href="https://example.com/page"');

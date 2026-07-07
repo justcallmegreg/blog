@@ -23,6 +23,10 @@ html, body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Headings and bold use the brighter accent so they stand out from body text. */
+h1, h2, h3, h4, h5, h6 { color: var(--accent); }
+strong, b { color: var(--accent); }
+
 .crt::after {
   content: '';
   position: fixed;
@@ -39,8 +43,87 @@ a:hover { text-decoration: underline; }
 
 .container { max-width: 820px; margin: 0 auto; padding: 2rem 1.25rem; position: relative; z-index: 2; }
 
+/* Match code to the body font + size (the UA stylesheet otherwise forces a
+   smaller `monospace`, which looks out of place next to the VT323 body text). */
+pre, code { font-family: var(--font); font-size: 1rem; }
 pre { padding: 1rem; overflow-x: auto; border: 1px solid var(--fg-dim); }
 img { max-width: 100%; }
+
+/* Mermaid diagrams. Before the client runtime renders them (or with JS off) the
+   raw source shows as preformatted text; once processed, center the SVG. */
+pre.mermaid { white-space: pre; }
+pre.mermaid[data-processed] { white-space: normal; text-align: center; line-height: 1; }
+pre.mermaid svg { max-width: 100%; height: auto; }
+
+/* Re-skin Mermaid's built-in C4 palette (blue/grey) to the terminal green.
+   Target each node fill by value and leave fill="none" alone — the container
+   boundary is a transparent rect, so filling it would paint over its children.
+   A Mermaid upgrade that changes these hexes just falls back to native colours
+   (readable, never broken). */
+pre.mermaid svg text { fill: var(--fg) !important; }
+pre.mermaid svg line,
+pre.mermaid svg path[stroke] { stroke: var(--fg-dim) !important; }
+pre.mermaid svg marker path { fill: var(--fg-dim) !important; stroke: var(--fg-dim) !important; }
+/* Node fills, matched by value on any shape (rect or path — ContainerDb is a
+   cylinder built from paths). Placed after the stroke rules so node borders win. */
+pre.mermaid svg [fill="#1168BD"] { fill: #10361c !important; stroke: var(--fg) !important; }     /* System */
+pre.mermaid svg [fill="#438DD5"] { fill: #0e2a18 !important; stroke: var(--fg) !important; }      /* Container / ContainerDb */
+pre.mermaid svg [fill="#08427B"] { fill: #0c2417 !important; stroke: var(--fg-dim) !important; }  /* Person */
+pre.mermaid svg [fill="#999999"] { fill: #0d1a11 !important; stroke: var(--fg-dim) !important; }  /* External */
+
+/* Inline code: a dim, subtle box in the terminal palette (excludes the shiki
+   fenced blocks, which keep their own highlighting). */
+:not(pre) > code {
+  color: var(--fg-dim);
+  background: rgba(51, 255, 102, 0.07);
+  border: 1px solid rgba(51, 255, 102, 0.18);
+  border-radius: 2px;
+  padding: 0.05em 0.35em;
+}
+
+/* Fenced blocks: line numbers via CSS counters on shiki's .line spans. The
+   numbers are pseudo-elements, so they're never included when code is copied. */
+pre.shiki code { counter-reset: ln; }
+pre.shiki code .line::before {
+  counter-increment: ln;
+  content: counter(ln);
+  display: inline-block;
+  width: 2.5ch;
+  margin-right: 1.5ch;
+  text-align: right;
+  color: var(--fg-dim);
+  opacity: 0.55;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Drop shiki's trailing empty line so it doesn't add a stray number. */
+pre.shiki code .line:last-child:empty { display: none; }
+
+/* Copy button, injected per shiki block by CodeCopy (progressive enhancement). */
+.code-block { position: relative; margin: 1.1rem 0; }
+.code-block > pre { margin: 0; }
+.copy-btn {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(11, 15, 11, 0.85);
+  color: var(--fg);
+  border: 1px solid var(--fg-dim);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+.copy-btn:hover { background: rgba(51, 255, 102, 0.15); }
+.copy-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+.copy-btn svg { width: 1em; height: 1em; fill: currentColor; }
 
 /* Fallout-style block cursor: a solid green character-cell rectangle. */
 .cursor {

@@ -1,0 +1,44 @@
+---
+// Client-side Mermaid renderer. Bundled (no CDN) and lazy-loaded: the mermaid
+// library is only imported on pages that actually contain a `<pre class="mermaid">`
+// block (emitted by the markdown renderer). With JavaScript off the raw diagram
+// source stays visible as preformatted text — the engine's no-JS principle holds.
+---
+<script>
+  function renderMermaid() {
+    const nodes = [...document.querySelectorAll<HTMLElement>('pre.mermaid:not([data-processed])')]
+      .filter((n) => (n.textContent ?? '').trim().length > 0);
+    if (nodes.length === 0) return;
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'base',
+        fontFamily: "'VT323', monospace",
+        themeVariables: {
+          darkMode: true,
+          background: '#0b0f0b',
+          primaryColor: '#0e160e',
+          primaryBorderColor: '#33ff66',
+          primaryTextColor: '#33ff66',
+          secondaryColor: '#0e160e',
+          secondaryBorderColor: '#1f9a3f',
+          secondaryTextColor: '#33ff66',
+          tertiaryColor: '#0e160e',
+          tertiaryBorderColor: '#1f9a3f',
+          tertiaryTextColor: '#33ff66',
+          lineColor: '#1f9a3f',
+          textColor: '#33ff66',
+          fontSize: '18px',
+        },
+      });
+      mermaid.run({ nodes }).catch((err) => console.error('mermaid render failed:', err));
+    }).catch((err) => console.error('mermaid import failed:', err));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMermaid);
+  } else {
+    renderMermaid();
+  }
+</script>
