@@ -14,7 +14,13 @@ const active = a.enabled && a.matomoUrl !== '' && accepted;
 )}
 
 <script>
-  import { loadMatomo } from '../lib/matomo';
+  // Dynamic, catchable import (never a static top-level one): the matomo chunk is
+  // blocked by privacy shields such as Brave, and that must fail silently rather
+  // than throw an uncaught module-load error. See ConsentBanner for the rationale.
   const el = document.getElementById('matomo-config');
-  if (el) loadMatomo(el.dataset.url ?? '', Number(el.dataset.site ?? '1'));
+  if (el) {
+    import('../lib/matomo')
+      .then(({ loadMatomo }) => loadMatomo(el.dataset.url ?? '', Number(el.dataset.site ?? '1')))
+      .catch(() => {});
+  }
 </script>

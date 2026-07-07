@@ -59,17 +59,27 @@ const show = cfg.privacy.consentBanner && !accepted;
 </style>
 
 <script>
-  import { loadMatomo } from '../lib/matomo';
-  // ACCEPT is always wired; it no-ops when the gate isn't on the page.
+  // ACCEPT is always wired; it no-ops when the gate isn't on the page. Matomo is
+  // pulled in via a guarded DYNAMIC import inside the handler (only when
+  // analytics is configured) — never a static top-level import. A privacy
+  // blocker such as Brave Shields blocks any request containing "matomo",
+  // including our own bundled chunk; a static import would then fail to load and
+  // leave the ACCEPT handler unattached, trapping the visitor behind the opaque
+  // overlay. Dismissing the gate must not depend on analytics loading.
   const gate = document.getElementById('consent-gate');
   const accept = document.getElementById('consent-accept');
   if (gate && accept) {
     accept.addEventListener('click', () => {
+      const url = gate.dataset.matomoUrl;
+      const siteId = Number(gate.dataset.siteId ?? '1');
       // ~180 days; SameSite=Lax is fine for a first-party consent flag.
       document.cookie = 'gregco-consent=1; path=/; max-age=15552000; SameSite=Lax';
-      const url = gate.dataset.matomoUrl;
-      if (url) loadMatomo(url, Number(gate.dataset.siteId ?? '1'));
       gate.remove();
+      if (url) {
+        import('../lib/matomo')
+          .then(({ loadMatomo }) => loadMatomo(url, siteId))
+          .catch(() => {}); // analytics blocked/unavailable — consent still stands
+      }
     });
   }
 </script>
