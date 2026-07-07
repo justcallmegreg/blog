@@ -176,6 +176,14 @@ pre.shiki code .line:last-child:empty { display: none; }
 .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
 .copy-btn svg { width: 1em; height: 1em; fill: currentColor; }
 
+/* Typewriter: blocks (code frames, images, diagrams) stay hidden until the
+   cursor reaches them, so they reveal in reading order instead of floating in
+   the blanked-out space ahead. Also suppress the copy/zoom buttons the runtimes
+   attach to a still-hidden block. */
+.tw-pending { display: none !important; }
+.code-block:has(> pre.tw-pending) .copy-btn,
+.mermaid-block:has(> pre.tw-pending) .zoom-btn { display: none; }
+
 /* Fallout-style block cursor: a solid green character-cell rectangle. */
 .cursor {
   display: inline-block;

@@ -7,28 +7,62 @@
   const root = document.getElementById('typewriter')!;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!reduce) {
-    // Skip text inside mermaid diagram blocks: their source must stay intact so
-    // the Mermaid runtime can render it (and typing out raw diagram source that
-    // then flips to an SVG would look broken).
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: (node) =>
-        (node as Text).parentElement?.closest('pre.mermaid, .copy-btn')
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT,
-    });
-    const nodes: { node: Text; full: string }[] = [];
+    // Build an ordered list of reveal steps by walking the rendered HTML in
+    // document order. Prose and code type out character-by-character; images and
+    // Mermaid diagrams are revealed whole the instant the cursor reaches them
+    // (typing out an <img> or raw diagram source would look broken).
+    //
+    // Anything that shows chrome before its text is typed — code blocks, inline
+    // `code`, images, diagrams, list markers — is hidden until the cursor reaches
+    // it. Otherwise its box (or bullet/number) sits empty in the blanked-out space
+    // ahead of the cursor. Text inside a code frame or list item still types in
+    // place; images and diagrams just appear whole.
+    type Item =
+      | { kind: 'text'; node: Text; full: string }
+      | { kind: 'show'; el: HTMLElement };
+    const isRevealUnit = (el: Element) =>
+      el.tagName === 'IMG' ||
+      el.tagName === 'LI' || // list marker (bullet / number) shows before its text
+      (el.tagName === 'PRE' && el.classList.contains('mermaid')) ||
+      (el.tagName === 'PRE' && el.classList.contains('shiki')) ||
+      (el.tagName === 'CODE' && !el.closest('pre')); // inline code (its own box)
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            // Diagram source is handled as a whole; the copy label isn't ours.
+            return (node as Text).parentElement?.closest('pre.mermaid, .copy-btn')
+              ? NodeFilter.FILTER_REJECT
+              : NodeFilter.FILTER_ACCEPT;
+          }
+          const el = node as Element;
+          if (el.closest('.copy-btn')) return NodeFilter.FILTER_REJECT;
+          if (isRevealUnit(el)) return NodeFilter.FILTER_ACCEPT;
+          return NodeFilter.FILTER_SKIP; // descend to reach inner text
+        },
+      }
+    );
+    const items: Item[] = [];
     let n: Node | null;
     while ((n = walker.nextNode())) {
-      const t = n as Text;
-      nodes.push({ node: t, full: t.data });
-      t.data = '';
+      if (n.nodeType === Node.TEXT_NODE) {
+        const t = n as Text;
+        items.push({ kind: 'text', node: t, full: t.data });
+        t.data = '';
+      } else {
+        const el = n as HTMLElement;
+        items.push({ kind: 'show', el });
+        el.classList.add('tw-pending'); // hidden until the cursor arrives
+      }
     }
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
     cursor.textContent = ' ';
     root.appendChild(cursor);
 
-    let ni = 0, ci = 0, revealed = 0;
+    let ii = 0, ci = 0, revealed = 0;
     let done = false;
 
     // Accelerate as the reader gets further in, so long posts aren't tedious:
@@ -36,7 +70,10 @@
     // next 255 faster still, then the rest streams at "lightning" speed (the
     // cursor keeps blinking until everything is revealed). Speed is scaled by
     // revealing more characters per tick (the 12ms cadence is kept).
-    const total = nodes.reduce((sum, x) => sum + x.full.length, 0);
+    const total = items.reduce(
+      (sum, x) => sum + (x.kind === 'text' ? x.full.length : 0),
+      0
+    );
     const lightningStep = Math.max(80, Math.ceil((total - 765) / 10));
     function stepFor(r: number): number {
       if (r < 255) return 1;   // normal
@@ -46,19 +83,28 @@
     }
     function reveal() {
       let step = stepFor(revealed);
-      while (step-- > 0) {
-        if (ni >= nodes.length) { finish(); return; }
-        const cur = nodes[ni];
-        cur.node.data = cur.full.slice(0, ++ci);
+      while (step > 0) {
+        if (ii >= items.length) { finish(); return; }
+        const it = items[ii];
+        if (it.kind === 'show') {
+          it.el.classList.remove('tw-pending'); // appears immediately, whole
+          ii++;
+          continue; // instant: a block reveal doesn't consume a typing step
+        }
+        it.node.data = it.full.slice(0, ++ci);
         revealed++;
-        if (ci >= cur.full.length) { ni++; ci = 0; }
+        step--;
+        if (ci >= it.full.length) { ii++; ci = 0; }
       }
       document.dispatchEvent(new Event('ui:type')); // keystroke tick (throttled + 3s-capped in ClickSound)
     }
     function finish() {
       if (done) return;
       done = true;
-      for (const { node, full } of nodes) node.data = full;
+      for (const it of items) {
+        if (it.kind === 'text') it.node.data = it.full;
+        else it.el.classList.remove('tw-pending');
+      }
       cursor.remove();
       clearInterval(timer);
     }
