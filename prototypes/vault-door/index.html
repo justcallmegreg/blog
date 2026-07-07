@@ -180,73 +180,6 @@
   }
   #door { width: 100%; height: 100%; display: block; }
 
-  /* ============ MECHANICAL ARM ============ */
-  /* Rides inside #track (travels with the door) but outside #spin (no rotation).
-     Parked folded up along the rail; swings down to hook the hub on alarm. */
-  #arm {
-    position: absolute;
-    left: 50%; top: -12%;
-    width: calc(var(--D) * 0.055);
-    height: 62%;
-    margin-left: calc(var(--D) * -0.0275);
-    transform-origin: 50% 0;
-    transform: rotate(64deg);
-    transition: transform 0.75s cubic-bezier(0.45, -0.25, 0.3, 1.1);
-    z-index: 6;
-    filter: drop-shadow(0 calc(var(--D)*0.012) calc(var(--D)*0.02) rgba(0,0,0,0.7));
-  }
-  #stage.alarm #arm, #stage.rolling #arm, #stage.revealed #arm { transform: rotate(0deg); }
-  /* boom */
-  #arm::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, #1a1e1a, #4a524a 35%, #666f66 50%, #3a413a 70%, #141814);
-    border: 1px solid #000;
-  }
-  /* piston sleeve */
-  #arm::after {
-    content: ''; position: absolute;
-    left: 26%; width: 48%; top: 8%; height: 46%;
-    background: linear-gradient(90deg, #2c322c, #8a938a 50%, #232823);
-    border: 1px solid #0a0d0a;
-  }
-  /* carriage on the rail */
-  #arm .carriage {
-    position: absolute;
-    left: 50%; top: calc(var(--D) * -0.028);
-    width: calc(var(--D) * 0.16); height: calc(var(--D) * 0.075);
-    transform: translateX(-50%);
-    background: linear-gradient(180deg, #4d554d, #20251f 60%, #333a33);
-    border: 1px solid #000;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
-  }
-  #arm .carriage::before, #arm .carriage::after {
-    content: ''; position: absolute; bottom: 12%;
-    width: 22%; height: 30%; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #757e75, #232823);
-    border: 1px solid #000;
-  }
-  #arm .carriage::before { left: 8%; }
-  #arm .carriage::after  { right: 8%; }
-  /* claw ring gripping the hub */
-  #arm .claw {
-    position: absolute;
-    left: 50%; bottom: calc(var(--D) * -0.052);
-    width: calc(var(--D) * 0.13); height: calc(var(--D) * 0.13);
-    transform: translateX(-50%);
-    border: calc(var(--D) * 0.014) solid #545d54;
-    border-bottom-color: transparent;
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #000;
-  }
-  #arm .claw::after { /* center pin */
-    content: ''; position: absolute; left: 50%; top: 50%;
-    width: 26%; height: 26%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #8a938a, #2a302a);
-    border: 1px solid #000;
-  }
-
   /* ============ DEBRIS & DUST ============ */
   /* grit shaken loose from above the frame */
   .debris { position: absolute; left: 50%; top: 50%; z-index: 6; pointer-events: none; }
@@ -427,7 +360,6 @@
     <div id="spin">
       <svg id="door" viewBox="0 0 600 600" aria-label="Vault 94 gear door"></svg>
     </div>
-    <div id="arm"><div class="carriage"></div><div class="claw"></div></div>
   </div>
   <div class="steam"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="debris"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
