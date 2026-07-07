@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ContentStore } from '../../src/lib/content-store';
@@ -163,5 +163,22 @@ describe('ContentStore', () => {
     );
     expect(store.resolveAssetPath('reactor', '../../../etc/passwd')).toBeNull();
     rmSync(relRoot, { recursive: true, force: true });
+  });
+
+  it('clones into a pre-existing non-empty cacheDir without removing the dir itself', async () => {
+    // Regression: in Kubernetes the cache dir is a volume mount point, which
+    // cannot be rmdir'd (EBUSY). The pre-clone cleanup must clear the dir's
+    // CONTENTS, never delete the directory — the inode has to survive.
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(join(cacheDir, 'stale-junk.txt'), 'left over from a failed attempt');
+    mkdirSync(join(cacheDir, 'stale-dir'), { recursive: true });
+    const inodeBefore = statSync(cacheDir).ino;
+
+    const store = makeStore();
+    await store.start();
+
+    expect(statSync(cacheDir).ino).toBe(inodeBefore); // dir itself never recreated
+    expect(existsSync(join(cacheDir, 'stale-junk.txt'))).toBe(false); // contents cleared
+    expect(store.listPosts().map((p) => p.slug)).toEqual(['first', 'older']);
   });
 });
