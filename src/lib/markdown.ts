@@ -9,6 +9,26 @@ import { visit, EXIT } from 'unist-util-visit';
 import type { Root, Element } from 'hast';
 
 const RELATIVE = /^(?:\.\/)?assets\//;
+const EXTERNAL = /^https?:\/\//i;
+
+/**
+ * Open external links (absolute http/https URLs) in a new tab so readers don't
+ * navigate away from the blog. Relative/root-relative links, anchors, and
+ * mailto:/tel: stay in the same tab. `noopener noreferrer` closes the
+ * reverse-tabnabbing hole and avoids leaking the referrer.
+ */
+function externalLinksNewTab() {
+  return (tree: Root) => {
+    visit(tree, 'element', (node: Element) => {
+      if (node.tagName !== 'a') return;
+      const href = node.properties?.href;
+      if (typeof href === 'string' && EXTERNAL.test(href)) {
+        node.properties!.target = '_blank';
+        node.properties!.rel = 'noopener noreferrer';
+      }
+    });
+  };
+}
 
 function rewriteAssets(urlPrefix: string) {
   return (tree: Root) => {
@@ -65,6 +85,7 @@ export async function renderMarkdown(
     .use(rehypeRaw)
     .use(rehypeShiki, { theme: 'github-dark' })
     .use(rewriteAssets, urlPrefix)
+    .use(externalLinksNewTab)
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(content);
   return String(file);
