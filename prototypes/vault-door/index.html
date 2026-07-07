@@ -155,13 +155,13 @@
     width: var(--D); height: var(--D);
     margin: calc(var(--D) / -2) 0 0 calc(var(--D) / -2);
     z-index: 4;
-    transition: transform 3.1s cubic-bezier(0.65, 0, 0.35, 1);
+    transition: transform 2s cubic-bezier(0.65, 0, 0.35, 1);
   }
   #stage.rolling #track { transform: translateX(calc(var(--D) * -1.28)); }
 
   #spin {
     width: 100%; height: 100%;
-    transition: transform 3.4s cubic-bezier(0.4, 0.1, 0.3, 1), scale 3.4s ease;
+    transition: transform 2.2s cubic-bezier(0.4, 0.1, 0.3, 1), scale 2.2s ease;
     filter: drop-shadow(0 calc(var(--D)*0.02) calc(var(--D)*0.04) rgba(0,0,0,0.85));
   }
   /* unscrew: just over a full turn while pushing out toward the viewer */
@@ -169,16 +169,131 @@
   /* keep rolling as it is carried away */
   #stage.rolling #spin {
     transform: rotate(-540deg); scale: 1.055;
-    transition: transform 3.1s cubic-bezier(0.65, 0, 0.35, 1);
+    transition: transform 2s cubic-bezier(0.65, 0, 0.35, 1);
   }
   /* seismic shudder before the mechanism catches */
-  #stage.shudder #spin { animation: shudder 0.7s steps(2, jump-none) 3; }
+  #stage.shudder #spin { animation: shudder 0.45s steps(2, jump-none) 2; }
   @keyframes shudder {
     0%,100% { translate: 0 0; }
     25% { translate: calc(var(--D) * -0.004) calc(var(--D) * 0.003); }
     75% { translate: calc(var(--D) * 0.004) calc(var(--D) * -0.004); }
   }
   #door { width: 100%; height: 100%; display: block; }
+
+  /* ============ MECHANICAL ARM ============ */
+  /* Rides inside #track (travels with the door) but outside #spin (no rotation).
+     Parked folded up along the rail; swings down to hook the hub on alarm. */
+  #arm {
+    position: absolute;
+    left: 50%; top: -12%;
+    width: calc(var(--D) * 0.055);
+    height: 62%;
+    margin-left: calc(var(--D) * -0.0275);
+    transform-origin: 50% 0;
+    transform: rotate(64deg);
+    transition: transform 0.75s cubic-bezier(0.45, -0.25, 0.3, 1.1);
+    z-index: 6;
+    filter: drop-shadow(0 calc(var(--D)*0.012) calc(var(--D)*0.02) rgba(0,0,0,0.7));
+  }
+  #stage.alarm #arm, #stage.rolling #arm, #stage.revealed #arm { transform: rotate(0deg); }
+  /* boom */
+  #arm::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, #1a1e1a, #4a524a 35%, #666f66 50%, #3a413a 70%, #141814);
+    border: 1px solid #000;
+  }
+  /* piston sleeve */
+  #arm::after {
+    content: ''; position: absolute;
+    left: 26%; width: 48%; top: 8%; height: 46%;
+    background: linear-gradient(90deg, #2c322c, #8a938a 50%, #232823);
+    border: 1px solid #0a0d0a;
+  }
+  /* carriage on the rail */
+  #arm .carriage {
+    position: absolute;
+    left: 50%; top: calc(var(--D) * -0.028);
+    width: calc(var(--D) * 0.16); height: calc(var(--D) * 0.075);
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #4d554d, #20251f 60%, #333a33);
+    border: 1px solid #000;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  #arm .carriage::before, #arm .carriage::after {
+    content: ''; position: absolute; bottom: 12%;
+    width: 22%; height: 30%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #757e75, #232823);
+    border: 1px solid #000;
+  }
+  #arm .carriage::before { left: 8%; }
+  #arm .carriage::after  { right: 8%; }
+  /* claw ring gripping the hub */
+  #arm .claw {
+    position: absolute;
+    left: 50%; bottom: calc(var(--D) * -0.052);
+    width: calc(var(--D) * 0.13); height: calc(var(--D) * 0.13);
+    transform: translateX(-50%);
+    border: calc(var(--D) * 0.014) solid #545d54;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #000;
+  }
+  #arm .claw::after { /* center pin */
+    content: ''; position: absolute; left: 50%; top: 50%;
+    width: 26%; height: 26%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #8a938a, #2a302a);
+    border: 1px solid #000;
+  }
+
+  /* ============ DEBRIS & DUST ============ */
+  /* grit shaken loose from above the frame */
+  .debris { position: absolute; left: 50%; top: 50%; z-index: 6; pointer-events: none; }
+  .debris i {
+    position: absolute;
+    width: calc(var(--D) * 0.013); height: calc(var(--D) * 0.011);
+    background: #5c6157; opacity: 0;
+  }
+  #stage.shudder .debris i, #stage.unsealing .debris i, #stage.rolling .debris i {
+    animation: debrisfall 1.3s cubic-bezier(0.3, 0, 0.8, 0.4) forwards;
+    animation-delay: var(--wait);
+  }
+  .debris i:nth-child(1) { --dx: -0.38; --drift: -0.03; --wait: 0.00s; scale: 0.8; background: #6b7060; }
+  .debris i:nth-child(2) { --dx: -0.16; --drift:  0.02; --wait: 0.12s; }
+  .debris i:nth-child(3) { --dx:  0.05; --drift: -0.02; --wait: 0.05s; scale: 1.3; background: #4a4e44; }
+  .debris i:nth-child(4) { --dx:  0.24; --drift:  0.04; --wait: 0.22s; scale: 0.7; }
+  .debris i:nth-child(5) { --dx:  0.40; --drift: -0.01; --wait: 0.34s; }
+  .debris i:nth-child(6) { --dx: -0.28; --drift:  0.03; --wait: 0.85s; scale: 1.2; background: #6b7060; }
+  .debris i:nth-child(7) { --dx:  0.12; --drift: -0.04; --wait: 1.05s; scale: 0.9; }
+  .debris i:nth-child(8) { --dx: -0.02; --drift:  0.02; --wait: 1.30s; }
+  @keyframes debrisfall {
+    0%   { opacity: 0; transform: translate(calc(var(--D) * var(--dx)), calc(var(--D) * -0.54)) rotate(0deg); }
+    10%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(var(--D) * (var(--dx) + var(--drift))), calc(var(--D) * 0.18)) rotate(230deg); }
+  }
+  /* dust kicked up along the floor as the door rolls */
+  .dust { position: absolute; left: 50%; top: 50%; z-index: 5; pointer-events: none; }
+  .dust i {
+    position: absolute;
+    width: calc(var(--D) * 0.22); height: calc(var(--D) * 0.14);
+    margin: calc(var(--D) * -0.07) calc(var(--D) * -0.11);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(128,120,100,0.4), transparent 70%);
+    filter: blur(7px);
+    opacity: 0;
+  }
+  #stage.rolling .dust i { animation: dustkick 1.4s ease-out forwards; animation-delay: var(--wait); }
+  .dust i:nth-child(1) { --dx: -0.15; --wait: 0.10s; }
+  .dust i:nth-child(2) { --dx: -0.45; --wait: 0.35s; }
+  .dust i:nth-child(3) { --dx: -0.75; --wait: 0.60s; }
+  .dust i:nth-child(4) { --dx: -1.05; --wait: 0.85s; }
+  @keyframes dustkick {
+    0%   { opacity: 0; scale: 0.3; transform: translate(calc(var(--D) * var(--dx)), calc(var(--D) * 0.44)); }
+    25%  { opacity: 0.55; }
+    100% { opacity: 0; scale: 1.8; transform: translate(calc(var(--D) * (var(--dx) - 0.08)), calc(var(--D) * 0.36)); }
+  }
 
   /* ================= STEAM ================= */
   .steam { position: absolute; left: 50%; top: 50%; z-index: 5; pointer-events: none; }
@@ -191,12 +306,12 @@
     filter: blur(8px);
     opacity: 0; scale: 0.2;
   }
-  #stage.unsealing .steam i, #stage.rolling .steam i { animation: puff 2.4s ease-out forwards; }
+  #stage.unsealing .steam i, #stage.rolling .steam i { animation: puff 1.8s ease-out forwards; }
   .steam i:nth-child(1) { --a: 205deg; animation-delay: 0.05s !important; }
-  .steam i:nth-child(2) { --a: 335deg; animation-delay: 0.25s !important; }
-  .steam i:nth-child(3) { --a: 90deg;  animation-delay: 0.45s !important; }
-  .steam i:nth-child(4) { --a: 250deg; animation-delay: 0.9s !important; }
-  .steam i:nth-child(5) { --a: 25deg;  animation-delay: 1.2s !important; }
+  .steam i:nth-child(2) { --a: 335deg; animation-delay: 0.2s !important; }
+  .steam i:nth-child(3) { --a: 90deg;  animation-delay: 0.35s !important; }
+  .steam i:nth-child(4) { --a: 250deg; animation-delay: 0.65s !important; }
+  .steam i:nth-child(5) { --a: 25deg;  animation-delay: 0.9s !important; }
   @keyframes puff {
     0%   { opacity: 0; scale: 0.2; transform: rotate(var(--a)) translateY(calc(var(--D) * -0.46)); }
     18%  { opacity: 0.85; }
@@ -308,10 +423,15 @@
     <p class="dim" id="copyright">COPYRIGHT 1994-2026 GREGCO INDUSTRIES</p>
     <button class="enter" id="enter">ENTER &gt;</button>
   </div>
-  <div id="track"><div id="spin">
-    <svg id="door" viewBox="0 0 600 600" aria-label="Vault 94 gear door"></svg>
-  </div></div>
+  <div id="track">
+    <div id="spin">
+      <svg id="door" viewBox="0 0 600 600" aria-label="Vault 94 gear door"></svg>
+    </div>
+    <div id="arm"><div class="carriage"></div><div class="claw"></div></div>
+  </div>
   <div class="steam"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="debris"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="dust"><i></i><i></i><i></i><i></i></div>
   <div class="lamp"></div>
   <div class="alarmwash"></div>
 
@@ -486,8 +606,8 @@ const SFX = (() => {
   return {
     cycle() {
       ensure();
-      klaxon(7); rumble(3.5); hiss(0.4, 1.4); hiss(1.2, 1.8);
-      setTimeout(() => rumble(3), 3600);
+      klaxon(4.5); rumble(2.5); hiss(0.3, 1.2); hiss(0.9, 1.4);
+      setTimeout(() => rumble(2), 2200);
     }
   };
 })();
@@ -501,9 +621,7 @@ let run = 0; // cancels stale sequences on replay/skip
 
 const BOOT_LINES = [
   'GREGCO INDUSTRIES (TM) TERMLINK PROTOCOL',
-  'INITIALIZING VAULT-TEC REMOTE UPLINK ...... OK',
-  'CHECKING RADIATION SEALS ................. OK',
-  'VISITOR CREDENTIALS ................ ACCEPTED',
+  'VISITOR CREDENTIALS .......... ACCEPTED',
   '',
   '> OVERSEER OVERRIDE: CYCLE DOOR — VAULT 94',
 ];
@@ -515,12 +633,12 @@ async function typeBoot(id) {
     for (const ch of line) {
       if (id !== run) return;
       boot.textContent += ch;
-      await sleep(ch === ' ' ? 6 : 14);
+      await sleep(ch === ' ' ? 3 : 7);
     }
     boot.textContent += '\n';
-    await sleep(120);
+    await sleep(70);
   }
-  await sleep(400);
+  await sleep(220);
 }
 
 async function playSequence({ sfx = false } = {}) {
@@ -534,25 +652,25 @@ async function playSequence({ sfx = false } = {}) {
   await typeBoot(id);
   if (id !== run) return;
   boot.classList.add('gone');
-  await sleep(500);
+  await sleep(250);
   if (id !== run) return;
 
   if (sfx) SFX.cycle();
 
   status.textContent = 'VAULT DOOR CYCLE INITIATED';
   stage.classList.add('alarm', 'shudder');
-  await sleep(1600);
+  await sleep(900);
   if (id !== run) return;
 
   status.textContent = 'DISENGAGING PRESSURE SEAL';
   stage.classList.remove('shudder');
   stage.classList.add('unsealing');
-  await sleep(3400);
+  await sleep(2150);
   if (id !== run) return;
 
   status.textContent = 'RETRACTING DOOR';
   stage.classList.add('rolling');
-  await sleep(3100);
+  await sleep(1950);
   if (id !== run) return;
 
   stage.classList.remove('alarm');
