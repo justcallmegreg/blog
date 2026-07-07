@@ -8,6 +8,7 @@ import ContactOverlay from '../components/ContactOverlay.astro';
 import NewsletterOverlay from '../components/NewsletterOverlay.astro';
 import CvRequestOverlay from '../components/CvRequestOverlay.astro';
 import ConsentBanner from '../components/ConsentBanner.astro';
+import VaultDoorIntro from '../components/VaultDoorIntro.astro';
 import Analytics from '../components/Analytics.astro';
 import MermaidRuntime from '../components/MermaidRuntime.astro';
 import CodeCopy from '../components/CodeCopy.astro';
@@ -214,6 +215,7 @@ function isActive(href: string): boolean {
     {cfg.contact.enabled && <ContactOverlay />}
     {cfg.newsletter.enabled && <NewsletterOverlay />}
     {cfg.about.enabled && <CvRequestOverlay />}
+    {cfg.effects.vaultDoorIntro && <VaultDoorIntro />}
     <ConsentBanner />
     <Analytics />
     <MermaidRuntime />

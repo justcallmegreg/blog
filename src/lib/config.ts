@@ -26,6 +26,8 @@ const ConfigSchema = z.object({
       crtGlitchIntervalSeconds: z.number().int().positive().default(15),
       vaultBoy: z.boolean().default(true),
       vaultBoyLoops: z.number().int().nonnegative().default(3),
+      vaultDoorIntro: z.boolean().default(true),
+      vaultDoorNumber: z.number().int().positive().default(94),
     })
     .default({}),
   github: z

@@ -16,6 +16,8 @@ effects:
   crtGlitchIntervalSeconds: 30      # roughly how often it sweeps (±jitter)
   vaultBoy: true                    # decorative Vault Boy GIF in the bottom-right corner
   vaultBoyLoops: 3                  # number of times the GIF loops, then freezes on its last frame (0 = infinite)
+  vaultDoorIntro: true              # vault-door opening animation on a visitor's FIRST visit only (cookie-gated)
+  vaultDoorNumber: 94               # number painted on the vault door
 github:
   username: "justcallmegreg"        # GitHub user summarized on the Contributions tab
   # Optional: set a GITHUB_TOKEN env var to raise API rate limits (not stored here).

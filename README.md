@@ -131,6 +131,8 @@ effects:                    # terminal eye-candy — all optional, all default o
   crtGlitchIntervalSeconds: 15
   vaultBoy: true                 # decorative Vault Boy GIF, bottom-right
   vaultBoyLoops: 3               # GIF loops N times then freezes (0 = infinite)
+  vaultDoorIntro: true           # vault-door opening animation, first visit only (cookie-gated)
+  vaultDoorNumber: 94            # number painted on the vault door
 
 github:
   username: "justcallmegreg"     # GitHub user summarized on the Contributions tab
@@ -281,8 +283,9 @@ shallow-clones the content repo, then on a timer runs `git fetch` + `git reset -
 re-indexes only the files whose git blob hash changed; posts are rendered to HTML once and held
 in an in-memory index that SSR routes read from.
 
-The terminal effects (Matrix rain, typewriter, click sounds, CRT glitch, Vault Boy) are
-client-side islands gated by `config.yaml` and built as progressive enhancement. The
+The terminal effects (Matrix rain, typewriter, click sounds, CRT glitch, Vault Boy, first-visit
+vault-door intro) are client-side islands gated by `config.yaml` and built as progressive
+enhancement. The
 Contributions tab calls the GitHub REST API at request time (cached briefly). The Contact and
 Request-CV flows validate server-side, gate on the slide-puzzle captcha, and forward JSON to
 their webhooks — keeping the engine stateless. Consent-gated Matomo analytics, when enabled,
