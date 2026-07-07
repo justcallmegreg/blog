@@ -141,6 +141,11 @@ pre.shiki code .line:last-child:empty { display: none; }
 
 .lede { color: var(--fg-dim); margin-top: 0; }
 
+/* Post header: title with the reading-time badge pushed to the right; wraps to a
+   new line on narrow screens. */
+.post-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap; }
+.post-head h1 { margin: 0; }
+
 /* Grouped post listing */
 .group { margin: 1.5rem 0; }
 .group-title {

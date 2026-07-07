@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { cloneRepo, fetchReset, lsTreeBlobs, firstAddedDate } from './git';
 import { pickPublishedDate } from './post-date';
+import { estimateReadingMinutes } from './reading-time';
 import { listLocalFiles } from './local-files';
 import { parsePostPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
@@ -19,6 +20,7 @@ export interface Post {
   draft: boolean;
   html: string;
   blobHash: string;
+  readingMinutes: number;
 }
 
 export interface ContentStoreOptions {
@@ -97,6 +99,7 @@ export class ContentStore {
         const { data, content } = parseFrontmatter(raw);
         const html = await renderMarkdown(content, info.urlPrefix);
         const excerpt = extractExcerpt(content) || data.description || '';
+        const readingMinutes = estimateReadingMinutes(content);
         const gitDate = this.opts.local
           ? null
           : await firstAddedDate(this.opts.cacheDir, repoRel);
@@ -112,6 +115,7 @@ export class ContentStore {
           draft: data.draft,
           html,
           blobHash: hash,
+          readingMinutes,
         });
         changed.push(contentRel);
       } catch (err) {

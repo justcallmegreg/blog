@@ -10,3 +10,20 @@ export function pickPublishedDate(
   if (gitDate) return gitDate;
   return '';
 }
+
+/**
+ * Human relative age of a `YYYY-MM-DD` published date: "today", "yesterday", or
+ * "N days ago". Whole-day UTC arithmetic (avoids DST edges); future dates read
+ * as "today"; empty or malformed input returns '' so the caller can omit it.
+ */
+export function relativeDay(dateYMD: string, now: Date): string {
+  if (!YMD.test(dateYMD)) return '';
+  const MS = 86_400_000;
+  const [y, m, d] = dateYMD.split('-').map(Number);
+  const then = Date.UTC(y, m - 1, d);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const days = Math.round((today - then) / MS);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
