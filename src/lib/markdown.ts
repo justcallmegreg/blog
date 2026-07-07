@@ -113,7 +113,10 @@ export async function renderMarkdown(
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(mermaidBlocks)
-    .use(rehypeShiki, { theme: 'github-dark' })
+    // defaultLanguage: even fences without a language get Shiki's line-wrapped
+    // structure (a <pre class="shiki"> with .line spans), so CSS line numbers
+    // and the copy button apply uniformly to every code block.
+    .use(rehypeShiki, { theme: 'github-dark', defaultLanguage: 'text' })
     .use(rewriteAssets, urlPrefix)
     .use(externalLinksNewTab)
     .use(rehypeStringify, { allowDangerousHtml: true })

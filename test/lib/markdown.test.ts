@@ -55,6 +55,12 @@ describe('renderMarkdown', () => {
     expect(html).toContain('shiki');
   });
 
+  it('routes language-less fences through shiki too, with .line spans', async () => {
+    const html = await renderMarkdown('```\nplain line one\nplain line two\n```', '/2026/06/12');
+    expect(html).toContain('class="shiki');
+    expect(html).toContain('class="line"');
+  });
+
   it('turns a mermaid fence into a <pre class="mermaid"> with the raw source', async () => {
     const src = 'C4Context\n    Person(a, "A", "desc")\n    Rel(a, b, "x")';
     const html = await renderMarkdown('```mermaid\n' + src + '\n```', '/2026/06/12');

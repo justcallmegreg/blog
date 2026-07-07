@@ -12,7 +12,7 @@
     // then flips to an SVG would look broken).
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) =>
-        (node as Text).parentElement?.closest('pre.mermaid')
+        (node as Text).parentElement?.closest('pre.mermaid, .copy-btn')
           ? NodeFilter.FILTER_REJECT
           : NodeFilter.FILTER_ACCEPT,
     });
