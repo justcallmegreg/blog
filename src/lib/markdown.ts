@@ -48,6 +48,35 @@ function rewriteAssets(urlPrefix: string) {
   };
 }
 
+/** Recursively gather the text content of a hast node. */
+function hastText(node: any): string {
+  if (node?.type === 'text') return node.value ?? '';
+  if (Array.isArray(node?.children)) return node.children.map(hastText).join('');
+  return '';
+}
+
+/**
+ * Rewrite ```mermaid fences to `<pre class="mermaid">…source…</pre>` so the
+ * client-side Mermaid runtime can render them, and so they bypass the Shiki
+ * highlighter. With JavaScript off the raw diagram source stays visible as
+ * preformatted text. Runs BEFORE rehypeShiki.
+ */
+function mermaidBlocks() {
+  return (tree: Root) => {
+    visit(tree, 'element', (node: Element) => {
+      if (node.tagName !== 'pre') return;
+      const code = node.children.find(
+        (c): c is Element => c.type === 'element' && c.tagName === 'code'
+      );
+      const cls = code?.properties?.className;
+      const isMermaid = Array.isArray(cls) && cls.includes('language-mermaid');
+      if (!code || !isMermaid) return;
+      node.properties = { className: ['mermaid'] };
+      node.children = [{ type: 'text', value: hastText(code) }];
+    });
+  };
+}
+
 /** Recursively gather the visible text of an mdast node. */
 function nodeText(node: any): string {
   if (typeof node?.value === 'string') return node.value;
@@ -83,6 +112,7 @@ export async function renderMarkdown(
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(mermaidBlocks)
     .use(rehypeShiki, { theme: 'github-dark' })
     .use(rewriteAssets, urlPrefix)
     .use(externalLinksNewTab)

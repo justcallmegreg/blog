@@ -9,6 +9,7 @@ import NewsletterOverlay from '../components/NewsletterOverlay.astro';
 import CvRequestOverlay from '../components/CvRequestOverlay.astro';
 import ConsentBanner from '../components/ConsentBanner.astro';
 import Analytics from '../components/Analytics.astro';
+import MermaidRuntime from '../components/MermaidRuntime.astro';
 import { getConfig } from '../lib/config';
 import { VERSION } from '../lib/version';
 
@@ -214,5 +215,6 @@ function isActive(href: string): boolean {
     {cfg.about.enabled && <CvRequestOverlay />}
     <ConsentBanner />
     <Analytics />
+    <MermaidRuntime />
   </body>
 </html>
