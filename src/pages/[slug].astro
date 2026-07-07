@@ -1,8 +1,10 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
 import Typewriter from '../components/Typewriter.astro';
+import ReadingTime from '../components/ReadingTime.astro';
 import { ensureStarted } from '../lib/store-singleton';
 import { getConfig } from '../lib/config';
+import { relativeDay } from '../lib/post-date';
 
 const cfg = getConfig();
 const { slug } = Astro.params;
@@ -12,12 +14,18 @@ const post = store.getPost(`/${slug}`);
 if (!post || post.draft) {
   return new Response('Not found', { status: 404 });
 }
+
+// Relative age is computed per request (SSR isn't cached), so it stays current.
+const rel = post.date ? relativeDay(post.date, new Date()) : '';
 ---
 <Terminal title={post.title}>
   <p><a href="/">&lt; back</a></p>
   <article>
-    <h1>{post.title}</h1>
-    {post.date && <p class="meta">{post.date}</p>}
+    <div class="post-head">
+      <h1>{post.title}</h1>
+      <ReadingTime minutes={post.readingMinutes} />
+    </div>
+    {post.date && <p class="meta">{post.date}{rel && ` (${rel})`}</p>}
     {cfg.effects.typewriter
       ? <Typewriter><Fragment set:html={post.html} /></Typewriter>
       : <Fragment set:html={post.html} />}
