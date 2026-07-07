@@ -54,4 +54,30 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<pre');
     expect(html).toContain('shiki');
   });
+
+  it('opens external links in a new tab with a safe rel', async () => {
+    const html = await renderMarkdown('[ext](https://example.com/page)', '/2026/06/12');
+    expect(html).toContain('href="https://example.com/page"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toMatch(/rel="[^"]*\bnoopener\b[^"]*"/);
+    expect(html).toMatch(/rel="[^"]*\bnoreferrer\b[^"]*"/);
+  });
+
+  it('opens http (non-TLS) external links in a new tab too', async () => {
+    const html = await renderMarkdown('[ext](http://example.com)', '/2026/06/12');
+    expect(html).toContain('target="_blank"');
+  });
+
+  it('leaves internal links in the same tab', async () => {
+    const html = await renderMarkdown(
+      '[post](/some-slug)\n\n[anchor](#section)\n\n[asset](assets/x.pdf)',
+      '/2026/06/12'
+    );
+    expect(html).not.toContain('target="_blank"');
+  });
+
+  it('does not add target to mailto links', async () => {
+    const html = await renderMarkdown('[mail](mailto:me@example.com)', '/2026/06/12');
+    expect(html).not.toContain('target="_blank"');
+  });
 });

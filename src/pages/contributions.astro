@@ -11,7 +11,7 @@ const data = await getContributionDataCached(user, process.env.GITHUB_TOKEN);
 const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
 ---
 <Terminal title="Contributions">
-  <h1>&gt; CONTRIBUTIONS<span class="muted"> // </span><a href={`https://github.com/${user}`}>{user}</a></h1>
+  <h1>&gt; CONTRIBUTIONS<span class="muted"> // </span><a href={`https://github.com/${user}`} target="_blank" rel="noopener noreferrer">{user}</a></h1>
 
   {data.error && (
     <p class="error">&gt; live data unavailable ({data.error}). Showing what we have.</p>
@@ -32,7 +32,7 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
       <ul class="repo-list">
         {data.repos.map((r) => (
           <li class="repo">
-            <a class="repo-name" href={r.url}>{r.name}</a>
+            <a class="repo-name" href={r.url} target="_blank" rel="noopener noreferrer">{r.name}</a>
             {r.language && <span class="repo-lang">{r.language}</span>}
             <div class="repo-desc">{r.description || '—'}</div>
           </li>
@@ -48,7 +48,7 @@ const fmtDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
         {data.prs.map((p) => (
           <li class="pr">
             <span class={`status status-${p.status.toLowerCase()}`}>{p.status}</span>
-            <a class="pr-title" href={p.url}>{p.title}</a>
+            <a class="pr-title" href={p.url} target="_blank" rel="noopener noreferrer">{p.title}</a>
             <div class="pr-meta">{p.repo}<span class="muted"> · </span>{fmtDate(p.createdAt)}</div>
           </li>
         ))}
