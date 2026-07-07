@@ -127,7 +127,10 @@ jobs:
             org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
           outputs: type=image,name=${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          # ignore-error: concurrent amd64/arm64 jobs race to reserve the same
+          # (unscoped) shared layer blobs in the GHA cache; a reserve failure
+          # must not fail the build+push. Cache export is best-effort.
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }},ignore-error=true
 
       - name: Export digest
         run: |
