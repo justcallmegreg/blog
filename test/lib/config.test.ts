@@ -40,6 +40,8 @@ content:
       crtGlitchIntervalSeconds: 15,
       vaultBoy: true,
       vaultBoyLoops: 3,
+      vaultDoorIntro: true,
+      vaultDoorNumber: 94,
     });
     expect(cfg.github.username).toBe('justcallmegreg');
     expect(cfg.github.cache.enabled).toBe(true);

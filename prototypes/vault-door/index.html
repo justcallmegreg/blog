@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VAULT 94 — door cycle prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0b0f0b;
+    --fg: #33ff66;
+    --fg-dim: #1f9a3f;
+    --accent: #b6ff00;
+    --amber: #e8c14a;
+    --alarm: #ff3b2f;
+    --font: 'VT323', monospace;
+    /* Door diameter */
+    --D: min(78vmin, 660px);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #050705;
+    color: var(--fg);
+    font-family: var(--font);
+    overflow: hidden;
+    -webkit-font-smoothing: none;
+  }
+
+  /* ================= STAGE ================= */
+  #stage { position: fixed; inset: 0; }
+
+  /* Tunnel wall: layered rock/concrete out of gradients + noise */
+  .wall {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(120,130,118,0.20) 0%, rgba(28,32,28,0.9) 46%, #05070522 70%),
+      radial-gradient(circle at 50% 42%, transparent calc(var(--D) * 0.55), rgba(0,0,0,0.75) calc(var(--D) * 0.56)),
+      linear-gradient(180deg, #131713 0%, #0a0d0a 55%, #060806 100%);
+  }
+  /* grain */
+  .wall::before {
+    content: ''; position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: overlay;
+    background-image:
+      repeating-radial-gradient(circle at 21% 33%, rgba(255,255,255,0.03) 0 1px, transparent 1px 5px),
+      repeating-radial-gradient(circle at 77% 61%, rgba(0,0,0,0.28) 0 2px, transparent 2px 7px),
+      repeating-linear-gradient(97deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 6px);
+  }
+  /* key light cone from above */
+  .wall::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 45% at 50% -4%, rgba(190,220,190,0.10), transparent 60%);
+  }
+
+  /* Overhead rail the door is carried along */
+  .rail {
+    position: absolute; left: 4%; right: 30%;
+    top: calc(50% - var(--D) * 0.62);
+    height: calc(var(--D) * 0.045);
+    background: linear-gradient(180deg, #3c423c, #161a16 60%, #2a2f2a);
+    border: 1px solid #000;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .rail::after { /* bolt heads */
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, transparent 0 44px, rgba(0,0,0,0.55) 44px 48px);
+  }
+
+  /* ============ DOORWAY / INTERIOR ============ */
+  .opening {
+    position: absolute; left: 50%; top: 50%;
+    width: var(--D); height: var(--D);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    overflow: hidden;
+    background: #010201;
+    box-shadow: inset 0 0 60px 22px #000;
+  }
+  /* Reveal text lives OUTSIDE the clipped opening, above every graphic layer,
+     so the circle/frame/vignette can never hide or crop it. */
+  .interior {
+    position: absolute; left: 50%; top: 50%;
+    width: var(--D); height: var(--D);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 8;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.4rem; text-align: center;
+    background:
+      radial-gradient(circle at 50% 58%, rgba(51,255,102,0.20), rgba(6,20,9,0.95) 62%),
+      #041007;
+    opacity: 0; transition: opacity 1.6s ease;
+    pointer-events: none;
+  }
+  #stage.revealed .interior { opacity: 1; pointer-events: auto; }
+  .interior .glyph { font-size: calc(var(--D) * 0.05); color: var(--fg-dim); letter-spacing: 0.4em; }
+  .interior h1 {
+    margin: 0; font-weight: 400;
+    font-size: calc(var(--D) * 0.11);
+    color: var(--accent);
+    text-shadow: 0 0 18px rgba(182,255,0,0.5);
+    letter-spacing: 0.06em;
+  }
+  .interior p { margin: 0; color: var(--fg); font-size: calc(var(--D) * 0.036); max-width: 70%; }
+  .interior .dim { color: var(--fg-dim); }
+  .enter {
+    margin-top: calc(var(--D) * 0.03);
+    font: inherit; cursor: pointer;
+    font-size: calc(var(--D) * 0.052);
+    color: var(--bg); background: var(--fg);
+    border: none; padding: 0.15em 0.9em;
+    box-shadow: 0 0 22px rgba(51,255,102,0.55);
+  }
+  .enter:hover { background: var(--accent); }
+  /* light flood when the door clears the frame */
+  .flood {
+    position: absolute; left: 50%; top: 50%;
+    width: var(--D); height: var(--D);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(circle, rgba(120,255,160,0.30), transparent 65%);
+    filter: blur(6px);
+    z-index: 3;
+  }
+  #stage.rolling .flood { opacity: 1; transition: opacity 2.2s ease 0.4s; }
+  #stage.revealed .flood { opacity: 0.25; }
+
+  /* Frame ring bolted around the opening */
+  .frame {
+    position: absolute; left: 50%; top: 50%;
+    width: calc(var(--D) * 1.12); height: calc(var(--D) * 1.12);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    background:
+      radial-gradient(circle,
+        transparent calc(50% - var(--D) * 0.062),
+        #3a413a calc(50% - var(--D) * 0.058),
+        #171b17 calc(50% - var(--D) * 0.028),
+        #2d332d calc(50% - var(--D) * 0.004),
+        transparent 50%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6);
+  }
+
+  /* ================= DOOR ================= */
+  /* track = horizontal carriage; spin = rotation; both animated separately */
+  #track {
+    position: absolute; left: 50%; top: 50%;
+    width: var(--D); height: var(--D);
+    margin: calc(var(--D) / -2) 0 0 calc(var(--D) / -2);
+    z-index: 4;
+    transition: transform 2s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  #stage.rolling #track { transform: translateX(calc(var(--D) * -1.28)); }
+
+  #spin {
+    width: 100%; height: 100%;
+    transition: transform 2.2s cubic-bezier(0.4, 0.1, 0.3, 1), scale 2.2s ease;
+    filter: drop-shadow(0 calc(var(--D)*0.02) calc(var(--D)*0.04) rgba(0,0,0,0.85));
+  }
+  /* unscrew: just over a full turn while pushing out toward the viewer */
+  #stage.unsealing #spin { transform: rotate(-380deg); scale: 1.055; }
+  /* keep rolling as it is carried away */
+  #stage.rolling #spin {
+    transform: rotate(-540deg); scale: 1.055;
+    transition: transform 2s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  /* seismic shudder before the mechanism catches */
+  #stage.shudder #spin { animation: shudder 0.45s steps(2, jump-none) 2; }
+  @keyframes shudder {
+    0%,100% { translate: 0 0; }
+    25% { translate: calc(var(--D) * -0.004) calc(var(--D) * 0.003); }
+    75% { translate: calc(var(--D) * 0.004) calc(var(--D) * -0.004); }
+  }
+  #door { width: 100%; height: 100%; display: block; }
+
+  /* ============ DEBRIS & DUST ============ */
+  /* grit shaken loose from above the frame */
+  .debris { position: absolute; left: 50%; top: 50%; z-index: 6; pointer-events: none; }
+  .debris i {
+    position: absolute;
+    width: calc(var(--D) * 0.013); height: calc(var(--D) * 0.011);
+    background: #5c6157; opacity: 0;
+  }
+  #stage.shudder .debris i, #stage.unsealing .debris i, #stage.rolling .debris i {
+    animation: debrisfall 1.3s cubic-bezier(0.3, 0, 0.8, 0.4) forwards;
+    animation-delay: var(--wait);
+  }
+  .debris i:nth-child(1) { --dx: -0.38; --drift: -0.03; --wait: 0.00s; scale: 0.8; background: #6b7060; }
+  .debris i:nth-child(2) { --dx: -0.16; --drift:  0.02; --wait: 0.12s; }
+  .debris i:nth-child(3) { --dx:  0.05; --drift: -0.02; --wait: 0.05s; scale: 1.3; background: #4a4e44; }
+  .debris i:nth-child(4) { --dx:  0.24; --drift:  0.04; --wait: 0.22s; scale: 0.7; }
+  .debris i:nth-child(5) { --dx:  0.40; --drift: -0.01; --wait: 0.34s; }
+  .debris i:nth-child(6) { --dx: -0.28; --drift:  0.03; --wait: 0.85s; scale: 1.2; background: #6b7060; }
+  .debris i:nth-child(7) { --dx:  0.12; --drift: -0.04; --wait: 1.05s; scale: 0.9; }
+  .debris i:nth-child(8) { --dx: -0.02; --drift:  0.02; --wait: 1.30s; }
+  @keyframes debrisfall {
+    0%   { opacity: 0; transform: translate(calc(var(--D) * var(--dx)), calc(var(--D) * -0.54)) rotate(0deg); }
+    10%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(var(--D) * (var(--dx) + var(--drift))), calc(var(--D) * 0.18)) rotate(230deg); }
+  }
+  /* dust kicked up along the floor as the door rolls */
+  .dust { position: absolute; left: 50%; top: 50%; z-index: 5; pointer-events: none; }
+  .dust i {
+    position: absolute;
+    width: calc(var(--D) * 0.22); height: calc(var(--D) * 0.14);
+    margin: calc(var(--D) * -0.07) calc(var(--D) * -0.11);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(128,120,100,0.4), transparent 70%);
+    filter: blur(7px);
+    opacity: 0;
+  }
+  #stage.rolling .dust i { animation: dustkick 1.4s ease-out forwards; animation-delay: var(--wait); }
+  .dust i:nth-child(1) { --dx: -0.15; --wait: 0.10s; }
+  .dust i:nth-child(2) { --dx: -0.45; --wait: 0.35s; }
+  .dust i:nth-child(3) { --dx: -0.75; --wait: 0.60s; }
+  .dust i:nth-child(4) { --dx: -1.05; --wait: 0.85s; }
+  @keyframes dustkick {
+    0%   { opacity: 0; scale: 0.3; transform: translate(calc(var(--D) * var(--dx)), calc(var(--D) * 0.44)); }
+    25%  { opacity: 0.55; }
+    100% { opacity: 0; scale: 1.8; transform: translate(calc(var(--D) * (var(--dx) - 0.08)), calc(var(--D) * 0.36)); }
+  }
+
+  /* ================= STEAM ================= */
+  .steam { position: absolute; left: 50%; top: 50%; z-index: 5; pointer-events: none; }
+  .steam i {
+    position: absolute; display: block;
+    width: calc(var(--D) * 0.3); height: calc(var(--D) * 0.3);
+    margin: calc(var(--D) * -0.15);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(210,225,210,0.5), transparent 70%);
+    filter: blur(8px);
+    opacity: 0; scale: 0.2;
+  }
+  #stage.unsealing .steam i, #stage.rolling .steam i { animation: puff 1.8s ease-out forwards; }
+  .steam i:nth-child(1) { --a: 205deg; animation-delay: 0.05s !important; }
+  .steam i:nth-child(2) { --a: 335deg; animation-delay: 0.2s !important; }
+  .steam i:nth-child(3) { --a: 90deg;  animation-delay: 0.35s !important; }
+  .steam i:nth-child(4) { --a: 250deg; animation-delay: 0.65s !important; }
+  .steam i:nth-child(5) { --a: 25deg;  animation-delay: 0.9s !important; }
+  @keyframes puff {
+    0%   { opacity: 0; scale: 0.2; transform: rotate(var(--a)) translateY(calc(var(--D) * -0.46)); }
+    18%  { opacity: 0.85; }
+    100% { opacity: 0; scale: 1.7; transform: rotate(var(--a)) translateY(calc(var(--D) * -0.62)); }
+  }
+
+  /* ================= ALARM ================= */
+  .lamp {
+    position: absolute; left: 50%; top: calc(50% - var(--D) * 0.78);
+    width: calc(var(--D) * 0.075); height: calc(var(--D) * 0.055);
+    transform: translateX(-50%);
+    background: radial-gradient(circle at 50% 30%, #7a1410, #2a0503 70%);
+    border-radius: 45% 45% 12% 12%;
+    border: 1px solid #000;
+    z-index: 6;
+  }
+  .lamp::after { /* rotating beam */
+    content: ''; position: absolute; left: 50%; top: 60%;
+    width: calc(var(--D) * 2.6); height: calc(var(--D) * 0.5);
+    margin: calc(var(--D) * -0.25) 0 0 calc(var(--D) * -1.3);
+    background: conic-gradient(from 0deg,
+      transparent 0 20deg, rgba(255,60,45,0.28) 30deg 45deg, transparent 55deg 180deg,
+      rgba(255,60,45,0.28) 205deg 225deg, transparent 235deg);
+    border-radius: 50%;
+    opacity: 0; filter: blur(2px);
+  }
+  #stage.alarm .lamp { background: radial-gradient(circle at 50% 30%, #ff4538, #6b0d06 70%); box-shadow: 0 0 26px 6px rgba(255,59,47,0.55); }
+  #stage.alarm .lamp::after { opacity: 1; animation: beam 1.1s linear infinite; }
+  @keyframes beam { to { transform: rotate(360deg); } }
+  /* red wash over the whole scene while cycling */
+  .alarmwash { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0; background: rgba(255,40,25,0.07); }
+  #stage.alarm .alarmwash { animation: wash 1.1s ease-in-out infinite; }
+  @keyframes wash { 0%,100% { opacity: 0.02; } 50% { opacity: 0.6; } }
+
+  /* ================= HUD ================= */
+  #hud {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 0.6rem 1.2rem;
+    display: flex; justify-content: space-between; align-items: baseline;
+    z-index: 9; font-size: clamp(16px, 2.6vmin, 24px);
+    text-shadow: 0 0 8px rgba(51,255,102,0.45);
+  }
+  #status { color: var(--fg); }
+  #status::after { content: '█'; animation: blink 0.9s steps(1) infinite; margin-left: 2px; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #skip { color: var(--fg-dim); cursor: pointer; text-decoration: none; }
+  #skip:hover { color: var(--accent); }
+  .tag {
+    position: absolute; top: 0.5rem; left: 1.2rem; z-index: 9;
+    color: var(--fg-dim); font-size: clamp(13px, 2vmin, 18px); opacity: 0.8;
+  }
+
+  #controls {
+    position: absolute; left: 50%; top: calc(50% + var(--D) * 0.60);
+    transform: translateX(-50%);
+    display: flex; gap: 1rem; z-index: 9;
+    opacity: 0; pointer-events: none; transition: opacity 0.8s ease 0.9s;
+  }
+  #stage.revealed #controls { opacity: 1; pointer-events: auto; }
+  #controls button {
+    font: inherit; font-size: clamp(15px, 2.4vmin, 22px);
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--fg-dim); padding: 0.1em 0.8em; cursor: pointer;
+  }
+  #controls button:hover { color: var(--bg); background: var(--fg); }
+  #controls button:focus-visible { outline: 1px dashed var(--fg-dim); outline-offset: 2px; }
+
+  /* ================= BOOT OVERLAY ================= */
+  #boot {
+    position: absolute; inset: 0; z-index: 20;
+    background: var(--bg);
+    padding: clamp(1rem, 6vmin, 4rem);
+    font-size: clamp(17px, 3vmin, 28px);
+    white-space: pre-wrap; line-height: 1.45;
+    text-shadow: 0 0 8px rgba(51,255,102,0.5);
+    transition: opacity 0.7s ease;
+  }
+  #boot.gone { opacity: 0; pointer-events: none; }
+
+  /* ================= CRT OVERLAY ================= */
+  .crt { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+  .crt::before { /* scanlines — same recipe as the blog theme */
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px);
+  }
+  .crt::after { /* vignette + slight phosphor bloom */
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+    animation: flicker 4.5s infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; } 92% { opacity: 1; }
+    93% { opacity: 0.86; } 94% { opacity: 1; } 97% { opacity: 0.93; } 98% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="wall"></div>
+  <div class="rail"></div>
+  <div class="flood"></div>
+  <div class="opening"></div>
+  <div class="frame"></div>
+  <div class="interior">
+    <div class="glyph">▚▚▚ VAULT-TEC ▞▞▞</div>
+    <h1>VAULT&nbsp;94</h1>
+    <p>GregCo Industries Unified Operating System</p>
+    <p class="dim" id="copyright">COPYRIGHT 1994-2026 GREGCO INDUSTRIES</p>
+    <button class="enter" id="enter">ENTER &gt;</button>
+  </div>
+  <div id="track">
+    <div id="spin">
+      <svg id="door" viewBox="0 0 600 600" aria-label="Vault 94 gear door"></svg>
+    </div>
+  </div>
+  <div class="steam"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="debris"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="dust"><i></i><i></i><i></i><i></i></div>
+  <div class="lamp"></div>
+  <div class="alarmwash"></div>
+
+  <div class="tag">PROTOTYPE // vault-door first-visit intro</div>
+  <div id="hud">
+    <span id="status">STANDBY</span>
+    <a id="skip" href="#">[ SKIP &gt;&gt; ]</a>
+  </div>
+  <div id="controls">
+    <button id="replay">↺ REPLAY</button>
+    <button id="replaySfx">↺ REPLAY + SFX</button>
+  </div>
+</div>
+<div id="boot"></div>
+<div class="crt"></div>
+
+<script>
+/* ---------------- SVG door construction ---------------- */
+(function buildDoor() {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('door');
+  const C = 300;
+  const el = (name, attrs, parent = svg) => {
+    const n = document.createElementNS(NS, name);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    parent.appendChild(n);
+    return n;
+  };
+
+  /* defs: steel gradients */
+  const defs = el('defs', {});
+  defs.innerHTML = `
+    <radialGradient id="steel" cx="42%" cy="36%" r="75%">
+      <stop offset="0%"  stop-color="#8d968c"/>
+      <stop offset="42%" stop-color="#5c655c"/>
+      <stop offset="78%" stop-color="#39413a"/>
+      <stop offset="100%" stop-color="#242b25"/>
+    </radialGradient>
+    <radialGradient id="hub" cx="45%" cy="40%" r="70%">
+      <stop offset="0%"  stop-color="#6e776d"/>
+      <stop offset="70%" stop-color="#414942"/>
+      <stop offset="100%" stop-color="#272e28"/>
+    </radialGradient>
+    <linearGradient id="tooth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#707a70"/>
+      <stop offset="100%" stop-color="#2c332d"/>
+    </linearGradient>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+      <feComposite operator="over" in2="SourceGraphic"/></filter>
+  `;
+
+  /* backing rim so the teeth read as part of one casting, not floating blocks */
+  el('circle', { cx: C, cy: C, r: 284, fill: '#232923', stroke: '#0e120e', 'stroke-width': 2 });
+
+  /* gear teeth */
+  const teeth = el('g', {});
+  for (let i = 0; i < 24; i++) {
+    el('rect', {
+      x: C - 13, y: 4, width: 26, height: 34, rx: 3,
+      fill: 'url(#tooth)', stroke: '#141814', 'stroke-width': 1.5,
+      transform: `rotate(${i * 15} ${C} ${C})`
+    }, teeth);
+  }
+
+  /* main disc + concentric ridges */
+  el('circle', { cx: C, cy: C, r: 268, fill: 'url(#steel)', stroke: '#101410', 'stroke-width': 3 });
+  [252, 214, 196].forEach((r, i) =>
+    el('circle', { cx: C, cy: C, r, fill: 'none', stroke: i % 2 ? '#1c221c' : '#6b746a', 'stroke-width': i % 2 ? 5 : 2, opacity: 0.8 }));
+
+  /* sector seams (6 pie plates) + highlight wedge for depth */
+  for (let i = 0; i < 6; i++) {
+    el('line', {
+      x1: C, y1: C - 196, x2: C, y2: C - 118,
+      stroke: '#20261f', 'stroke-width': 7, 'stroke-linecap': 'round',
+      transform: `rotate(${i * 60 + 30} ${C} ${C})`
+    });
+  }
+  el('path', { d: `M ${C} ${C} L ${C - 190} ${C - 60} A 200 200 0 0 1 ${C - 40} ${C - 195} Z`,
+    fill: 'rgba(255,255,255,0.05)' });
+  el('path', { d: `M ${C} ${C} L ${C + 120} ${C + 160} A 200 200 0 0 1 ${C - 90} ${C + 178} Z`,
+    fill: 'rgba(0,0,0,0.18)' });
+
+  /* rivet rings */
+  const rivets = el('g', {});
+  const ring = (r, n, size) => {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      el('circle', {
+        cx: C + Math.cos(a) * r, cy: C + Math.sin(a) * r, r: size,
+        fill: '#525b52', stroke: '#171c17', 'stroke-width': 1.5
+      }, rivets);
+    }
+  };
+  ring(233, 32, 5.5);
+  ring(174, 20, 4.5);
+
+  /* hub */
+  el('circle', { cx: C, cy: C, r: 104, fill: 'url(#hub)', stroke: '#161b16', 'stroke-width': 4 });
+  el('circle', { cx: C, cy: C, r: 86, fill: 'none', stroke: '#5f685e', 'stroke-width': 2, opacity: 0.7 });
+  /* hub cross-spokes */
+  for (let i = 0; i < 3; i++) {
+    el('rect', {
+      x: C - 80, y: C - 9, width: 160, height: 18, rx: 8,
+      fill: '#333a33', stroke: '#141914', 'stroke-width': 2,
+      transform: `rotate(${i * 60} ${C} ${C})`
+    });
+  }
+  el('circle', { cx: C, cy: C, r: 26, fill: '#2a302a', stroke: '#101510', 'stroke-width': 3 });
+  el('circle', { cx: C, cy: C, r: 9, fill: '#4c554c' });
+
+  /* painted 94 — big stencil yellow across the hub, like the in-game doors */
+  const num = el('text', {
+    x: C, y: C + 96, 'text-anchor': 'middle',
+    'font-family': "'VT323', monospace", 'font-size': 280,
+    fill: '#d8b445', opacity: 0.88, 'letter-spacing': '8',
+    stroke: '#3f3210', 'stroke-width': 3
+  });
+  num.textContent = '94';
+  el('text', {
+    x: C, y: C + 236, 'text-anchor': 'middle',
+    'font-family': "'VT323', monospace", 'font-size': 30,
+    fill: '#c9a83f', opacity: 0.6, 'letter-spacing': '6'
+  }).textContent = 'VAULT-TEC';
+
+  /* grime */
+  el('circle', { cx: C, cy: C, r: 268, fill: '#000', opacity: 0.16, filter: 'url(#rough)' });
+})();
+
+/* ---------------- sound (WebAudio, opt-in) ---------------- */
+const SFX = (() => {
+  let ctx = null;
+  const ensure = () => (ctx ??= new (window.AudioContext || window.webkitAudioContext)());
+  const now = () => ctx.currentTime;
+
+  function klaxon(dur) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.connect(g).connect(ctx.destination);
+    g.gain.value = 0;
+    for (let t = 0; t < dur; t += 1.1) {
+      o.frequency.setValueAtTime(320, now() + t);
+      o.frequency.exponentialRampToValueAtTime(180, now() + t + 0.9);
+      g.gain.setValueAtTime(0.05, now() + t);
+      g.gain.linearRampToValueAtTime(0.015, now() + t + 0.9);
+    }
+    g.gain.setValueAtTime(0, now() + dur);
+    o.start(); o.stop(now() + dur + 0.1);
+  }
+  function rumble(dur) {
+    const size = ctx.sampleRate * dur;
+    const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < size; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / size);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 90;
+    const g = ctx.createGain(); g.gain.value = 0.9;
+    src.connect(f).connect(g).connect(ctx.destination);
+    src.start();
+  }
+  function hiss(delay, dur) {
+    const size = ctx.sampleRate * dur;
+    const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < size; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / size, 2);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3200;
+    const g = ctx.createGain(); g.gain.value = 0.12;
+    src.connect(f).connect(g).connect(ctx.destination);
+    src.start(now() + delay);
+  }
+  return {
+    cycle() {
+      ensure();
+      klaxon(4.5); rumble(2.5); hiss(0.3, 1.2); hiss(0.9, 1.4);
+      setTimeout(() => rumble(2), 2200);
+    }
+  };
+})();
+
+/* ---------------- sequence ---------------- */
+const stage = document.getElementById('stage');
+const boot = document.getElementById('boot');
+const status = document.getElementById('status');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let run = 0; // cancels stale sequences on replay/skip
+
+const BOOT_LINES = [
+  'GREGCO INDUSTRIES (TM) TERMLINK PROTOCOL',
+  'VISITOR CREDENTIALS .......... ACCEPTED',
+  '',
+  '> OVERSEER OVERRIDE: CYCLE DOOR — VAULT 94',
+];
+
+async function typeBoot(id) {
+  boot.classList.remove('gone');
+  boot.textContent = '';
+  for (const line of BOOT_LINES) {
+    for (const ch of line) {
+      if (id !== run) return;
+      boot.textContent += ch;
+      await sleep(ch === ' ' ? 3 : 7);
+    }
+    boot.textContent += '\n';
+    await sleep(70);
+  }
+  await sleep(220);
+}
+
+async function playSequence({ sfx = false } = {}) {
+  const id = ++run;
+  stage.className = '';
+  document.getElementById('spin').style.transition = 'none';
+  void stage.offsetWidth; // reflow so transform resets apply instantly
+  document.getElementById('spin').style.transition = '';
+  status.textContent = 'STANDBY';
+
+  await typeBoot(id);
+  if (id !== run) return;
+  boot.classList.add('gone');
+  await sleep(250);
+  if (id !== run) return;
+
+  if (sfx) SFX.cycle();
+
+  status.textContent = 'VAULT DOOR CYCLE INITIATED';
+  stage.classList.add('alarm', 'shudder');
+  await sleep(900);
+  if (id !== run) return;
+
+  status.textContent = 'DISENGAGING PRESSURE SEAL';
+  stage.classList.remove('shudder');
+  stage.classList.add('unsealing');
+  await sleep(2150);
+  if (id !== run) return;
+
+  status.textContent = 'RETRACTING DOOR';
+  stage.classList.add('rolling');
+  await sleep(1950);
+  if (id !== run) return;
+
+  stage.classList.remove('alarm');
+  stage.classList.add('revealed');
+  status.textContent = 'DOOR OPEN — WELCOME, DWELLER';
+}
+
+function finishNow() {
+  ++run;
+  boot.classList.add('gone');
+  stage.className = 'rolling revealed';
+  status.textContent = 'DOOR OPEN — WELCOME, DWELLER';
+}
+
+document.getElementById('skip').addEventListener('click', e => { e.preventDefault(); finishNow(); });
+document.getElementById('replay').addEventListener('click', () => playSequence());
+document.getElementById('replaySfx').addEventListener('click', () => playSequence({ sfx: true }));
+document.getElementById('enter').addEventListener('click', () => {
+  status.textContent = 'LOADING PERSONAL LOG ... (would navigate to the blog index)';
+});
+
+document.getElementById('copyright').textContent =
+  `COPYRIGHT 1994-${new Date().getFullYear()} GREGCO INDUSTRIES`;
+
+playSequence();
+</script>
+</body>
+</html>
