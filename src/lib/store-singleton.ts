@@ -35,14 +35,31 @@ export async function ensureStarted(): Promise<ContentStore> {
         }
   );
   if (!startPromise) {
-    startPromise = s.start().then(() => {
-      timer = setInterval(() => {
-        s.sync().catch((err) =>
-          console.error(`Sync failed: ${(err as Error).message}`)
-        );
-      }, cfg.content.syncIntervalSeconds * 1000);
-      timer.unref?.();
-    });
+    const cacheDir = localDir ?? process.env.CACHE_DIR ?? './cache';
+    console.log(
+      `[content] config — repo=${cfg.content.repo} branch=${cfg.content.branch} ` +
+        `subdir=${cfg.content.subdir} cacheDir=${cacheDir} ` +
+        `mode=${localDir ? 'local' : 'git'} token=${process.env.CONTENT_REPO_TOKEN ? 'set' : 'none'} ` +
+        `syncInterval=${cfg.content.syncIntervalSeconds}s`
+    );
+    startPromise = s
+      .start()
+      .then(() => {
+        timer = setInterval(() => {
+          s.sync().catch((err) =>
+            console.error(`[content] sync failed: ${(err as Error).message}`)
+          );
+        }, cfg.content.syncIntervalSeconds * 1000);
+        timer.unref?.();
+      })
+      .catch((err) => {
+        // start() swallows clone failures, so this is unexpected — but never
+        // cache a rejected promise (it would 500 every request forever with no
+        // retry). Clear it so the next request re-attempts startup.
+        console.error(`[content] startup failed: ${(err as Error).message} — will retry on next request`);
+        startPromise = undefined;
+        throw err;
+      });
   }
   await startPromise;
   return s;
