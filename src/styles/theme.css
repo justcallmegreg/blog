@@ -59,17 +59,68 @@ pre.mermaid svg { max-width: 100%; height: auto; }
    Target each node fill by value and leave fill="none" alone — the container
    boundary is a transparent rect, so filling it would paint over its children.
    A Mermaid upgrade that changes these hexes just falls back to native colours
-   (readable, never broken). */
-pre.mermaid svg text { fill: var(--fg) !important; }
-pre.mermaid svg line,
-pre.mermaid svg path[stroke] { stroke: var(--fg-dim) !important; }
-pre.mermaid svg marker path { fill: var(--fg-dim) !important; stroke: var(--fg-dim) !important; }
+   (readable, never broken). `:is(pre.mermaid, .zoom-pane)` so the enlarged clone
+   in the zoom pane keeps the same green treatment. */
+:is(pre.mermaid, .zoom-pane) svg text { fill: var(--fg) !important; }
+:is(pre.mermaid, .zoom-pane) svg line,
+:is(pre.mermaid, .zoom-pane) svg path[stroke] { stroke: var(--fg-dim) !important; }
+:is(pre.mermaid, .zoom-pane) svg marker path { fill: var(--fg-dim) !important; stroke: var(--fg-dim) !important; }
 /* Node fills, matched by value on any shape (rect or path — ContainerDb is a
    cylinder built from paths). Placed after the stroke rules so node borders win. */
-pre.mermaid svg [fill="#1168BD"] { fill: #10361c !important; stroke: var(--fg) !important; }     /* System */
-pre.mermaid svg [fill="#438DD5"] { fill: #0e2a18 !important; stroke: var(--fg) !important; }      /* Container / ContainerDb */
-pre.mermaid svg [fill="#08427B"] { fill: #0c2417 !important; stroke: var(--fg-dim) !important; }  /* Person */
-pre.mermaid svg [fill="#999999"] { fill: #0d1a11 !important; stroke: var(--fg-dim) !important; }  /* External */
+:is(pre.mermaid, .zoom-pane) svg [fill="#1168BD"] { fill: #10361c !important; stroke: var(--fg) !important; }     /* System */
+:is(pre.mermaid, .zoom-pane) svg [fill="#438DD5"] { fill: #0e2a18 !important; stroke: var(--fg) !important; }      /* Container / ContainerDb */
+:is(pre.mermaid, .zoom-pane) svg [fill="#08427B"] { fill: #0c2417 !important; stroke: var(--fg-dim) !important; }  /* Person */
+:is(pre.mermaid, .zoom-pane) svg [fill="#999999"] { fill: #0d1a11 !important; stroke: var(--fg-dim) !important; }  /* External */
+
+/* Zoom: magnifier button on each rendered diagram + the full-screen pane. */
+.mermaid-block { position: relative; }
+.zoom-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 15, 11, 0.85);
+  color: var(--fg);
+  border: 1px solid var(--fg-dim);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 0;
+}
+.zoom-btn:hover { background: rgba(51, 255, 102, 0.15); }
+.zoom-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.zoom-btn svg { width: 1.15em; height: 1.15em; fill: currentColor; }
+
+.zoom-pane {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1rem 1rem;
+  overflow: auto;
+  background: rgba(11, 15, 11, 0.97);
+}
+.zoom-pane[hidden] { display: none; } /* beats the display:flex above */
+/* Fixed-size stage; the SVG fills it and its viewBox + preserveAspectRatio
+   ("meet") scales the diagram to fit, aspect ratio preserved and centered. */
+.zoom-pane-inner { width: 95vw; height: 86vh; display: flex; align-items: center; justify-content: center; margin: auto; }
+.zoom-pane svg { width: 100%; height: 100%; }
+.zoom-close {
+  position: fixed;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--fg-dim);
+  font: inherit;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+.zoom-close:hover { background: rgba(51, 255, 102, 0.15); }
 
 /* Inline code: a dim, subtle box in the terminal palette (excludes the shiki
    fenced blocks, which keep their own highlighting). */

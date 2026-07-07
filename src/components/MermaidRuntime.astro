@@ -32,8 +32,76 @@
           fontSize: '18px',
         },
       });
-      mermaid.run({ nodes }).catch((err) => console.error('mermaid render failed:', err));
+      mermaid
+        .run({ nodes })
+        .then(() => addZoom(nodes))
+        .catch((err) => console.error('mermaid render failed:', err));
     }).catch((err) => console.error('mermaid import failed:', err));
+  }
+
+  // --- Zoom: a magnifier button per rendered diagram, opening it enlarged in a
+  // full-screen pane. Progressive enhancement (only present once JS has rendered
+  // the SVG). Icon-only so the typewriter has nothing to retype.
+  const ZOOM_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14zM9 6h1v2h2v1h-2v2H9V9H7V8h2V6z"/></svg>';
+
+  let pane: HTMLElement | null = null;
+  function ensurePane(): HTMLElement {
+    if (pane) return pane;
+    const p = document.createElement('div');
+    p.className = 'zoom-pane';
+    p.hidden = true;
+    p.innerHTML =
+      '<button type="button" class="zoom-close" aria-label="Close diagram">[ CLOSE ✕ ]</button><div class="zoom-pane-inner"></div>';
+    const close = () => {
+      p.hidden = true;
+      (p.querySelector('.zoom-pane-inner') as HTMLElement).innerHTML = '';
+      document.removeEventListener('keydown', onKey);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    p.querySelector('.zoom-close')!.addEventListener('click', close);
+    p.addEventListener('click', (e) => {
+      if (e.target === p) close(); // backdrop click
+    });
+    (p as any).__open = (svg: SVGElement) => {
+      const inner = p.querySelector('.zoom-pane-inner') as HTMLElement;
+      const clone = svg.cloneNode(true) as SVGElement;
+      // Drop mermaid's fixed width/height + inline max-width cap; the viewBox
+      // plus the sized container (CSS) scales it to fit, aspect preserved.
+      clone.removeAttribute('width');
+      clone.removeAttribute('height');
+      clone.removeAttribute('style');
+      inner.replaceChildren(clone);
+      p.hidden = false;
+      document.addEventListener('keydown', onKey);
+      (p.querySelector('.zoom-close') as HTMLElement).focus();
+    };
+    document.body.appendChild(p);
+    pane = p;
+    return p;
+  }
+
+  function addZoom(nodes: HTMLElement[]) {
+    for (const pre of nodes) {
+      const svg = pre.querySelector('svg');
+      if (!svg || pre.closest('.mermaid-block')) continue;
+      const wrap = document.createElement('div');
+      wrap.className = 'mermaid-block';
+      pre.parentNode?.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'zoom-btn';
+      btn.setAttribute('aria-label', 'Zoom diagram');
+      btn.innerHTML = ZOOM_ICON;
+      btn.addEventListener('click', () => {
+        const cur = pre.querySelector('svg');
+        if (cur) ensurePane().__open(cur);
+      });
+      wrap.appendChild(btn);
+    }
   }
 
   if (document.readyState === 'loading') {
