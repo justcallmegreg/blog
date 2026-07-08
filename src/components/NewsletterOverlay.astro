@@ -36,7 +36,7 @@ const noticeText = noticeParts.join(' ');
       <p class="contact-error" id="nl-error" hidden></p>
       <div class="preview-actions">
         <button class="contact-btn nl-ghost" id="nl-unsubscribe" type="button">UNSUBSCRIBE</button>
-        <button class="contact-btn contact-approve nl-crt" id="nl-subscribe" type="button">SUBSCRIBE</button>
+        <button class="contact-btn contact-approve crt-btn" id="nl-subscribe" type="button">SUBSCRIBE</button>
       </div>
     </form>
 
@@ -66,23 +66,7 @@ const noticeText = noticeParts.join(' ');
   .nl-result { color: var(--accent); margin: 0.5rem 0 1rem; }
   /* Unsubscribe: quiet ghost button. */
   .nl-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-  /* Subscribe: localized CRT effect — scanlines + a periodic beam sweep + glow. */
-  .nl-crt { position: relative; overflow: hidden; }
-  @media (prefers-reduced-motion: no-preference) {
-    .nl-crt { animation: nl-glow 2.2s ease-in-out infinite; }
-    .nl-crt::before {
-      content: ""; position: absolute; inset: 0; pointer-events: none;
-      background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
-      mix-blend-mode: multiply;
-    }
-    .nl-crt::after {
-      content: ""; position: absolute; top: 0; left: -45%; width: 45%; height: 100%; pointer-events: none;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
-      animation: nl-sweep 2.8s linear infinite;
-    }
-  }
-  @keyframes nl-sweep { 0% { left: -45%; } 60%, 100% { left: 130%; } }
-  @keyframes nl-glow { 0%, 100% { box-shadow: 0 0 4px var(--accent); } 50% { box-shadow: 0 0 16px var(--accent); } }
+  /* Subscribe uses the shared .crt-btn effect (see theme.css). */
 </style>
 
 <script>

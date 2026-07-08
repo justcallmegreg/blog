@@ -442,6 +442,25 @@ pre.shiki code .line:last-child:empty { display: none; }
 .preview-actions { display: flex; gap: 0.75rem; }
 .preview-actions .contact-btn { margin-top: 0; }
 .contact-approve { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Localized CRT effect for a primary button: scanlines + a periodic beam sweep
+   + glow. Shared by the newsletter Subscribe button and the Request-CV button. */
+.crt-btn { position: relative; overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .crt-btn { animation: crt-glow 2.2s ease-in-out infinite; }
+  .crt-btn::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .crt-btn::after {
+    content: ""; position: absolute; top: 0; left: -45%; width: 45%; height: 100%; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    animation: crt-sweep 2.8s linear infinite;
+  }
+}
+@keyframes crt-sweep { 0% { left: -45%; } 60%, 100% { left: 130%; } }
+@keyframes crt-glow { 0%, 100% { box-shadow: 0 0 4px var(--accent); } 50% { box-shadow: 0 0 16px var(--accent); } }
 .contact-status { color: var(--accent); margin-top: 0.75rem; }
 
 /* Puzzle captcha */
@@ -469,4 +488,6 @@ pre.shiki code .line:last-child:empty { display: none; }
 .about-years { color: var(--accent); letter-spacing: 0.05em; }
 .about-desc { margin: 0.1rem 0; }
 .about-sub { color: var(--fg-dim); font-size: 0.95rem; }
-.about-cv-btn { max-width: 16rem; margin-top: 1.5rem; }
+/* Full-width primary CTA at the top of the About page, aligned with the
+   achievements block below it. */
+.about-cv-btn { margin: 1.25rem 0 1.75rem; }

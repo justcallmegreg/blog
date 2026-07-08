@@ -11,6 +11,8 @@ const projects = [...about.projects].sort((a, b) => b.end - a.end || b.start - a
   <h1>&gt; ABOUT{about.headline && <span class="muted"> // </span>}{about.headline}</h1>
   {about.bio && <p class="about-bio">{about.bio}</p>}
 
+  <button class="contact-btn contact-approve crt-btn about-cv-btn" id="request-cv" type="button">▸ REQUEST CV</button>
+
   <h2 class="pane-title">{'// ACHIEVEMENTS'}</h2>
   {projects.length === 0 && <p class="muted">&gt; no entries listed.</p>}
   <ul class="about-projects">
@@ -27,6 +29,4 @@ const projects = [...about.projects].sort((a, b) => b.end - a.end || b.start - a
       </li>
     ))}
   </ul>
-
-  <button class="contact-send about-cv-btn" id="request-cv" type="button">▸ REQUEST CV</button>
 </Terminal>
