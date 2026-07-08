@@ -82,5 +82,22 @@ const show = cfg.privacy.consentBanner && !accepted;
           .catch(() => {}); // analytics blocked/unavailable — consent still stands
       }
     });
+
+    // Escape hatch for content blockers. Brave's built-in cookie-notice filter
+    // (and similar ad-block cosmetic rules) hide the consent bar via CSS while
+    // leaving #consent-gate in the DOM — the ACCEPT button collapses to zero size
+    // and the visitor is trapped behind the opaque gate with no way to dismiss it
+    // (and, since the vault-door intro waits for the gate to close, the whole site
+    // goes blank). If ACCEPT isn't actually laid out shortly after load, the gate
+    // can't serve its purpose, so remove it and let the site through. No consent
+    // is recorded — analytics (if any) stays off, which is the privacy-safe result.
+    setTimeout(() => {
+      if (!document.getElementById('consent-gate')) return; // already dismissed
+      const r = accept.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) {
+        console.warn('[consent] ACCEPT control not rendered — a content blocker hid the gate; removing it so the site stays usable');
+        gate.remove();
+      }
+    }, 600);
   }
 </script>
