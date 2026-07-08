@@ -1,0 +1,67 @@
+---
+// src/pages/overseer/index.astro
+import Terminal from '../../layouts/Terminal.astro';
+import Heatmap from '../../components/Heatmap.astro';
+import OverseerTabs from '../../components/overseer/OverseerTabs.astro';
+import DeleteConfirm from '../../components/overseer/DeleteConfirm.astro';
+import { sesConfigFromEnv, listSubscribers } from '../../lib/overseer/ses';
+import { buildSubscribersView } from '../../lib/overseer/view';
+
+let error = '';
+let view = buildSubscribersView([], new Date());
+try {
+  const subs = await listSubscribers(sesConfigFromEnv());
+  view = buildSubscribersView(subs, new Date());
+} catch (e) {
+  error = e instanceof Error ? e.message : 'unknown error';
+}
+---
+<Terminal title="Overseer">
+  <h1>&gt; OVERSEER<span class="muted"> // </span>ADMIN TERMINAL</h1>
+  <OverseerTabs active="subscribers" />
+
+  {error && <p class="error">&gt; subscriber data unavailable ({error}).</p>}
+
+  <Heatmap
+    heatmap={view.heatmap}
+    label="Subscribers per day, last month"
+    unit="subscriber"
+    legend="> new subscribers per day — last month (rows: weekday, columns: ISO week)"
+  />
+
+  <section class="pane">
+    <h2 class="pane-title">// SUBSCRIBERS ({view.total})</h2>
+    <table class="overseer-table">
+      <thead><tr><th>EMAIL</th><th>SUBSCRIBED</th><th>STATUS</th><th>ACTION</th></tr></thead>
+      <tbody>
+        {view.rows.map((row) => (
+          <tr>
+            <td>{row.email}</td>
+            <td>{row.date}</td>
+            <td>{row.status}</td>
+            <td>
+              <button class="ov-del-btn" type="button" data-email={row.email} aria-label={`Delete ${row.email}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        ))}
+        {view.rows.length === 0 && (
+          <tr><td colspan="4" class="muted">&gt; no subscribers.</td></tr>
+        )}
+      </tbody>
+    </table>
+  </section>
+
+  <DeleteConfirm />
+</Terminal>
+
+<style>
+  .overseer-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+  .overseer-table th, .overseer-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid currentColor; }
+  .overseer-table th { opacity: 0.7; }
+  .ov-del-btn { background: none; border: none; color: inherit; cursor: pointer; padding: 0.2rem; opacity: 0.7; }
+  .ov-del-btn:hover { opacity: 1; }
+</style>

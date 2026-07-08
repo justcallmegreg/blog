@@ -1,0 +1,21 @@
+---
+// src/components/overseer/OverseerTabs.astro
+interface Props { active: string }
+const { active } = Astro.props;
+// Only Subscribers exists today; add entries here as tabs are built.
+const tabs = [{ id: 'subscribers', label: 'SUBSCRIBERS', href: '/overseer' }];
+---
+<nav class="overseer-tabs" aria-label="Overseer sections">
+  {tabs.map((t) => (
+    <a
+      href={t.href}
+      class:list={['overseer-tab', { active: t.id === active }]}
+      aria-current={t.id === active ? 'page' : undefined}
+    >{t.label}</a>
+  ))}
+</nav>
+<style>
+  .overseer-tabs { display: flex; gap: 0.5rem; margin: 1rem 0; border-bottom: 1px solid currentColor; }
+  .overseer-tab { padding: 0.4rem 0.9rem; text-decoration: none; color: inherit; opacity: 0.55; border: 1px solid transparent; border-bottom: none; }
+  .overseer-tab.active { opacity: 1; border-color: currentColor; }
+</style>

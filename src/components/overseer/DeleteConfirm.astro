@@ -1,0 +1,71 @@
+---
+// src/components/overseer/DeleteConfirm.astro
+// APPROVE-guarded deletion modal. Reuses the global .contact-overlay /
+// .contact-window terminal styling. Opened by clicking any [data-email]
+// .ov-del-btn in the subscriber table (event-delegated below).
+---
+<div id="ov-del-overlay" class="contact-overlay" hidden aria-hidden="true">
+  <div class="contact-window" role="dialog" aria-modal="true" aria-label="Delete subscriber">
+    <button id="ov-del-close" class="contact-close" type="button" aria-label="Close">[ X ]</button>
+    <p class="contact-boot">&gt; PURGE SUBSCRIBER</p>
+    <p>Permanently delete <strong id="ov-del-email"></strong> from the contact list.</p>
+    <p class="muted">Type <strong>APPROVE</strong> to confirm.</p>
+    <input id="ov-del-input" type="text" autocomplete="off" spellcheck="false" aria-label="Type APPROVE to confirm" />
+    <p id="ov-del-error" class="error" hidden></p>
+    <div class="ov-del-actions"><button id="ov-del-confirm" type="button" disabled>DELETE</button></div>
+  </div>
+</div>
+<script>
+  const overlay = document.getElementById('ov-del-overlay') as HTMLElement | null;
+  if (overlay) {
+    const emailEl = document.getElementById('ov-del-email') as HTMLElement;
+    const input = document.getElementById('ov-del-input') as HTMLInputElement;
+    const confirmBtn = document.getElementById('ov-del-confirm') as HTMLButtonElement;
+    const closeBtn = document.getElementById('ov-del-close') as HTMLButtonElement;
+    const errorEl = document.getElementById('ov-del-error') as HTMLElement;
+    let target = '';
+
+    function open(email: string) {
+      target = email;
+      emailEl.textContent = email;
+      input.value = '';
+      confirmBtn.disabled = true;
+      errorEl.hidden = true;
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      input.focus();
+    }
+    function close() {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    input.addEventListener('input', () => { confirmBtn.disabled = input.value !== 'APPROVE'; });
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.ov-del-btn') as HTMLElement | null;
+      if (btn?.dataset.email) open(btn.dataset.email);
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      confirmBtn.disabled = true;
+      try {
+        const res = await fetch('/overseer/api/delete', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: target, confirm: 'APPROVE' }),
+        });
+        if (res.ok) { window.location.reload(); return; }
+        errorEl.textContent = '> delete failed'; errorEl.hidden = false; confirmBtn.disabled = false;
+      } catch {
+        errorEl.textContent = '> network error'; errorEl.hidden = false; confirmBtn.disabled = false;
+      }
+    });
+  }
+</script>
+<style>
+  .ov-del-actions { margin-top: 1rem; }
+  #ov-del-input { width: 100%; }
+</style>
