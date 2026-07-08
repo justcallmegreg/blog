@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mailer-digest
+  namespace: app-mailer
+  labels: { app: mailer }
+spec:
+  # Weekly, Monday 09:00. Adjust to taste (must line up with your announced cadence).
+  schedule: "0 9 * * 1"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: digest
+              image: ghcr.io/justcallmegreg/blog-mailer:latest
+              imagePullPolicy: Always
+              command: ["python", "-m", "app.digest"]
+              envFrom:
+                - secretRef: { name: mailer-secrets }
+              env:
+                - { name: SUMMARY_DAYS, value: "7" }
+                - { name: SITE_TITLE, value: "GregCo Industries Unified Operating System" }
+                - { name: BLOG_RSS_URL, value: "http://blog-engine.app-blog-engine-01.svc/rss.xml" }
+              resources:
+                requests: { cpu: 10m, memory: 64Mi }
+                limits: { cpu: 250m, memory: 192Mi }

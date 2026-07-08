@@ -78,7 +78,7 @@ Config (env; secrets via K8s Secret):
 |---|---|
 | `AWS_REGION` | SES region (contact list is per-region) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | SES credentials (K8s Secret) |
-| `MAIL_FROM` | verified SES sender, e.g. `GregCo <noreply@gatecastle.com>` |
+| `MAIL_FROM` | verified SES sender, e.g. `GregCo <noreply@justcallmegreg.io>` |
 | `MAIL_OWNER` | where owner notifications go (your address) |
 | `SES_CONTACT_LIST` | SES v2 contact list name |
 | `SES_TOPIC` | contact-list topic name (e.g. `weekly-digest`) |
@@ -155,7 +155,7 @@ Sample policy:
       "Effect": "Allow",
       "Action": ["ses:SendEmail"],
       "Resource": "*",
-      "Condition": { "StringEquals": { "ses:FromAddress": "noreply@gatecastle.com" } }
+      "Condition": { "StringEquals": { "ses:FromAddress": "noreply@justcallmegreg.io" } }
     },
     {
       "Sid": "ManageContacts",
