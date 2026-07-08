@@ -236,6 +236,17 @@ re-syncs on a timer. No volumes are required for content.
 > (`https://github.com/you/blog-content.git`) works. A host `file://` path does **not** — the
 > container can't see your host filesystem. To serve a local folder, use dev mode below.
 
+## Overseer (admin)
+
+An internal admin console, served from the **same image** as the blog engine but deployed
+separately on its own ingress host — there's no auth yet, so it must never be exposed publicly.
+Enable it by setting `overseer.enabled: true` in the Helm chart (which sets `OVERSEER_ENABLED=true`
+and points it at your SES credentials via `overseer.existingSecret`, e.g. the `mailer-secrets`
+secret); the route guard 404s the whole `/overseer` path when the flag is off. Its first tab,
+**Subscribers**, shows a newsletter signup heatmap and a table of subscribers with an
+APPROVE-guarded delete (you must type `APPROVE` to confirm — enforced server-side, not just in
+the UI).
+
 ## Deploy with Helm
 
 A Helm chart lives in [`helm/blog-engine`](helm/blog-engine/) — a stateless blog Deployment
