@@ -41,6 +41,7 @@ import { listLocalFiles } from './local-files';
 import { parsePostPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
 import { renderMarkdown, extractExcerpt } from './markdown';
+import { parsePublishAt } from './publish-schedule';
 
 export interface Post {
   url: string;
@@ -55,6 +56,8 @@ export interface Post {
   html: string;
   blobHash: string;
   readingMinutes: number;
+  publishAt?: string;        // resolved UTC instant when validly scheduled
+  scheduleInvalid?: boolean; // publishAt was present but unparseable → keep hidden
 }
 
 export interface ContentStoreOptions {
@@ -63,6 +66,8 @@ export interface ContentStoreOptions {
   subdir: string;
   cacheDir: string;
   token?: string;
+  /** IANA timezone for interpreting bare `publishAt` times. Defaults to Europe/Budapest. */
+  timezone?: string;
   /**
    * Local (dev) mode: treat `cacheDir` as a directory to read content from
    * directly — no git clone or fetch. Change detection uses file mtime+size
@@ -228,10 +233,17 @@ export class ContentStore {
         const gitDate = this.opts.local
           ? null
           : await firstAddedDate(this.opts.cacheDir, repoRel);
+        const sched = parsePublishAt(data.publishAt, this.tz());
+        if (sched.kind === 'invalid') {
+          console.warn(
+            `[content] ${contentRel}: invalid publishAt ${JSON.stringify(data.publishAt)} — keeping the post hidden`
+          );
+        }
+        const publishAtDay = sched.kind === 'scheduled' ? sched.day : null;
         this.index.set(info.url, {
           url: info.url,
           urlPrefix: info.urlPrefix,
-          date: pickPublishedDate(data.date, gitDate),
+          date: pickPublishedDate(data.date, publishAtDay ?? gitDate),
           slug: info.slug,
           contentDir: info.contentDir,
           title: data.title ?? info.slug,
@@ -241,6 +253,8 @@ export class ContentStore {
           html,
           blobHash: hash,
           readingMinutes,
+          publishAt: sched.kind === 'scheduled' ? sched.instant : undefined,
+          scheduleInvalid: sched.kind === 'invalid' ? true : undefined,
         });
         changed.push(contentRel);
       } catch (err) {
@@ -255,9 +269,21 @@ export class ContentStore {
     return changed;
   }
 
-  listPosts(): Post[] {
+  private tz(): string {
+    return this.opts.timezone ?? 'Europe/Budapest';
+  }
+
+  /** Visible to readers now? Drafts and not-yet-published posts are not. */
+  private isLive(post: Post, now: Date): boolean {
+    if (post.draft) return false;
+    if (post.scheduleInvalid) return false;
+    if (post.publishAt && Date.parse(post.publishAt) > now.getTime()) return false;
+    return true;
+  }
+
+  listPosts(now: Date = new Date()): Post[] {
     return [...this.index.values()]
-      .filter((p) => !p.draft)
+      .filter((p) => this.isLive(p, now))
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   }
 
@@ -265,9 +291,15 @@ export class ContentStore {
     return this.index.get(url);
   }
 
-  resolveAssetPath(slug: string, file: string): string | null {
+  /** Like getPost, but returns undefined unless the post is live at `now`. */
+  getLivePost(url: string, now: Date = new Date()): Post | undefined {
+    const post = this.index.get(url);
+    return post && this.isLive(post, now) ? post : undefined;
+  }
+
+  resolveAssetPath(slug: string, file: string, now: Date = new Date()): string | null {
     const post = this.index.get(`/${slug}`);
-    if (!post) return null;
+    if (!post || !this.isLive(post, now)) return null;
     // resolve() makes baseDir absolute so the traversal check holds even when
     // contentRoot/cacheDir is a relative path (e.g. the default './cache').
     const baseDir = resolve(this.contentRoot(), post.contentDir, 'assets');
