@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -180,5 +180,80 @@ describe('ContentStore', () => {
     expect(statSync(cacheDir).ino).toBe(inodeBefore); // dir itself never recreated
     expect(existsSync(join(cacheDir, 'stale-junk.txt'))).toBe(false); // contents cleared
     expect(store.listPosts().map((p) => p.slug)).toEqual(['first', 'older']);
+  });
+
+  it('hides a post scheduled in the future from the list and its URL', async () => {
+    commitPost('future', '---\ntitle: Future\npublishAt: "2030-01-01T00:00:00Z"\n---\nsoon');
+    const store = makeStore();
+    await store.start();
+    const now = new Date('2025-01-01T00:00:00Z');
+    expect(store.listPosts(now).map((p) => p.slug)).not.toContain('future');
+    expect(store.getLivePost('/future', now)).toBeUndefined();
+    // still retrievable raw (internal callers / preview)
+    expect(store.getPost('/future')?.title).toBe('Future');
+    expect(store.getPost('/future')?.publishAt).toBe('2030-01-01T00:00:00.000Z');
+  });
+
+  it('shows a post once its publishAt has passed', async () => {
+    commitPost('past', '---\ntitle: Past\npublishAt: "2020-01-01T00:00:00Z"\n---\nlive');
+    const store = makeStore();
+    await store.start();
+    const now = new Date('2025-01-01T00:00:00Z');
+    expect(store.listPosts(now).map((p) => p.slug)).toContain('past');
+    expect(store.getLivePost('/past', now)?.title).toBe('Past');
+  });
+
+  it('flips a scheduled post live exactly at its publishAt (request-time gate)', async () => {
+    commitPost('drop', '---\ntitle: Drop\npublishAt: "2026-08-01T00:00:00Z"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    expect(store.getLivePost('/drop', new Date('2026-07-31T23:59:59Z'))).toBeUndefined();
+    expect(store.getLivePost('/drop', new Date('2026-08-01T00:00:01Z'))?.title).toBe('Drop');
+  });
+
+  it('keeps a post with an invalid publishAt hidden and warns', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    commitPost('broken', '---\ntitle: Broken\npublishAt: "not-a-date"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    const now = new Date('2025-01-01T00:00:00Z');
+    expect(store.getLivePost('/broken', now)).toBeUndefined();
+    expect(store.listPosts(now).map((p) => p.slug)).not.toContain('broken');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('publishAt'));
+    warn.mockRestore();
+  });
+
+  it('dates a scheduled post by its publishAt day when no explicit date is set', async () => {
+    commitPost('dbs', '---\ntitle: DBS\npublishAt: "2020-03-04T09:00:00Z"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    // 09:00Z on Mar 4 is 10:00 in Budapest (CET) → day 2020-03-04
+    expect(store.getPost('/dbs')?.date).toBe('2020-03-04');
+  });
+
+  it('lets an explicit date override the publishAt day', async () => {
+    commitPost('exp', '---\ntitle: E\ndate: "2019-12-31"\npublishAt: "2020-03-04T09:00:00Z"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    expect(store.getPost('/exp')?.date).toBe('2019-12-31');
+  });
+
+  it('keeps a draft hidden even after its publishAt has passed', async () => {
+    commitPost('ds', '---\ntitle: DS\ndraft: true\npublishAt: "2020-01-01T00:00:00Z"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    const now = new Date('2025-01-01T00:00:00Z');
+    expect(store.getLivePost('/ds', now)).toBeUndefined();
+    expect(store.listPosts(now).map((p) => p.slug)).not.toContain('ds');
+  });
+
+  it('does not serve assets for a not-yet-published post', async () => {
+    commitPost('fa', '---\ntitle: FA\npublishAt: "2030-01-01T00:00:00Z"\n---\nx');
+    const store = makeStore();
+    await store.start();
+    expect(store.resolveAssetPath('fa', 'x.png', new Date('2025-01-01T00:00:00Z'))).toBeNull();
+    expect(store.resolveAssetPath('fa', 'x.png', new Date('2031-01-01T00:00:00Z'))).toBe(
+      resolve(cacheDir, NS, 'fa/assets/x.png')
+    );
   });
 });

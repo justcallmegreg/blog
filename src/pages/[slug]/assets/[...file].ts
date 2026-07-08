@@ -18,8 +18,8 @@ export const GET: APIRoute = async ({ params }) => {
   if (!slug || !file) return new Response('Not found', { status: 404 });
 
   const store = await ensureStarted();
-  const path = store.resolveAssetPath(slug, file);
-  if (!path) return new Response('Forbidden', { status: 403 });
+  const path = store.resolveAssetPath(slug, file, new Date());
+  if (!path) return new Response('Not found', { status: 404 });
 
   try {
     await stat(path);

@@ -6,6 +6,9 @@ const FrontmatterSchema = z.object({
   description: z.string().optional(),
   draft: z.boolean().default(false),
   date: z.string().optional(),
+  // Optional schedule: when set and in the future, the engine hides the post
+  // until this moment. See docs/superpowers/specs/2026-07-08-scheduled-publishing-design.md.
+  publishAt: z.string().optional(),
 });
 
 export type PostFrontmatter = z.infer<typeof FrontmatterSchema>;

@@ -14,6 +14,8 @@ const ConfigSchema = z.object({
       branch: z.string().default('main'),
       subdir: z.string().default(''),
       syncIntervalSeconds: z.number().int().positive().default(300),
+      // IANA timezone used to interpret bare `publishAt` times in posts.
+      timezone: z.string().default('Europe/Budapest'),
     })
     .default({}),
   effects: z

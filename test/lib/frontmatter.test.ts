@@ -27,4 +27,13 @@ describe('parseFrontmatter', () => {
     const { data } = parseFrontmatter('---\ntitle: T\n---\nbody');
     expect(data.date).toBeUndefined();
   });
+
+  it('parses an optional publishAt string', () => {
+    const { data } = parseFrontmatter('---\ntitle: T\npublishAt: "2026-08-01T09:00"\n---\nbody');
+    expect(data.publishAt).toBe('2026-08-01T09:00');
+  });
+  it('leaves publishAt undefined when absent', () => {
+    const { data } = parseFrontmatter('---\ntitle: T\n---\nbody');
+    expect(data.publishAt).toBeUndefined();
+  });
 });

@@ -9,9 +9,9 @@ import { relativeDay } from '../lib/post-date';
 const cfg = getConfig();
 const { slug } = Astro.params;
 const store = await ensureStarted();
-const post = store.getPost(`/${slug}`);
+const post = store.getLivePost(`/${slug}`, new Date());
 
-if (!post || post.draft) {
+if (!post) {
   return new Response('Not found', { status: 404 });
 }
 
