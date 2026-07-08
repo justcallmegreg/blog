@@ -179,13 +179,12 @@ Secrets and runtime settings live in the environment, never in `config.yaml`:
 | `CONTENT_LOCAL_DIR` | Dev mode: serve a local content folder directly instead of cloning (see below). |
 | `CACHE_DIR` | Where the content repo is cloned + the Contributions cache is stored (ephemeral; defaults to a temp dir). |
 | `GITHUB_TOKEN` | Optional: raises GitHub API rate limits for the Contributions tab. |
-| `CONTACT_WEBHOOK_URL` | Where the Contact form POSTs its JSON. Unset → logged server-side ("stage mode"). |
-| `CV_WEBHOOK_URL` | Where Request-CV POSTs its JSON. Unset → logged server-side. |
-| `NEWSLETTER_SUBSCRIBE_WEBHOOK_URL` | Where a newsletter **subscribe** POSTs its JSON. Unset → stage-logged. |
-| `NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL` | Where a newsletter **unsubscribe** POSTs its JSON. Unset → stage-logged. |
+| `MAILER_URL` | Base URL of the internal [mailer](mailer/) service (e.g. `http://mailer.app-mailer.svc:8080`). Contact, CV, and newsletter flows build email content and POST it to `/send` (+ `/subscribe`/`/unsubscribe`). Unset → "stage mode" (logged server-side, nothing sent). |
+| `OWNER_EMAIL` | Recipient for owner notifications (contact/CV/newsletter events). Falls back to `privacy.email`. |
 
-Both webhook payloads are plain JSON, so you can wire them to Zapier, a mailer, or your own
-endpoint — the engine itself sends no email and stores no submissions.
+The engine builds the email content and hands it to the mailer, which sends via AWS SES;
+the engine itself holds no SES credentials and stores no submissions. With `MAILER_URL`
+unset it stays in stage-mode, so local dev sends nothing.
 
 The Contributions tab caches the GitHub data on local disk under `CACHE_DIR/contributions/`
 (stale-while-revalidate; tunable via `github.cache.enabled` / `github.cache.ttlSeconds`), so the

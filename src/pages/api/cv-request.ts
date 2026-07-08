@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getConfig } from '../../lib/config';
 import { validateCvRequest, buildCvPayload, type CvInput } from '../../lib/cv-request';
+import { cvEmails, sendAll } from '../../lib/mailer';
 import { captchaActive } from './captcha';
 import { consume as consumeCaptcha } from '../../lib/captcha-store';
 
@@ -9,7 +10,8 @@ interface HandleOpts {
   site: string;
   now: Date;
   ip: string;
-  webhookUrl?: string;
+  owner?: string;
+  mailerUrl?: string;
   fetchImpl?: typeof fetch;
   captcha?: { active: boolean; consume: (token?: string) => boolean };
 }
@@ -52,25 +54,10 @@ export async function handleCvRequest(
   }
 
   const payload = buildCvPayload(input, { site: opts.site, now: opts.now });
-
-  if (!opts.webhookUrl) {
-    console.log('[cv-request] stage mode (no webhook):', JSON.stringify(payload));
-    return { status: 200, body: { ok: true } };
-  }
-
-  try {
-    const doFetch = opts.fetchImpl ?? fetch;
-    const res = await doFetch(opts.webhookUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return { status: 502, body: { ok: false, error: 'forwarding failed' } };
-    return { status: 200, body: { ok: true } };
-  } catch {
-    return { status: 502, body: { ok: false, error: 'forwarding failed' } };
-  }
+  const emails = cvEmails(payload, opts.owner ?? '');
+  const ok = await sendAll(emails, { mailerUrl: opts.mailerUrl, fetchImpl: opts.fetchImpl });
+  if (!ok) return { status: 502, body: { ok: false, error: 'delivery failed' } };
+  return { status: 200, body: { ok: true } };
 }
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
@@ -95,7 +82,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     site: getConfig().site.title,
     now: new Date(),
     ip,
-    webhookUrl: process.env.CV_WEBHOOK_URL,
+    owner: process.env.OWNER_EMAIL || getConfig().privacy.email,
+    mailerUrl: process.env.MAILER_URL,
     // captchaActive() is driven by the shared `contact.captcha` config toggle —
     // one switch governs both the contact and CV-request captchas.
     captcha: { active: captchaActive(), consume: (t?: string) => (t ? consumeCaptcha(t) : false) },

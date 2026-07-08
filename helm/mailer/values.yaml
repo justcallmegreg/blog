@@ -1,0 +1,41 @@
+image:
+  repository: ghcr.io/justcallmegreg/blog-mailer
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+replicas: 1
+
+service:
+  port: 8080
+
+# Non-secret env, rendered into the Deployment + CronJob. Override in the stack
+# values (MAIL_FROM/MAIL_OWNER/region/list/topic).
+env:
+  AWS_REGION: "eu-central-1"
+  MAIL_FROM: ""
+  MAIL_OWNER: ""
+  SES_CONTACT_LIST: "blog-subscribers"
+  SES_TOPIC: "weekly-digest"
+
+# AWS credentials come from a pre-created Secret (SES creds must NOT live in git).
+# The Secret should hold AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+secret:
+  existingSecret: ""   # e.g. "mailer-secrets"
+
+# Weekly digest CronJob.
+digest:
+  enabled: true
+  schedule: "0 9 * * 1"      # Monday 09:00
+  summaryDays: 7
+  siteTitle: "The Blog"
+  rssUrl: "http://blog-engine.app-blog-engine-01.svc/rss.xml"
+
+resources:
+  requests: { cpu: 10m, memory: 64Mi }
+  limits: { cpu: 250m, memory: 192Mi }
+
+# The image's USER is the non-numeric `app`, so keep runAsNonRoot off (mirrors
+# the blog-engine chart note) to avoid the kubelet's numeric non-root pre-check.
+podSecurityContext:
+  runAsNonRoot: false

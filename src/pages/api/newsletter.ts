@@ -1,6 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getConfig } from '../../lib/config';
 import { validateNewsletter, buildNewsletterPayload, type NewsletterInput } from '../../lib/newsletter';
+import {
+  newsletterContact,
+  newsletterOwnerEmail,
+  newsletterWelcomeEmail,
+  sendAll,
+} from '../../lib/mailer';
 import { captchaActive } from './captcha';
 import { consume as consumeCaptcha } from '../../lib/captcha-store';
 
@@ -9,8 +15,8 @@ interface HandleOpts {
   site: string;
   now: Date;
   ip: string;
-  subscribeUrl?: string;
-  unsubscribeUrl?: string;
+  owner?: string;
+  mailerUrl?: string;
   fetchImpl?: typeof fetch;
   captcha?: { active: boolean; consume: (token?: string) => boolean };
 }
@@ -47,24 +53,20 @@ export async function handleNewsletter(input: NewsletterInput, opts: HandleOpts)
     }
   }
 
-  const url = input.action === 'subscribe' ? opts.subscribeUrl : opts.unsubscribeUrl;
   const payload = buildNewsletterPayload(input, { site: opts.site, now: opts.now });
-  if (!url) {
-    console.log(`[newsletter] stage mode (no webhook) ${input.action}:`, JSON.stringify(payload));
-    return { status: 200, body: { ok: true } };
-  }
-  try {
-    const res = await (opts.fetchImpl ?? fetch)(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return { status: 502, body: { ok: false, error: 'forwarding failed' } };
-    return { status: 200, body: { ok: true } };
-  } catch {
-    return { status: 502, body: { ok: false, error: 'forwarding failed' } };
-  }
+  const mopts = { mailerUrl: opts.mailerUrl, fetchImpl: opts.fetchImpl };
+
+  // Update the SES contact list, then notify the owner and (on subscribe) the
+  // new subscriber.
+  const listOk = await newsletterContact(input.action, payload.email, mopts);
+  const emails = [];
+  const ownerEmail = newsletterOwnerEmail(payload, opts.owner ?? '');
+  if (ownerEmail) emails.push(ownerEmail);
+  if (input.action === 'subscribe') emails.push(newsletterWelcomeEmail(payload.email, opts.site));
+  const mailOk = await sendAll(emails, mopts);
+
+  if (!listOk || !mailOk) return { status: 502, body: { ok: false, error: 'delivery failed' } };
+  return { status: 200, body: { ok: true } };
 }
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
@@ -87,8 +89,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     site: getConfig().site.title,
     now: new Date(),
     ip,
-    subscribeUrl: process.env.NEWSLETTER_SUBSCRIBE_WEBHOOK_URL,
-    unsubscribeUrl: process.env.NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL,
+    owner: process.env.OWNER_EMAIL || getConfig().privacy.email,
+    mailerUrl: process.env.MAILER_URL,
     captcha: { active: captchaActive(), consume: (t?: string) => (t ? consumeCaptcha(t) : false) },
   });
   return new Response(JSON.stringify(result.body), {

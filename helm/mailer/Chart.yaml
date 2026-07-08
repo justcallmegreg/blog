@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mailer
+description: Internal SES-backed mailer for the blog engine (API + weekly digest CronJob).
+type: application
+version: 0.1.0
+appVersion: "latest"
