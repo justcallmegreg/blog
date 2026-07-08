@@ -76,4 +76,16 @@ describe('parsePublishAt', () => {
     expect(r.kind).toBe('scheduled');
     if (r.kind === 'scheduled') expect(r.day).toBe('2026-03-29');
   });
+
+  it('rejects an impossible day-of-month in both the offset and bare paths', () => {
+    expect(parsePublishAt('2026-02-30T09:00:00+02:00', 'Europe/Budapest')).toEqual({ kind: 'invalid' });
+    expect(parsePublishAt('2026-04-31T09:00', 'Europe/Budapest')).toEqual({ kind: 'invalid' });
+    // 2026 is not a leap year → Feb 29 does not exist
+    expect(parsePublishAt('2026-02-29T09:00', 'Europe/Budapest')).toEqual({ kind: 'invalid' });
+  });
+
+  it('accepts Feb 29 in a leap year', () => {
+    const r = parsePublishAt('2028-02-29T09:00', 'Europe/Budapest');
+    expect(r.kind).toBe('scheduled');
+  });
 });

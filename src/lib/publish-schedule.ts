@@ -27,6 +27,18 @@ export function parsePublishAt(
   const [, y, mo, d, h, mi, s, offset] = m;
   const sec = s ?? '00';
 
+  // Reject impossible calendar days (e.g. Feb 30, Apr 31, Feb 29 in a non-leap
+  // year). The bare-local path's round-trip catches these, but Date.parse (the
+  // explicit-offset path) silently rolls them forward — validate here for both.
+  const dayProbe = new Date(Date.UTC(+y, +mo - 1, +d));
+  if (
+    dayProbe.getUTCFullYear() !== +y ||
+    dayProbe.getUTCMonth() !== +mo - 1 ||
+    dayProbe.getUTCDate() !== +d
+  ) {
+    return { kind: 'invalid' };
+  }
+
   let instantMs: number;
   if (offset) {
     instantMs = Date.parse(`${y}-${mo}-${d}T${h}:${mi}:${sec}${offset}`);
