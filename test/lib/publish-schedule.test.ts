@@ -64,4 +64,16 @@ describe('parsePublishAt', () => {
   it('returns invalid for an unknown timezone', () => {
     expect(parsePublishAt('2026-08-01T09:00', 'Mars/Olympus')).toEqual({ kind: 'invalid' });
   });
+
+  it('returns invalid for out-of-range minutes or seconds (bare local time)', () => {
+    expect(parsePublishAt('2026-08-01T09:70', 'Europe/Budapest')).toEqual({ kind: 'invalid' });
+    expect(parsePublishAt('2026-08-01T09:30:70', 'Europe/Budapest')).toEqual({ kind: 'invalid' });
+  });
+
+  it('resolves a DST spring-forward gap time deterministically without error', () => {
+    // 2026-03-29 02:30 does not exist in Europe/Budapest (clocks jump 02:00→03:00).
+    const r = parsePublishAt('2026-03-29T02:30', 'Europe/Budapest');
+    expect(r.kind).toBe('scheduled');
+    if (r.kind === 'scheduled') expect(r.day).toBe('2026-03-29');
+  });
 });

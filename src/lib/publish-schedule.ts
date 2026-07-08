@@ -51,11 +51,23 @@ export function parsePublishAt(
 // Treat the components as if UTC, see how that instant renders in the zone, and
 // correct by the difference. One pass suffices except at DST edges, so do two.
 function wallClockToUtc(w: Wall, timezone: string): number | null {
+  // DST edges: a nonexistent wall time (spring-forward gap) resolves to a
+  // deterministic nearby instant, and an ambiguous one (fall-back fold) resolves
+  // to a single deterministic occurrence. Neither is reported as invalid — for a
+  // publish schedule, a ~1h resolution of an impossible/ambiguous time is fine.
   const asUtc = Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s);
   if (Number.isNaN(asUtc)) return null;
-  // Reject components that Date.UTC silently rolled over (e.g. month 13, day 40).
+  // Reject components Date.UTC silently rolled over — not just day-in-month
+  // overflow (month 13, day 40) but also out-of-range h/mi/s (e.g. "09:70",
+  // which would otherwise be reinterpreted as 10:10 without changing the day).
   const back = zoneParts(asUtc, 'UTC');
-  if (!back || back.y !== w.y || back.mo !== w.mo || back.d !== w.d) return null;
+  if (
+    !back ||
+    back.y !== w.y || back.mo !== w.mo || back.d !== w.d ||
+    back.h !== w.h || back.mi !== w.mi || back.s !== w.s
+  ) {
+    return null;
+  }
 
   let guess = asUtc;
   for (let i = 0; i < 2; i++) {
