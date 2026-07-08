@@ -6,27 +6,32 @@ const ctx = {
   site: 'GregCo',
   now: new Date('2026-06-13T00:00:00.000Z'),
   ip: '9.9.9.9',
+  owner: 'owner@gregco.example',
   captcha: { active: false, consume: () => true },
 };
 
 beforeEach(() => __resetCvRateLimit());
 
 describe('handleCvRequest', () => {
-  it('stage mode (no webhook) → 200, no fetch', async () => {
+  it('stage mode (no mailer) → 200, no fetch', async () => {
     const fetchMock = vi.fn();
-    const res = await handleCvRequest(good, { ...ctx, webhookUrl: undefined, fetchImpl: fetchMock });
+    const res = await handleCvRequest(good, { ...ctx, mailerUrl: undefined, fetchImpl: fetchMock });
     expect(res.status).toBe(200);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('forwards a cv-request payload to the webhook', async () => {
+  it('emails the owner (reply-to requester) + confirms to the requester', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     const res = await handleCvRequest(good, {
-      ...ctx, webhookUrl: 'https://hooks.example/cv', fetchImpl: fetchMock,
+      ...ctx, mailerUrl: 'http://mailer.svc:8080', fetchImpl: fetchMock,
     });
     expect(res.status).toBe(200);
-    const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(sent).toMatchObject({ name: 'Recruiter', type: 'cv-request', consent: true, site: 'GregCo' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe('http://mailer.svc:8080/send');
+    const owner = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(owner).toMatchObject({ to: 'owner@gregco.example', replyTo: 'r@acme.example' });
+    expect(owner.subject).toContain('CV');
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).to).toBe('r@acme.example');
   });
 
   it('400 when not consented', async () => {
@@ -44,9 +49,8 @@ describe('handleCvRequest', () => {
 
   it('accepts + consumes a valid captcha token', async () => {
     let consumed = '';
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     const res = await handleCvRequest({ ...good, captchaToken: 'tok' }, {
-      ...ctx, webhookUrl: 'https://hooks.example/cv', fetchImpl: fetchMock,
+      ...ctx, mailerUrl: undefined,
       captcha: { active: true, consume: (t?: string) => { consumed = t ?? ''; return true; } },
     });
     expect(res.status).toBe(200);
@@ -54,7 +58,7 @@ describe('handleCvRequest', () => {
   });
 
   it('rate-limits after 5 from one ip (429)', async () => {
-    const opts = { ...ctx, webhookUrl: undefined as string | undefined };
+    const opts = { ...ctx, mailerUrl: undefined as string | undefined };
     for (let i = 0; i < 5; i++) expect((await handleCvRequest(good, opts)).status).toBe(200);
     expect((await handleCvRequest(good, opts)).status).toBe(429);
   });
