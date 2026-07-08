@@ -18,25 +18,33 @@ const contact = {
 };
 
 describe('content builders', () => {
-  it('contactEmails: owner (reply-to sender) + sender confirmation', () => {
-    const [owner, confirm] = contactEmails(contact, 'me@site');
+  it('contactEmails: owner-only (reply-to sender), no confirmation to the submitter', () => {
+    const emails = contactEmails(contact, 'me@site');
+    expect(emails).toHaveLength(1);
+    const [owner] = emails;
     expect(owner).toMatchObject({ to: 'me@site', replyTo: 'a@x.co' });
     expect(owner.subject).toContain('Contact');
     expect(owner.body).toContain('msg');
-    expect(confirm.to).toBe('a@x.co');
+    // The submitter must never be a send target (SES would reject unverified
+    // recipients; the submitter's address is reply-to metadata only).
+    expect(emails.some((e) => e.to === 'a@x.co')).toBe(false);
   });
 
-  it('contactEmails: omits owner email when no owner configured', () => {
-    const emails = contactEmails(contact, '');
-    expect(emails).toHaveLength(1);
-    expect(emails[0].to).toBe('a@x.co');
+  it('contactEmails: no emails at all when no owner configured', () => {
+    expect(contactEmails(contact, '')).toHaveLength(0);
   });
 
-  it('cvEmails: owner + confirmation', () => {
+  it('cvEmails: owner-only, no confirmation to the requester', () => {
     const cv = { name: 'R', email: 'r@x.co', company: 'Acme', consent: true, type: 'cv-request' as const, site: 'GregCo', sentAt: 's' };
     const emails = cvEmails(cv, 'me@site');
+    expect(emails).toHaveLength(1);
     expect(emails[0]).toMatchObject({ to: 'me@site', replyTo: 'r@x.co' });
-    expect(emails[1].to).toBe('r@x.co');
+    expect(emails.some((e) => e.to === 'r@x.co')).toBe(false);
+  });
+
+  it('cvEmails: no emails at all when no owner configured', () => {
+    const cv = { name: 'R', email: 'r@x.co', company: 'Acme', consent: true, type: 'cv-request' as const, site: 'GregCo', sentAt: 's' };
+    expect(cvEmails(cv, '')).toHaveLength(0);
   });
 
   it('newsletterOwnerEmail: null when no owner', () => {
