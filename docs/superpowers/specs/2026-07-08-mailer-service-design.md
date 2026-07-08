@@ -130,16 +130,21 @@ tokens are ever forwarded.
 
 ## Deployment
 
-- **Image:** `blog/mailer/Dockerfile` (slim Python), built + pushed to GHCR by a
-  GitHub Action scoped to `mailer/**` changes.
-- **Manifests:** a small Helm chart (or raw manifests) under `blog/mailer/deploy/`
-  vendored into the `ignition` repo as a new ArgoCD app (`mailer`), mirroring
-  `blog-engine`: `Deployment` + `Service` (ClusterIP) + `CronJob` + a `Secret`
-  (AWS creds, `MAIL_FROM`, `MAIL_OWNER`, contact list/topic).
-- **Blog wiring:** add `MAILER_URL` to the blog's config/secret pointing at the
-  mailer Service DNS.
-- Modest resource requests/limits; `imagePullPolicy: Always` on `:latest` (matches
-  the existing deploy convention).
+- **Image:** `mailer/Dockerfile` (slim Python), built + pushed to
+  `ghcr.io/justcallmegreg/blog-mailer` by `.github/workflows/mailer.yml` on
+  `mailer/**` changes.
+- **Chart:** `helm/mailer` (Deployment + ClusterIP Service + digest CronJob),
+  published to `oci://ghcr.io/justcallmegreg/charts` by the release workflow.
+- **Same stack as the blog:** the mailer is added as **another release in the blog
+  stack's helmfile** (`stacks/blog-engine.yaml`), namespace `app-blog-engine-01`,
+  with values in `stack-configs/blog-engine/mailer-values.yaml`. No separate
+  ArgoCD app — it deploys with the blog stack.
+- **AWS creds:** the chart references a pre-created `existingSecret` (SES creds not
+  in git). Non-secret config (region, from, owner, list/topic, digest) is chart
+  values.
+- **Blog wiring:** set `MAILER_URL=http://mailer.app-blog-engine-01.svc:8080` and
+  `OWNER_EMAIL` on the blog engine via its chart `secrets.data` in the stack values.
+- `imagePullPolicy: Always` on `:latest` (matches the existing deploy convention).
 
 ## IAM (least privilege)
 

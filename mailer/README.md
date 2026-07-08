@@ -85,12 +85,18 @@ Replace `<region>`, `<account-id>`, and the from-address/list-name as needed.
 
 ## Deploy
 
-The image is built and pushed to `ghcr.io/justcallmegreg/blog-mailer` by
-`.github/workflows/mailer.yml` on changes under `mailer/**`.
+The **image** is built + pushed to `ghcr.io/justcallmegreg/blog-mailer` by
+`.github/workflows/mailer.yml` on changes under `mailer/**`. The **Helm chart**
+lives at `../helm/mailer` and is published to `oci://ghcr.io/justcallmegreg/charts`
+alongside the blog-engine chart by the release workflow.
 
-Raw manifests are in `deploy/` (namespace `app-mailer`): `Deployment`, `Service`
-(ClusterIP), `CronJob` (digest), and `secret.example.yaml`. Vendor these into your
-GitOps repo as a new ArgoCD app, supply the real `mailer-secrets`, and sync.
+The mailer runs in the **same stack as the blog engine** (namespace
+`app-blog-engine-01`), added as another release in the blog stack's helmfile
+(`stacks/blog-engine.yaml` in the GitOps repo) with a values file in the same
+stack. It reads AWS credentials from a pre-created Secret (see
+`secret.existingSecret`) — SES creds must not live in git; create that Secret
+out-of-band (SealedSecret / external-secret / manual). Once deployed it's
+reachable in-cluster as `http://mailer.app-blog-engine-01.svc:8080`.
 
 ## Wiring the blog engine
 

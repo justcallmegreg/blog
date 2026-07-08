@@ -206,6 +206,11 @@ jobs:
           helm package helm/blog-engine --version "$NEXT" --app-version "$NEXT" -d /tmp/chart
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
           helm push "/tmp/chart/blog-engine-${NEXT}.tgz" "oci://ghcr.io/${OWNER}/charts"
+          # Also publish the mailer chart (its own version from Chart.yaml; the
+          # mailer image is :latest, built by mailer.yml).
+          MAILER_V="$(awk '/^version:/{print $2; exit}' helm/mailer/Chart.yaml)"
+          helm package helm/mailer -d /tmp/chart
+          helm push "/tmp/chart/mailer-${MAILER_V}.tgz" "oci://ghcr.io/${OWNER}/charts"
           {
             echo "tgz=/tmp/chart/blog-engine-${NEXT}.tgz"
             echo "repo=ghcr.io/${OWNER}/charts/blog-engine"
