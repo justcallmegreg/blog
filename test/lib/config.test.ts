@@ -75,4 +75,25 @@ content:
   it('throws when the file does not exist', () => {
     expect(() => loadConfig('/no/such/config.yaml')).toThrow(/config/i);
   });
+
+  it('defaults content.timezone to Europe/Budapest and accepts an override', () => {
+    const base = writeConfig(`
+site:
+  title: "x"
+content:
+  repo: "https://github.com/you/content.git"
+`);
+    dirs.push(join(base, '..'));
+    expect(loadConfig(base).content.timezone).toBe('Europe/Budapest');
+
+    const custom = writeConfig(`
+site:
+  title: "x"
+content:
+  repo: "https://github.com/you/content.git"
+  timezone: "UTC"
+`);
+    dirs.push(join(custom, '..'));
+    expect(loadConfig(custom).content.timezone).toBe('UTC');
+  });
 });
