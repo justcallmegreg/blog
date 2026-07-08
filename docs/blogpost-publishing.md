@@ -90,3 +90,27 @@ destination path, branch, and PR title for every current post **without opening 
   repos can publish the same slug without colliding. Within one repo, keep slugs unique.
 - **Asset pruning:** the asset copy is additive — assets removed or renamed in the project repo
   are not deleted from `blog-content` on re-publish.
+
+## Scheduling a post
+
+Add a quoted `publishAt` to a post's frontmatter to hold it until a future moment:
+
+```yaml
+---
+title: "My scheduled post"
+publishAt: "2026-08-01T09:00"     # 09:00 in content.timezone (default Europe/Budapest)
+---
+```
+
+- Until `publishAt` passes, the post is absent from the site — the blog list, the
+  RSS feed, and its own URL (and its assets) all return 404. It appears
+  automatically on the next request after its time (no redeploy or sync needed).
+- Bare times are read in `content.timezone`; include an explicit offset (e.g.
+  `"2026-08-01T09:00+02:00"` or `"...Z"`) to override. **Quote the value** — an
+  unquoted datetime is rejected.
+- `publishAt` is independent of `date`: `date` still sets the *displayed* date;
+  if you omit it, a scheduled post is dated by `publishAt`'s day.
+- A malformed `publishAt` keeps the post hidden and logs a `[content]` warning.
+
+> Note: content merged into `blog-content` is public on GitHub immediately — this
+> hides the post *on the site*, it does not keep the file secret.

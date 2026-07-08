@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ url }) => {
     description: cfg.site.description,
     siteUrl,
     feedUrl: `${siteUrl}/rss.xml`,
-    items: store.listPosts().map((p) => ({
+    items: store.listPosts(new Date()).map((p) => ({
       title: p.title,
       url: p.url,
       date: p.date,
