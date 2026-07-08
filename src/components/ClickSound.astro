@@ -1,7 +1,11 @@
 ---
-// Web Audio click feedback on link/button activation. Default ON, mutable, persisted.
+// Web Audio click feedback on link/button activation. Default ON, mutable, and
+// persisted in the first-party `gregco-sound` cookie so the choice survives
+// across visits. Read server-side so the toggle renders in the right state with
+// no flash.
+const muted = Astro.cookies.get('gregco-sound')?.value === 'off';
 ---
-<button id="sound-toggle" type="button" aria-label="Toggle sound"></button>
+<button id="sound-toggle" type="button" aria-label="Toggle sound" aria-pressed={String(!muted)}>{muted ? '[ SOUND OFF ]' : '[ SOUND ON ]'}</button>
 <style>
   #sound-toggle {
     position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60;
@@ -13,9 +17,12 @@
   }
 </style>
 <script>
-  const KEY = 'blog-sound-muted';
+  // Persist the mute choice in a first-party cookie (~180 days) so it survives
+  // across visits and can be read server-side to render the toggle state.
+  const setSound = (m: boolean) =>
+    (document.cookie = `gregco-sound=${m ? 'off' : 'on'}; path=/; max-age=15552000; SameSite=Lax`);
   const toggle = document.getElementById('sound-toggle') as HTMLButtonElement;
-  let muted = localStorage.getItem(KEY) === '1';
+  let muted = document.cookie.split('; ').includes('gregco-sound=off');
   let ctx: AudioContext | null = null;
 
   function render() {
@@ -109,7 +116,7 @@
 
   toggle.addEventListener('click', () => {
     muted = !muted;
-    localStorage.setItem(KEY, muted ? '1' : '0');
+    setSound(muted);
     render();
   });
 </script>
