@@ -430,8 +430,11 @@ const title = cfg.site.title;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     let finished = false;
 
-    document.getElementById('vi-copyright')!.textContent =
-      `COPYRIGHT 1994-${new Date().getFullYear()} ${title.toUpperCase()}`;
+    const copyright = document.getElementById('vi-copyright');
+    if (copyright) {
+      copyright.textContent =
+        `COPYRIGHT 1994-${new Date().getFullYear()} ${title.toUpperCase()}`;
+    }
 
     const BOOT_LINES = [
       `${title.toUpperCase()} TERMLINK PROTOCOL`,
@@ -452,6 +455,16 @@ const title = cfg.site.title;
       setTimeout(() => root.remove(), 950);
     };
 
+    // Fail-safe. The overlay is opaque and covers the whole viewport, so if the
+    // animation ever throws or stalls — e.g. a browser (Brave with strict
+    // shields/fingerprinting) breaks a DOM/SVG call mid-sequence — the site
+    // would be stuck blank with no way out. forceReveal tears it down instantly.
+    const forceReveal = () => {
+      if (finished) return;
+      finished = true;
+      try { root.remove(); } catch { /* already gone */ }
+    };
+
     async function typeBoot() {
       for (const line of BOOT_LINES) {
         for (const ch of line) {
@@ -466,41 +479,59 @@ const title = cfg.site.title;
     }
 
     async function play() {
-      rememberSeen();
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        finished = true;
-        root!.remove();
-        return;
+      // Hard watchdog: no matter what the animation does, never keep the visitor
+      // behind the opaque door longer than the whole sequence could legitimately
+      // take (~8.5s) plus a buffer. If anything hangs, the site still appears.
+      const failsafe = setTimeout(forceReveal, 12000);
+      try {
+        rememberSeen();
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          finished = true;
+          root!.remove();
+          return;
+        }
+        try {
+          buildDoor(document.getElementById('vi-door') as unknown as SVGSVGElement);
+        } catch (err) {
+          // Door art failed to build — skip it and still roll the overlay away
+          // rather than trapping the visitor behind a blank screen.
+          console.warn('[vault-intro] door render failed, revealing anyway', err);
+        }
+
+        await typeBoot();
+        if (finished) return;
+        boot.classList.add('vi-gone');
+        await sleep(250);
+        if (finished) return;
+
+        status.textContent = 'VAULT DOOR CYCLE INITIATED';
+        root!.classList.add('vi-alarm', 'vi-shudder');
+        await sleep(900);
+        if (finished) return;
+
+        status.textContent = 'DISENGAGING PRESSURE SEAL';
+        root!.classList.remove('vi-shudder');
+        root!.classList.add('vi-unsealing');
+        await sleep(2150);
+        if (finished) return;
+
+        status.textContent = 'RETRACTING DOOR';
+        root!.classList.add('vi-rolling');
+        await sleep(1950);
+        if (finished) return;
+
+        root!.classList.remove('vi-alarm');
+        root!.classList.add('vi-revealed');
+        status.textContent = 'DOOR OPEN — WELCOME, DWELLER';
+        await sleep(1500);
+        cleanup();
+      } catch (err) {
+        // Any uncaught failure in the sequence must still reveal the site.
+        console.warn('[vault-intro] intro failed, revealing site', err);
+        forceReveal();
+      } finally {
+        clearTimeout(failsafe);
       }
-      buildDoor(document.getElementById('vi-door') as unknown as SVGSVGElement);
-
-      await typeBoot();
-      if (finished) return;
-      boot.classList.add('vi-gone');
-      await sleep(250);
-      if (finished) return;
-
-      status.textContent = 'VAULT DOOR CYCLE INITIATED';
-      root!.classList.add('vi-alarm', 'vi-shudder');
-      await sleep(900);
-      if (finished) return;
-
-      status.textContent = 'DISENGAGING PRESSURE SEAL';
-      root!.classList.remove('vi-shudder');
-      root!.classList.add('vi-unsealing');
-      await sleep(2150);
-      if (finished) return;
-
-      status.textContent = 'RETRACTING DOOR';
-      root!.classList.add('vi-rolling');
-      await sleep(1950);
-      if (finished) return;
-
-      root!.classList.remove('vi-alarm');
-      root!.classList.add('vi-revealed');
-      status.textContent = 'DOOR OPEN — WELCOME, DWELLER';
-      await sleep(1500);
-      cleanup();
     }
 
     document.getElementById('vi-skip')!.addEventListener('click', (e) => {
