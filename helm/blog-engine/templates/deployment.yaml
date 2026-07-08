@@ -17,6 +17,7 @@ spec:
         checksum/config: {{ list (.Values.config | toYaml) (.Values.matomo.enabled | toString) .Values.matomo.ingress.host | join "|" | sha256sum }}
       labels:
         {{- include "blog-engine.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
     spec:
       serviceAccountName: {{ include "blog-engine.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
