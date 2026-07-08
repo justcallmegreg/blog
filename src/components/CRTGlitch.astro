@@ -5,11 +5,14 @@
 // decorative, pointer-events:none, disabled under prefers-reduced-motion.
 interface Props { intervalSeconds?: number }
 const { intervalSeconds = 30 } = Astro.props;
+// Persisted in the first-party `gregco-crt` cookie; read server-side so the
+// toggle renders in the right state with no flash.
+const crtOff = Astro.cookies.get('gregco-crt')?.value === 'off';
 ---
 <div id="crt-glitch" data-interval={intervalSeconds} aria-hidden="true">
   <div class="crt-bar"></div>
 </div>
-<button id="crt-toggle" type="button" aria-label="Toggle CRT effect"></button>
+<button id="crt-toggle" type="button" aria-label="Toggle CRT effect" aria-pressed={String(crtOff)}>{crtOff ? '[ CRT OFF ]' : '[ CRT ON ]'}</button>
 <style>
   #crt-glitch { position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden; }
   /* Sits directly below the [ SOUND ON/OFF ] toggle (top: 0.5rem). */
@@ -69,10 +72,12 @@ const { intervalSeconds = 30 } = Astro.props;
       (document.getElementById('crt-glitch') as HTMLElement).dataset.interval ?? 15
     ) * 1000;
 
-    // Visitor toggle (persisted): turn the beam off if it's distracting.
-    const CRT_KEY = 'blog-crt-off';
+    // Visitor toggle, persisted in a first-party cookie (~180 days) so it
+    // survives across visits and can be read server-side.
+    const setCrt = (o: boolean) =>
+      (document.cookie = `gregco-crt=${o ? 'off' : 'on'}; path=/; max-age=15552000; SameSite=Lax`);
     const toggle = document.getElementById('crt-toggle') as HTMLButtonElement;
-    let off = localStorage.getItem(CRT_KEY) === '1';
+    let off = document.cookie.split('; ').includes('gregco-crt=off');
     function renderToggle() {
       toggle.textContent = off ? '[ CRT OFF ]' : '[ CRT ON ]';
       toggle.setAttribute('aria-pressed', String(off));
@@ -80,7 +85,7 @@ const { intervalSeconds = 30 } = Astro.props;
     renderToggle();
     toggle.addEventListener('click', () => {
       off = !off;
-      localStorage.setItem(CRT_KEY, off ? '1' : '0');
+      setCrt(off);
       renderToggle();
       if (off) bar.classList.remove('sweep'); // kill any in-flight sweep
     });
