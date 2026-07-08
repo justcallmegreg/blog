@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { cloneRepo, fetchReset, lsTreeBlobs, firstAddedDate } from './git';
 
@@ -110,8 +110,14 @@ export class ContentStore {
     );
     await withRetry(
       async () => {
+        // Clear the dir's CONTENTS rather than the dir itself: in Kubernetes the
+        // cache dir is a volume mount point, and removing a mount point fails
+        // with EBUSY — which used to block the clone forever. `git clone` is
+        // fine with an existing directory as long as it is empty.
         if (existsSync(this.opts.cacheDir)) {
-          rmSync(this.opts.cacheDir, { recursive: true, force: true });
+          for (const entry of readdirSync(this.opts.cacheDir)) {
+            rmSync(join(this.opts.cacheDir, entry), { recursive: true, force: true });
+          }
         }
         await cloneRepo({
           repo: this.opts.repo,
