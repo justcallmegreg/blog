@@ -76,44 +76,39 @@ export async function newsletterContact(
 
 // ---- content builders (pure) --------------------------------------------------
 
-/** Contact: notify the owner (reply-to sender) + confirm to the sender. */
+/**
+ * Contact: notify the owner only. The submitter's address is reply-to metadata,
+ * never a send target — we don't email confirmations back to the sender (SES
+ * rejects unverified recipients, and delivery is owner-inbound by design).
+ */
 export function contactEmails(p: ForwardPayload, owner: string): Email[] {
-  const emails: Email[] = [];
-  if (owner) {
-    emails.push({
+  if (!owner) return [];
+  return [
+    {
       to: owner,
       replyTo: p.email,
       subject: `[${p.site}] Contact: ${p.subject}`,
       body: `From: ${p.name} <${p.email}>\nSubject: ${p.subject}\n\n${p.message}\n\n— received ${p.sentAt}`,
-    });
-  }
-  emails.push({
-    to: p.email,
-    subject: `We received your message`,
-    body: `Hi ${p.name},\n\nThanks for reaching out — your message came through and you'll get a reply soon.\n\n— ${p.site}`,
-  });
-  return emails;
+    },
+  ];
 }
 
-/** CV request: notify the owner (reply-to requester) + confirm to the requester. */
+/**
+ * CV request: notify the owner only (reply-to requester). Like contactEmails,
+ * the requester is never a send target — no confirmation back to them.
+ */
 export function cvEmails(p: CvPayload, owner: string): Email[] {
-  const emails: Email[] = [];
-  if (owner) {
-    emails.push({
+  if (!owner) return [];
+  return [
+    {
       to: owner,
       replyTo: p.email,
       subject: `[${p.site}] CV request from ${p.name}`,
       body:
         `Name: ${p.name}\nEmail: ${p.email}\nCompany: ${p.company || '—'}\n` +
         `Consent: ${p.consent ? 'yes' : 'no'}\n\n— received ${p.sentAt}`,
-    });
-  }
-  emails.push({
-    to: p.email,
-    subject: `Your CV request`,
-    body: `Hi ${p.name},\n\nYour CV request was received and will be handled shortly.\n\n— ${p.site}`,
-  });
-  return emails;
+    },
+  ];
 }
 
 /** Newsletter: notify the owner of a subscribe/unsubscribe event. */

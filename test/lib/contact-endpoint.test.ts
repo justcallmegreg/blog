@@ -26,7 +26,7 @@ describe('handleContact', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('sends owner notification + sender confirmation via the mailer', async () => {
+  it('sends the owner notification only (no confirmation to the sender)', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     const res = await handleContact(good, {
       ...ctx,
@@ -34,14 +34,14 @@ describe('handleContact', () => {
       fetchImpl: fetchMock,
     });
     expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(2); // owner + confirmation
+    expect(fetchMock).toHaveBeenCalledTimes(1); // owner only
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('http://mailer.svc:8080/send');
     const owner = JSON.parse(init.body);
     expect(owner).toMatchObject({ to: 'owner@gregco.example', replyTo: 'dweller@vault111.example' });
     expect(owner.subject).toContain('Contact');
-    const confirm = JSON.parse(fetchMock.mock.calls[1][1].body);
-    expect(confirm.to).toBe('dweller@vault111.example');
+    // The sender's address must never be a send destination.
+    expect(fetchMock.mock.calls.every((c) => JSON.parse(c[1].body).to !== 'dweller@vault111.example')).toBe(true);
   });
 
   it('honeypot returns 200 success but does NOT send', async () => {

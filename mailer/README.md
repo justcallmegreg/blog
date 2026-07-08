@@ -100,8 +100,11 @@ reachable in-cluster as `http://mailer.app-blog-engine-01.svc:8080`.
 
 ## Wiring the blog engine
 
-Point the blog at the mailer with `MAILER_URL=http://mailer.app-mailer.svc:8080`.
-The blog builds each email's content and calls `/send` (contact, CV, newsletter
-notices + confirmations) and `/subscribe` / `/unsubscribe` for the newsletter
-form. With `MAILER_URL` unset the blog stays in stage-mode (logs, sends nothing),
-so local dev is unaffected.
+Point the blog at the mailer with `MAILER_URL=http://mailer:8080` (same namespace;
+or `http://mailer.app-blog-engine-01.svc:8080` cross-namespace). The blog builds
+each email's content and calls `/send` and `/subscribe` / `/unsubscribe`. Contact
+and CV send an **owner notification only** (reply-to = the sender) — the sender's
+address is never a send target, so no confirmation is mailed back to them. The
+newsletter sends an owner notice plus a welcome to the new subscriber. With
+`MAILER_URL` unset the blog stays in stage-mode (logs, sends nothing), so local
+dev is unaffected.

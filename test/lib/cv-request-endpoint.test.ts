@@ -20,18 +20,19 @@ describe('handleCvRequest', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('emails the owner (reply-to requester) + confirms to the requester', async () => {
+  it('emails the owner only (reply-to requester), no confirmation to the requester', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     const res = await handleCvRequest(good, {
       ...ctx, mailerUrl: 'http://mailer.svc:8080', fetchImpl: fetchMock,
     });
     expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('http://mailer.svc:8080/send');
     const owner = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(owner).toMatchObject({ to: 'owner@gregco.example', replyTo: 'r@acme.example' });
     expect(owner.subject).toContain('CV');
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).to).toBe('r@acme.example');
+    // The requester's address must never be a send destination.
+    expect(fetchMock.mock.calls.every((c) => JSON.parse(c[1].body).to !== 'r@acme.example')).toBe(true);
   });
 
   it('400 when not consented', async () => {
