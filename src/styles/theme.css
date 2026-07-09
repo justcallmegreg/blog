@@ -373,15 +373,22 @@ pre.shiki code .line:last-child:empty { display: none; }
 }
 
 /* Decorative Vault Boy in the bottom-right corner. The GIF has a true
-   transparent background (re-encoded), so no blend trick is needed. */
+   transparent background (re-encoded), so no blend trick is needed.
+   His width is capped to the free gutter right of the 820px content column
+   (852 = container + breathing room), so he can never overlap the content;
+   below ~1080px the gutter is too small for him to read as anything but
+   clutter, so he disappears entirely (phones/tablets). */
 .vaultboy {
   position: fixed;
   bottom: 0.5rem;
   right: 0.5rem;
-  width: 280px;
+  width: min(280px, calc((100vw - 852px) / 2));
   height: auto;
   z-index: 40;
   pointer-events: none;
+}
+@media (max-width: 1080px) {
+  .vaultboy { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
