@@ -52,9 +52,7 @@ content:
     expect(cfg.social.linkedin).toBe('justcallmegreg');
     expect(cfg.social.medium).toBe('');
     expect(cfg.about.enabled).toBe(true);
-    expect(cfg.about.headline).toBe('');
-    expect(cfg.about.bio).toBe('');
-    expect(cfg.about.projects).toEqual([]);
+    expect(cfg.about).toEqual({ enabled: true });
     expect(cfg.privacy.email).toBe('');
     expect(cfg.privacy.consentBanner).toBe(true);
     expect(cfg.analytics.enabled).toBe(false);

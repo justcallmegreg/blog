@@ -1,15 +1,22 @@
 ---
 import Terminal from '../layouts/Terminal.astro';
 import { getConfig } from '../lib/config';
+import { ensureStarted } from '../lib/store-singleton';
 
 const cfg = getConfig();
-const about = cfg.about;
-if (!about.enabled) return new Response('Not found', { status: 404 });
-const projects = [...about.projects].sort((a, b) => b.end - a.end || b.start - a.start);
+if (!cfg.about.enabled) return new Response('Not found', { status: 404 });
+
+// About content (headline/bio/projects) comes from blog-content/about.yaml via
+// the content store; null when the file is absent/malformed → graceful empty page.
+const store = await ensureStarted();
+const about = store.getAbout();
+const headline = about?.headline ?? '';
+const bio = about?.bio ?? '';
+const projects = [...(about?.projects ?? [])].sort((a, b) => b.end - a.end || b.start - a.start);
 ---
 <Terminal title="About">
-  <h1>&gt; ABOUT{about.headline && <span class="muted"> // </span>}{about.headline}</h1>
-  {about.bio && <p class="about-bio">{about.bio}</p>}
+  <h1>&gt; ABOUT{headline && <span class="muted"> // </span>}{headline}</h1>
+  {bio && <p class="about-bio">{bio}</p>}
 
   <button class="contact-btn contact-approve crt-btn about-cv-btn" id="request-cv" type="button">▸ REQUEST CV</button>
 
