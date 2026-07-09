@@ -16,6 +16,8 @@ const ConfigSchema = z.object({
       syncIntervalSeconds: z.number().int().positive().default(300),
       // IANA timezone used to interpret bare `publishAt` times in posts.
       timezone: z.string().default('Europe/Budapest'),
+      // Content-repo subdirectory holding presentation decks (deck dialect).
+      decksSubdir: z.string().default('decks'),
     })
     .default({}),
   effects: z

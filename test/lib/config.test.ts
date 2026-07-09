@@ -96,4 +96,25 @@ content:
     dirs.push(join(custom, '..'));
     expect(loadConfig(custom).content.timezone).toBe('UTC');
   });
+
+  it('defaults content.decksSubdir to "decks" and accepts an override', () => {
+    const base = writeConfig(`
+site:
+  title: "x"
+content:
+  repo: "https://github.com/you/content.git"
+`);
+    dirs.push(join(base, '..'));
+    expect(loadConfig(base).content.decksSubdir).toBe('decks');
+
+    const custom = writeConfig(`
+site:
+  title: "x"
+content:
+  repo: "https://github.com/you/content.git"
+  decksSubdir: "slides"
+`);
+    dirs.push(join(custom, '..'));
+    expect(loadConfig(custom).content.decksSubdir).toBe('slides');
+  });
 });

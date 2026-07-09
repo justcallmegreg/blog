@@ -68,6 +68,8 @@ export interface ContentStoreOptions {
   token?: string;
   /** IANA timezone for interpreting bare `publishAt` times. Defaults to Europe/Budapest. */
   timezone?: string;
+  /** Content-repo subdirectory holding decks. Defaults to "decks". */
+  decksSubdir?: string;
   /**
    * Local (dev) mode: treat `cacheDir` as a directory to read content from
    * directly — no git clone or fetch. Change detection uses file mtime+size

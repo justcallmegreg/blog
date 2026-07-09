@@ -26,6 +26,7 @@ export async function ensureStarted(): Promise<ContentStore> {
           cacheDir: localDir,
           local: true,
           timezone: cfg.content.timezone,
+          decksSubdir: cfg.content.decksSubdir,
         }
       : {
           repo: cfg.content.repo,
@@ -34,6 +35,7 @@ export async function ensureStarted(): Promise<ContentStore> {
           cacheDir: process.env.CACHE_DIR ?? './cache',
           token: process.env.CONTENT_REPO_TOKEN,
           timezone: cfg.content.timezone,
+          decksSubdir: cfg.content.decksSubdir,
         }
   );
   if (!startPromise) {
