@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { overseerBlocked } from '../../../src/lib/overseer/guard';
+import { overseerBlocked, overseerHomeRedirect } from '../../../src/lib/overseer/guard';
 
 describe('overseerBlocked', () => {
   it('blocks /overseer routes when disabled', () => {
@@ -17,5 +17,17 @@ describe('overseerBlocked', () => {
     expect(overseerBlocked('/', false)).toBe(false);
     expect(overseerBlocked('/about', false)).toBe(false);
     expect(overseerBlocked('/overseerish', false)).toBe(false);
+  });
+});
+
+describe('overseerHomeRedirect', () => {
+  it('redirects the root to /overseer only when the console is enabled', () => {
+    expect(overseerHomeRedirect('/', true)).toBe(true);
+    expect(overseerHomeRedirect('/', false)).toBe(false);
+  });
+
+  it('does not redirect non-root paths', () => {
+    expect(overseerHomeRedirect('/overseer', true)).toBe(false);
+    expect(overseerHomeRedirect('/about', true)).toBe(false);
   });
 });
