@@ -8,6 +8,7 @@ content:
   subdir: "blogs"           # posts live under blogs/ — the publish workflow places them there
   syncIntervalSeconds: 300
   timezone: "Europe/Budapest"     # IANA zone for interpreting bare publishAt times (default: Europe/Budapest)
+  decksSubdir: "decks"           # content-repo subdir holding presentation decks (default: decks)
 effects:
   matrixRain: true
   matrixRainDurationSeconds: 3      # matrix runs this long on the index, then fades out (shown once per visitor)
