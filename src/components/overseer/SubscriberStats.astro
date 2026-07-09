@@ -1,0 +1,51 @@
+---
+// Opt-in / opt-out breakdown shown beside the subscribers heatmap: a row per
+// timeframe (today / 7 days / 30 days / total) with IN and OUT counts and a net
+// ± indicator (accent-glow PLUS when more opt in than out, dim MINUS otherwise).
+import type { SubscribersStats } from '../../lib/overseer/types';
+
+interface Props { stats: SubscribersStats }
+const { stats } = Astro.props;
+---
+<table class="stat-table" aria-label="Opt-in vs opt-out by timeframe">
+  <thead>
+    <tr><th scope="col"></th><th scope="col">IN</th><th scope="col">OUT</th><th scope="col">±</th></tr>
+  </thead>
+  <tbody>
+    {stats.rows.map((r) => (
+      <tr>
+        <td class="stat-tf">{r.label}</td>
+        <td class="stat-in">{r.optIn}</td>
+        <td class="stat-out">{r.optOut}</td>
+        <td>
+          <span
+            class:list={['stat-sign', r.trend]}
+            aria-label={r.trend === 'up' ? 'net positive' : 'net negative'}
+          >{r.trend === 'up' ? '+' : '−'}</span>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+<style>
+  .stat-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .stat-table th, .stat-table td { padding: 0.28rem 0 0.28rem 1.1rem; text-align: right; }
+  .stat-table th:first-child, .stat-table td:first-child { padding-left: 0; text-align: left; }
+  .stat-table th { color: var(--fg-dim); font-weight: normal; font-size: 0.8rem; letter-spacing: 0.08em; }
+  .stat-tf { color: var(--fg-dim); letter-spacing: 0.06em; }
+  .stat-in { color: var(--fg); }
+  .stat-out { color: var(--fg-dim); }
+  /* ± chip: mirror the counter's bordered/glowing accent cells. */
+  .stat-sign {
+    display: inline-block; min-width: 1.5ch; text-align: center;
+    padding: 0 0.35rem; line-height: 1.3; border: 1px solid currentColor;
+    font-weight: bold;
+  }
+  .stat-sign.up {
+    color: var(--accent);
+    background: rgba(182, 255, 0, 0.06);
+    box-shadow: inset 0 0 6px rgba(182, 255, 0, 0.15), 0 0 6px rgba(182, 255, 0, 0.35);
+  }
+  .stat-sign.down { color: var(--fg-dim); }
+</style>

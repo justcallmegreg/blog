@@ -1,8 +1,9 @@
 ---
-// src/components/overseer/DeleteConfirm.astro
-// APPROVE-guarded deletion modal. Reuses the global .contact-overlay /
-// .contact-window terminal styling. Opened by clicking any [data-email]
-// .ov-del-btn in the subscriber table (event-delegated below).
+// APPROVE-guarded deletion modal. Reuses the global terminal form styling:
+// the `.contact-overlay`/`.contact-window` frame, the `.field-box` entry field
+// (mirrored text + blinking block cursor), and the `.contact-send` button which
+// gains the `.crt-btn` glow + filled `.contact-approve` look once APPROVE is
+// typed. Opened by clicking any [data-email] `.ov-del-btn` in the table.
 ---
 <div id="ov-del-overlay" class="contact-overlay" hidden aria-hidden="true">
   <div class="contact-window" role="dialog" aria-modal="true" aria-label="Delete subscriber">
@@ -10,26 +11,46 @@
     <p class="contact-boot">&gt; PURGE SUBSCRIBER</p>
     <p>Permanently delete <strong id="ov-del-email"></strong> from the contact list.</p>
     <p class="muted">Type <strong>APPROVE</strong> to confirm.</p>
-    <input id="ov-del-input" type="text" autocomplete="off" spellcheck="false" aria-label="Type APPROVE to confirm" />
-    <p id="ov-del-error" class="error" hidden></p>
-    <div class="ov-del-actions"><button id="ov-del-confirm" type="button" disabled>DELETE</button></div>
+
+    <label class="field">
+      <span class="field-title">CONFIRMATION</span>
+      <span class="field-box" id="ov-del-fieldbox">
+        <span class="field-text" id="ov-del-text"></span><span class="cursor field-cursor"> </span>
+        <input class="field-input" id="ov-del-input" type="text" autocomplete="off" spellcheck="false" maxlength="16" aria-label="Type APPROVE to confirm" />
+      </span>
+    </label>
+
+    <p id="ov-del-error" class="contact-error" hidden></p>
+    <button id="ov-del-confirm" class="contact-send" type="button" disabled>DELETE</button>
   </div>
 </div>
 <script>
   const overlay = document.getElementById('ov-del-overlay') as HTMLElement | null;
   if (overlay) {
     const emailEl = document.getElementById('ov-del-email') as HTMLElement;
+    const box = document.getElementById('ov-del-fieldbox') as HTMLElement;
+    const text = document.getElementById('ov-del-text') as HTMLElement;
     const input = document.getElementById('ov-del-input') as HTMLInputElement;
     const confirmBtn = document.getElementById('ov-del-confirm') as HTMLButtonElement;
     const closeBtn = document.getElementById('ov-del-close') as HTMLButtonElement;
     const errorEl = document.getElementById('ov-del-error') as HTMLElement;
     let target = '';
 
+    // Mirror the typed value into the visible span (the native input is
+    // transparent) and enable + glow the button only on an exact APPROVE.
+    function sync() {
+      text.textContent = input.value;
+      const ok = input.value === 'APPROVE';
+      confirmBtn.disabled = !ok;
+      confirmBtn.classList.toggle('crt-btn', ok);
+      confirmBtn.classList.toggle('contact-approve', ok);
+    }
+
     function open(email: string) {
       target = email;
       emailEl.textContent = email;
       input.value = '';
-      confirmBtn.disabled = true;
+      sync();
       errorEl.hidden = true;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
@@ -40,9 +61,12 @@
       overlay.setAttribute('aria-hidden', 'true');
     }
 
-    input.addEventListener('input', () => { confirmBtn.disabled = input.value !== 'APPROVE'; });
+    input.addEventListener('input', sync);
+    input.addEventListener('focus', () => box.classList.add('is-focused'));
+    input.addEventListener('blur', () => box.classList.remove('is-focused'));
     closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
 
     document.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.ov-del-btn') as HTMLElement | null;
@@ -50,6 +74,7 @@
     });
 
     confirmBtn.addEventListener('click', async () => {
+      if (input.value !== 'APPROVE') return;
       confirmBtn.disabled = true;
       try {
         const res = await fetch('/overseer/api/delete', {
@@ -58,14 +83,10 @@
           body: JSON.stringify({ email: target, confirm: 'APPROVE' }),
         });
         if (res.ok) { window.location.reload(); return; }
-        errorEl.textContent = '> delete failed'; errorEl.hidden = false; confirmBtn.disabled = false;
+        errorEl.textContent = '> delete failed'; errorEl.hidden = false; sync();
       } catch {
-        errorEl.textContent = '> network error'; errorEl.hidden = false; confirmBtn.disabled = false;
+        errorEl.textContent = '> network error'; errorEl.hidden = false; sync();
       }
     });
   }
 </script>
-<style>
-  .ov-del-actions { margin-top: 1rem; }
-  #ov-del-input { width: 100%; }
-</style>

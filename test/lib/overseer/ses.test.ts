@@ -43,6 +43,19 @@ describe('listSubscribers', () => {
     const subs = await listSubscribers(cfg, client);
     expect(subs[0].status).toBe('OPT_OUT');
   });
+
+  it('treats a global UnsubscribeAll as OPT_OUT even with an OPT_IN topic pref', async () => {
+    const client = fakeClient({
+      ListContactsCommand: () => ({ Contacts: [{ EmailAddress: 'a@x.co' }] }),
+      GetContactCommand: () => ({
+        CreatedTimestamp: new Date('2026-07-01T00:00:00.000Z'),
+        UnsubscribeAll: true,
+        TopicPreferences: [{ TopicName: 'weekly-digest', SubscriptionStatus: 'OPT_IN' }],
+      }),
+    });
+    const subs = await listSubscribers(cfg, client);
+    expect(subs[0].status).toBe('OPT_OUT');
+  });
 });
 
 describe('deleteSubscriber', () => {

@@ -36,6 +36,10 @@ function toIso(ts: unknown): string {
 }
 
 function effectiveStatus(contact: any, topic: string): SubscriptionStatus {
+  // A contact-level global opt-out (SES "unsubscribe from everything") wins over
+  // any single-topic preference — otherwise a globally-unsubscribed contact with
+  // a stale/absent topic pref would read as OPT_IN.
+  if (contact.UnsubscribeAll) return 'OPT_OUT';
   const pref = (contact.TopicPreferences ?? []).find((p: any) => p.TopicName === topic);
   if (pref) return pref.SubscriptionStatus === 'OPT_OUT' ? 'OPT_OUT' : 'OPT_IN';
   const def = (contact.TopicDefaultPreferences ?? []).find((p: any) => p.TopicName === topic);

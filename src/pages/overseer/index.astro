@@ -1,8 +1,8 @@
 ---
 // src/pages/overseer/index.astro
-import Terminal from '../../layouts/Terminal.astro';
+import Overseer from '../../layouts/Overseer.astro';
 import Heatmap from '../../components/Heatmap.astro';
-import OverseerTabs from '../../components/overseer/OverseerTabs.astro';
+import SubscriberStats from '../../components/overseer/SubscriberStats.astro';
 import DeleteConfirm from '../../components/overseer/DeleteConfirm.astro';
 import { sesConfigFromEnv, listSubscribers } from '../../lib/overseer/ses';
 import { buildSubscribersView } from '../../lib/overseer/view';
@@ -16,32 +16,58 @@ try {
   error = e instanceof Error ? e.message : 'unknown error';
 }
 ---
-<Terminal title="Overseer">
-  <h1>&gt; OVERSEER<span class="muted"> // </span>ADMIN TERMINAL</h1>
-  <OverseerTabs active="subscribers" />
-
+<Overseer title="Subscribers" tab="subscribers">
   {error && <p class="error">&gt; subscriber data unavailable ({error}).</p>}
 
-  <Heatmap
-    heatmap={view.heatmap}
-    label="Subscribers per day, last month"
-    unit="subscriber"
-    legend="> new subscribers per day — last month (rows: weekday, columns: ISO week)"
-  />
+  <div class="ov-overview">
+    <Heatmap
+      heatmap={view.heatmap}
+      label="Subscribers per day, last month"
+      unit="subscriber"
+    />
+    <SubscriberStats stats={view.stats} />
+  </div>
+  <p class="heatmap-legend muted">&gt; new subscribers per day — last month (rows: weekday, columns: ISO week)</p>
 
   <section class="pane">
-    <h2 class="pane-title">// SUBSCRIBERS ({view.total})</h2>
+    <h2 class="pane-title">// SUBSCRIBERS (<span id="ov-count" aria-live="polite">{view.total}</span>)</h2>
     <table class="overseer-table">
-      <thead><tr><th>EMAIL</th><th>SUBSCRIBED</th><th>STATUS</th><th>ACTION</th></tr></thead>
+      <thead>
+        <tr>
+          <th>EMAIL</th>
+          <th>SINCE</th>
+          <th class="ov-c">
+            <button class="ov-sort" type="button" data-dir="none" aria-label="Sort by days as a member">
+              MEMBER <span class="ov-sort-ico" aria-hidden="true">↕</span>
+            </button>
+          </th>
+          <th class="ov-c">
+            <button class="ov-filter" type="button" aria-label="Filter by status (all / opt-in / opt-out)">
+              STATUS
+              <svg class="ov-funnel" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>
+              <span class="ov-filter-lbl" aria-hidden="true">ALL</span>
+            </button>
+          </th>
+          <th>ACTION</th>
+        </tr>
+      </thead>
       <tbody>
         {view.rows.map((row) => (
-          <tr>
+          <tr data-days={row.days} data-status={row.status}>
             <td>{row.email}</td>
             <td>{row.date}</td>
-            <td>{row.status}</td>
+            <td class="ov-member ov-c">{row.days}d</td>
+            <td class="ov-c">
+              <span
+                class="ov-status"
+                role="img"
+                title={row.status}
+                aria-label={row.status}
+              >{row.status === 'OPT_IN' ? '🟢' : '🔴'}</span>
+            </td>
             <td>
               <button class="ov-del-btn" type="button" data-email={row.email} aria-label={`Delete ${row.email}`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
                 </svg>
               </button>
@@ -49,19 +75,81 @@ try {
           </tr>
         ))}
         {view.rows.length === 0 && (
-          <tr><td colspan="4" class="muted">&gt; no subscribers.</td></tr>
+          <tr><td colspan="5" class="muted">&gt; no subscribers.</td></tr>
         )}
       </tbody>
     </table>
   </section>
 
   <DeleteConfirm />
-</Terminal>
+</Overseer>
+
+<script>
+  // Client-side sort (MEMBER days) + filter (STATUS) over the already-rendered
+  // rows — no SES round-trips. Rows carry data-days / data-status.
+  const table = document.querySelector('.overseer-table') as HTMLTableElement | null;
+  const tbody = table?.querySelector('tbody');
+  if (table && tbody) {
+    const countEl = document.getElementById('ov-count');
+    const dataRows = () => Array.from(tbody.querySelectorAll<HTMLTableRowElement>('tr[data-days]'));
+
+    // MEMBER — toggle ascending / descending.
+    const sortBtn = table.querySelector('.ov-sort') as HTMLButtonElement | null;
+    const sortIco = sortBtn?.querySelector('.ov-sort-ico') as HTMLElement | null;
+    let dir: 'asc' | 'desc' = 'desc';
+    sortBtn?.addEventListener('click', () => {
+      dir = dir === 'asc' ? 'desc' : 'asc';
+      const mul = dir === 'asc' ? 1 : -1;
+      const rows = dataRows().sort(
+        (a, b) => (Number(a.dataset.days) - Number(b.dataset.days)) * mul
+      );
+      for (const r of rows) tbody.appendChild(r); // re-order in place (keeps hidden state)
+      sortBtn.dataset.dir = dir;
+      if (sortIco) sortIco.textContent = dir === 'asc' ? '↑' : '↓';
+    });
+
+    // STATUS — cycle ALL → OPT_IN → OPT_OUT.
+    const filterBtn = table.querySelector('.ov-filter') as HTMLButtonElement | null;
+    const filterLbl = filterBtn?.querySelector('.ov-filter-lbl') as HTMLElement | null;
+    const states = ['ALL', 'OPT_IN', 'OPT_OUT'] as const;
+    let fi = 0;
+    filterBtn?.addEventListener('click', () => {
+      fi = (fi + 1) % states.length;
+      const f = states[fi];
+      let visible = 0;
+      for (const r of dataRows()) {
+        const show = f === 'ALL' || r.dataset.status === f;
+        r.hidden = !show;
+        if (show) visible += 1;
+      }
+      if (countEl) countEl.textContent = String(visible);
+      if (filterLbl) filterLbl.textContent = f === 'ALL' ? 'ALL' : f === 'OPT_IN' ? '🟢' : '🔴';
+      filterBtn.classList.toggle('is-active', f !== 'ALL');
+    });
+  }
+</script>
 
 <style>
+  /* Heatmap grid and the opt-in/out table sit side by side; legend drops below. */
+  .ov-overview { display: flex; align-items: flex-start; gap: 3rem; flex-wrap: wrap; margin: 0.5rem 0 0.25rem; }
   .overseer-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
   .overseer-table th, .overseer-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid currentColor; }
   .overseer-table th { opacity: 0.7; }
-  .ov-del-btn { background: none; border: none; color: inherit; cursor: pointer; padding: 0.2rem; opacity: 0.7; }
-  .ov-del-btn:hover { opacity: 1; }
+  /* MEMBER + STATUS centred in their cells. */
+  .overseer-table th.ov-c, .overseer-table td.ov-c { text-align: center; }
+  .ov-member { color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  .ov-status { font-size: 0.85rem; line-height: 1; }
+  /* Sort / filter header controls (unstyled buttons that read as headers). */
+  .ov-sort, .ov-filter {
+    background: none; border: none; color: inherit; font: inherit;
+    letter-spacing: inherit; text-transform: inherit; cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .ov-sort:hover, .ov-filter:hover { color: var(--fg); }
+  .ov-sort-ico { display: inline-block; min-width: 1ch; }
+  .ov-sort[data-dir="asc"] .ov-sort-ico, .ov-sort[data-dir="desc"] .ov-sort-ico { color: var(--accent); }
+  .ov-filter-lbl { min-width: 3ch; text-align: left; }
+  .ov-filter.is-active .ov-filter-lbl, .ov-filter.is-active .ov-funnel { color: var(--accent); }
+  .ov-del-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; padding: 0.2rem; opacity: 0.8; line-height: 0; }
+  .ov-del-btn:hover { opacity: 1; filter: drop-shadow(0 0 4px rgba(255, 77, 77, 0.6)); }
 </style>
