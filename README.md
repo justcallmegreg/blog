@@ -35,7 +35,8 @@ content repo and an in-memory render index.
   posting-activity **heatmap**.
 - **Contributions** (`/contributions`) — a GitHub activity **heatmap** (commits *and* PRs, last
   five weeks), owned repositories, and a recent pull-request timeline.
-- **About me** (`/about`) — a config-driven bio + unnamed (confidential) project list, with a
+- **About me** (`/about`) — a bio + unnamed (confidential) project list sourced from
+  `about.yaml` in the content repo (edit without redeploying), with a
   **Request CV** flow: GDPR consent → slide-puzzle captcha → JSON to a webhook → "received".
 - **Contact** — an in-page terminal overlay: dial-in sound, per-field block cursor, a
   typewriter transmission preview, then a JSON POST to a webhook.
@@ -147,15 +148,22 @@ social:                          # top-bar links (handles only; empty string hid
   medium: ""                     # e.g. "@justcallmegreg"
 
 about:
-  enabled: true                  # show the About me tab + page
-  headline: "Greg — software engineer"
-  bio: "Short background summary — who I am, what I work on."
-  projects:                      # unnamed for confidentiality; newest-first
-    - start: 2021
-      end: 2023
-      description: "Confidential project — what it was (no client name)."
-      responsibilities: "What I owned / led."
-      deliveries: "What I shipped / achieved."
+  enabled: true                  # show the About me tab + page (content lives in about.yaml)
+
+The About page's content lives in the **content repo** at `about.yaml` (repo
+root, alongside the posts folder), so it syncs live like posts — no redeploy:
+
+```yaml
+# blog-content/about.yaml
+headline: "Greg — software engineer"
+bio: "Short background summary — who I am, what I work on."
+projects:                        # unnamed for confidentiality; newest-first
+  - start: 2021
+    end: 2023
+    description: "Confidential project — what it was (no client name)."
+    responsibilities: "What I owned / led."
+    deliveries: "What I shipped / achieved."
+```
 
 privacy:
   email: "you@example.com"       # GDPR data-erasure contact (consent gate + CV form); empty hides it
