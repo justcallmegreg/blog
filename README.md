@@ -150,6 +150,16 @@ social:                          # top-bar links (handles only; empty string hid
 about:
   enabled: true                  # show the About me tab + page (content lives in about.yaml)
 
+privacy:
+  email: "you@example.com"       # GDPR data-erasure contact (consent gate + CV form); empty hides it
+  consentBanner: true            # first-visit "accept data processing" gate (choice stored in a cookie)
+
+analytics:
+  enabled: false                 # self-hosted Matomo; loads ONLY after a visitor accepts the gate
+  matomoUrl: "https://analytics.example.com"   # Matomo base URL (no trailing /matomo.php)
+  siteId: 1                      # the Matomo site id for this blog
+```
+
 The About page's content lives in the **content repo** at `about.yaml` (repo
 root, alongside the posts folder), so it syncs live like posts — no redeploy:
 
@@ -163,16 +173,6 @@ projects:                        # unnamed for confidentiality; newest-first
     description: "Confidential project — what it was (no client name)."
     responsibilities: "What I owned / led."
     deliveries: "What I shipped / achieved."
-```
-
-privacy:
-  email: "you@example.com"       # GDPR data-erasure contact (consent gate + CV form); empty hides it
-  consentBanner: true            # first-visit "accept data processing" gate (choice stored in a cookie)
-
-analytics:
-  enabled: false                 # self-hosted Matomo; loads ONLY after a visitor accepts the gate
-  matomoUrl: "https://analytics.example.com"   # Matomo base URL (no trailing /matomo.php)
-  siteId: 1                      # the Matomo site id for this blog
 ```
 
 ## Environment variables
