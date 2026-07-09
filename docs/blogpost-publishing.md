@@ -114,3 +114,19 @@ publishAt: "2026-08-01T09:00"     # 09:00 in content.timezone (default Europe/Bu
 
 > Note: content merged into `blog-content` is public on GitHub immediately — this
 > hides the post *on the site*, it does not keep the file secret.
+
+## Presentation decks
+
+The engine also serves presentation decks (Fallout Pip-Boy presenter) from the
+content repo. A deck is one Markdown file in the deck dialect — frontmatter +
+slides separated by `---`, five layouts via `<!-- slide: … -->` directives; see
+`docs/superpowers/specs/2026-07-09-deck-dialect-and-presenter-design.md`.
+
+- Location in `blog-content`: `decks/{owner}-{repo}/{slug}/index.md`
+  (assets in `assets/` next to it) — served at `/decks/{slug}`.
+- Publishing: open a PR against `blog-content` placing the file there. (The
+  `publish-blogpost` workflow can be copied with `SOURCE_DIR`/`DEST_SUBDIR`
+  set to `decks` — remember to also change the `on.push.paths` glob — but a
+  manual PR works fine until deck volume justifies automation.)
+- `draft: true` and `publishAt` behave exactly as for posts: hidden from the
+  route (404) until live.

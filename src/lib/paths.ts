@@ -19,3 +19,19 @@ export function parsePostPath(relPath: string): PostPathInfo | null {
     contentDir: `${ns}/${slug}`,
   };
 }
+
+/**
+ * {namespace}/{slug}/index.md under the DECKS root — served at /decks/{slug}.
+ * Same shape as posts so decks ride the same publish conventions.
+ */
+export function parseDeckPath(relPath: string): PostPathInfo | null {
+  const match = POST_PATH.exec(relPath);
+  if (!match) return null;
+  const [, ns, slug] = match;
+  return {
+    slug,
+    url: `/decks/${slug}`,
+    urlPrefix: `/decks/${slug}`,
+    contentDir: `${ns}/${slug}`,
+  };
+}

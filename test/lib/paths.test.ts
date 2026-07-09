@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePostPath } from '../../src/lib/paths';
+import { parsePostPath, parseDeckPath } from '../../src/lib/paths';
 
 describe('parsePostPath', () => {
   it('parses {ns}/{slug}/index.md into a slug URL + content dir', () => {
@@ -17,5 +17,21 @@ describe('parsePostPath', () => {
     expect(parsePostPath('README.md')).toBeNull();
     expect(parsePostPath('my-post/index.md')).toBeNull();  // too shallow ({slug}/index.md, no namespace)
     expect(parsePostPath('a/b/c/index.md')).toBeNull();    // too deep
+  });
+});
+
+describe('parseDeckPath', () => {
+  it('maps {ns}/{slug}/index.md to /decks/{slug}', () => {
+    const info = parseDeckPath('justcallmegreg-blog/demo-deck/index.md');
+    expect(info).toEqual({
+      slug: 'demo-deck',
+      url: '/decks/demo-deck',
+      urlPrefix: '/decks/demo-deck',
+      contentDir: 'justcallmegreg-blog/demo-deck',
+    });
+  });
+  it('returns null for non-matching paths', () => {
+    expect(parseDeckPath('demo-deck/index.md')).toBeNull();
+    expect(parseDeckPath('ns/demo-deck/other.md')).toBeNull();
   });
 });
