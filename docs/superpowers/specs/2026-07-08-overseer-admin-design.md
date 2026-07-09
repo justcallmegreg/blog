@@ -165,3 +165,15 @@ using the AWS SDK (new dependency `@aws-sdk/client-sesv2`).
 - A dedicated Overseer image or separate repo/app.
 - Narrowly-scoped SES IAM key (reuses `mailer-secrets` initially; tightening is a
   later, creds-only change).
+
+## Future work (documented, not built)
+
+- **Search + pagination.** SES `ListContacts` has no text/fuzzy search (only
+  topic + `FilteredStatus`) and paginates via an opaque forward-only `NextToken`
+  (no total, no random page access). Short term, do client-side fuzzy search
+  (reuse the blog's terminal `Search` component) + local pagination over the
+  loaded rows. At real scale, have the mailer maintain a synced datastore
+  (SQLite/Dynamo/Postgres) — which also removes the per-contact `GetContact`
+  N+1 — and query that for indexed search + keyset pagination.
+- **Auth.** Still none; the console relies on the `OVERSEER_ENABLED` guard + an
+  internal-only ingress host.
