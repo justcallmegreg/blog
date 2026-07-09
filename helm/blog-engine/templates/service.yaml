@@ -16,3 +16,4 @@ spec:
       name: http
   selector:
     {{- include "blog-engine.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: web

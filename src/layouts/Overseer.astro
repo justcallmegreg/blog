@@ -1,0 +1,70 @@
+---
+// Isolated shell for the internal Overseer admin console. Deliberately does NOT
+// reuse the public Terminal layout: no site nav, no social links, no contact/
+// newsletter overlays, no analytics/consent — nothing public-facing. It keeps
+// the terminal/CRT theme and mirrors the blog's header (brand + handshake, with
+// the section tabs living IN the header bar) so the console feels like the rest
+// of the estate.
+import os from 'node:os';
+import '../styles/theme.css';
+import { VERSION } from '../lib/version';
+
+interface Props { title?: string; tab?: string }
+const { title, tab = 'subscribers' } = Astro.props;
+const pageTitle = title ? `${title} — Overseer` : 'Overseer';
+
+// Terminal-flavoured handshake line (best-effort, not precise).
+function hostAddress(): string {
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const ni of list ?? []) {
+      if (ni.family === 'IPv4' && !ni.internal) return ni.address;
+    }
+  }
+  return '127.0.0.1';
+}
+const hostIp = hostAddress();
+
+// Header tabs — the console's sections. Only Subscribers exists today; add
+// entries here as new tabs are built.
+const tabs = [{ id: 'subscribers', label: 'Subscribers', href: '/overseer' }];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{pageTitle}</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" href="/favicon-180.png" />
+  </head>
+  <body class="crt">
+    <header class="topbar">
+      <div class="topbar-head">
+        <div class="brand-block">
+          <div class="brand">&gt; OVERSEER</div>
+          <div class="conn">
+            <span class="conn-badge">CONNECTED</span>
+            <div class="conn-line conn-os">OS version: {VERSION}</div>
+            <div class="conn-line">node: {hostIp}</div>
+            <div class="conn-line">access: INTERNAL // RESTRICTED</div>
+          </div>
+        </div>
+      </div>
+      <div class="topbar-row">
+        <nav class="tabs" aria-label="Overseer sections">
+          {tabs.map((t) => (
+            <a
+              class:list={['tab', { 'is-active': t.id === tab }]}
+              href={t.href}
+              aria-current={t.id === tab ? 'page' : undefined}
+            >{t.label}</a>
+          ))}
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      <slot />
+    </main>
+  </body>
+</html>

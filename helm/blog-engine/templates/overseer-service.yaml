@@ -1,0 +1,19 @@
+{{- if .Values.overseer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "blog-engine.fullname" . }}-overseer
+  labels:
+    {{- include "blog-engine.labels" . | nindent 4 }}
+    app.kubernetes.io/component: overseer
+spec:
+  type: {{ .Values.overseer.service.type }}
+  ports:
+    - port: {{ .Values.overseer.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "blog-engine.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: overseer
+{{- end }}

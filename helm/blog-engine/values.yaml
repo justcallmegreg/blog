@@ -98,3 +98,29 @@ matomo:
       password: "change-me"
     persistence:
       size: 8Gi
+
+# Internal "Overseer" admin console — the SAME image as blog-engine, deployed
+# separately with OVERSEER_ENABLED=true and SES credentials. Disabled by default;
+# existing installs are unaffected. The public blog-engine holds no AWS creds and
+# 404s /overseer.
+overseer:
+  enabled: false
+  replicas: 1
+  # Secret holding SES creds (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY). For now
+  # this can be the mailer's Secret (e.g. "mailer-secrets"); tighten later.
+  existingSecret: ""
+  env:
+    AWS_REGION: "eu-central-1"
+    SES_CONTACT_LIST: "blog-subscribers"
+    SES_TOPIC: "weekly-digest"
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: false
+    className: ""
+    host: overseer.example.com
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
