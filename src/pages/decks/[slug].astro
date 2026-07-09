@@ -1,0 +1,13 @@
+---
+import Presenter from '../../layouts/Presenter.astro';
+import { ensureStarted } from '../../lib/store-singleton';
+
+const { slug } = Astro.params;
+const store = await ensureStarted();
+const deck = store.getLiveDeck(`/decks/${slug}`, new Date());
+
+if (!deck) {
+  return new Response('Not found', { status: 404 });
+}
+---
+<Presenter deck={deck} />
