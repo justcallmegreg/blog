@@ -46,7 +46,7 @@ and the content repo is the single source of that identity.
 | File location | Repo root, sibling of the posts subdir (`blogs/`) | Outside `contentRoot`, so the post scanner never treats it as a post. |
 | Feature flag | `about.enabled` stays in engine config | Used synchronously by the layout (nav tab, CV overlay); config avoids an async nav dependency. |
 | Loading | `ContentStore.getAbout()`, parsed on `start()`/`sync()` | Reuses the existing clone/fetch/local-mode lifecycle; refreshes with the same cadence as posts. |
-| Missing/invalid file | Return `null`, log once, render graceful empty state | Content is external and user-edited; a bad file must never crash `/about`. |
+| Missing/invalid file | Return `null` (missing: silent; invalid: one warn), render graceful empty state | Content is external and user-edited; a bad file must never crash `/about`. |
 | Config schema | Remove `headline`/`bio`/`projects`; keep `enabled` | Content leaves config; the on/off switch is behaviour, not identity. |
 
 ## Data model
@@ -123,9 +123,7 @@ Small and independently testable; owns the schema only, no I/O.
 
 ## Error handling
 
-- **Missing `about.yaml`**: `getAbout()` → `null`; `/about` renders the empty
-  state; logged once at info level (not an error — the common state for a fresh
-  content repo).
+- **Missing `about.yaml`**: `getAbout()` → `null`; `/about` renders the empty state. Not logged — absence is the normal state for a fresh content repo, and reindex runs every sync cycle, so logging it would be per-cycle noise.
 - **Malformed YAML / schema violation**: caught during parse; `getAbout()` →
   `null`; a single `console.warn` names the file and the validation issue; the
   page still renders the empty state. Never throws, never 500s.

@@ -288,4 +288,31 @@ describe('ContentStore', () => {
     await store.start();
     expect(store.getAbout()).toBeNull();
   });
+
+  it('reads about.yaml from the repo root even when posts use a subdir', async () => {
+    // With subdir:'blogs', contentRoot() = <cacheDir>/blogs, but about.yaml lives
+    // at the repo ROOT. A regression that read it from contentRoot() would look in
+    // <cacheDir>/blogs/about.yaml, miss the file, and return null — this pins that.
+    mkdirSync(join(originDir, 'blogs', NS, 'reactor'), { recursive: true });
+    writeFileSync(
+      join(originDir, 'blogs', NS, 'reactor', 'index.md'),
+      '---\ntitle: Reactor\ndate: "2026-06-12"\n---\nBody'
+    );
+    writeFileSync(join(originDir, 'about.yaml'), 'headline: "Root-level"\n');
+    git(originDir, 'add', '-A');
+    git(originDir, 'commit', '-m', 'subdir post + root about');
+
+    const store = new ContentStore({
+      repo: originDir,
+      branch: 'main',
+      subdir: 'blogs',
+      cacheDir,
+    });
+    await store.start();
+
+    // The post is indexed under the subdir…
+    expect(store.listPosts().map((p) => p.slug)).toEqual(['reactor']);
+    // …and about.yaml is still found at the ROOT (would be null if read from contentRoot()).
+    expect(store.getAbout()?.headline).toBe('Root-level');
+  });
 });

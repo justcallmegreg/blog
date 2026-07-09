@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - `about.yaml` lives at the **content repo root** (`<cacheDir>/about.yaml`), a sibling of the posts subdir — never inside it.
-- A missing or malformed `about.yaml` must yield `null` and a log line, **never a thrown error / 500**.
+- A missing `about.yaml` yields `null` silently; a malformed one yields `null` plus a single `console.warn`; **never a thrown error / 500**.
 - `about.enabled` stays in engine config; `headline`/`bio`/`projects` are **removed** from the config schema.
 - Bio stays a plain string (no markdown rendering).
 - Follow existing patterns: `parseYaml` from `'yaml'` (as in `config.ts`), zod schemas with `.default()`, `[content]`-prefixed log lines.
