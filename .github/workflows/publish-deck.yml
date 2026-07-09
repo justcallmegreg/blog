@@ -1,0 +1,144 @@
+name: publish-deck
+
+on:
+  push:
+    branches: [main]
+    # Keep this glob in sync with SOURCE_DIR below — the `on:` trigger can't read
+    # env, so if you change SOURCE_DIR you must change this path too (or the
+    # workflow silently never runs).
+    paths: ['decks/**']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print what would be published without opening PRs'
+        type: boolean
+        default: false
+
+# Only the project repo is read with GITHUB_TOKEN; the content repo is written
+# with CONTENT_PR_TOKEN (a fine-grained PAT), so no write perms are needed here.
+permissions:
+  contents: read
+
+# ---- EDIT THESE when copying this workflow into another project repo ----
+env:
+  CONTENT_REPO: justcallmegreg/blog-content   # destination repo (owner/name)
+  CONTENT_BRANCH: main                         # base branch for the PR
+  SOURCE_DIR: decks                            # where decks live in THIS repo
+  DEST_SUBDIR: decks                           # where decks go in the content repo
+# -------------------------------------------------------------------------
+
+jobs:
+  # 1) Find the posts added/modified by this push and emit them as a JSON array.
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      posts: ${{ steps.changed.outputs.posts }}
+      count: ${{ steps.changed.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect added/modified posts
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ZERO=0000000000000000000000000000000000000000
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "$ZERO" ]; then
+            mapfile -t files < <(find "$SOURCE_DIR" -type f | sort)
+          else
+            mapfile -t files < <(git diff --name-only --diff-filter=AM "$BEFORE" "$AFTER" -- "$SOURCE_DIR" | sort -u)
+          fi
+          # Map each changed path to its post slug (the segment right under SOURCE_DIR),
+          # keep only real posts (those that have an index.md), dedupe.
+          slugs=()
+          for f in "${files[@]:-}"; do
+            rel="${f#"$SOURCE_DIR"/}"
+            slug="${rel%%/*}"
+            [ -n "$slug" ] || continue
+            [ -f "$SOURCE_DIR/$slug/index.md" ] || continue
+            slugs+=("$slug")
+          done
+          if [ "${#slugs[@]}" -eq 0 ]; then
+            json='[]'
+          else
+            json=$(printf '%s\n' "${slugs[@]}" | sort -u | jq -R . | jq -cs .)
+          fi
+          count=$(printf '%s' "$json" | jq 'length')
+          echo "posts=$json" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "found $count post(s): $json"
+
+  # 2) One PR per post in the content repo (re-merges update the same branch/PR).
+  publish:
+    needs: detect
+    if: needs.detect.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        post: ${{ fromJSON(needs.detect.outputs.posts) }}
+    steps:
+      - name: Checkout project repo (source post + assets)
+        uses: actions/checkout@v4
+
+      - name: Checkout content repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CONTENT_REPO }}
+          ref: ${{ env.CONTENT_BRANCH }}
+          token: ${{ secrets.CONTENT_PR_TOKEN }}
+          path: .content-repo
+          fetch-depth: 0
+
+      - name: Compute destination + copy files
+        id: prep
+        env:
+          POST: ${{ matrix.post }}
+        run: |
+          set -euo pipefail
+          slug="$POST"
+          prefix="${GITHUB_REPOSITORY//\//-}"      # owner-repo
+          srcdir="$SOURCE_DIR/$slug"
+          destrel="$DEST_SUBDIR/$prefix/$slug"
+          dest=".content-repo/$destrel"
+          mkdir -p "$(dirname "$dest")"
+          rm -rf "$dest"
+          cp -R "$srcdir" "$dest"               # whole post folder: index.md + assets/
+          {
+            echo "slug=$slug"
+            echo "destrel=$destrel"
+            echo "branch=deck/$prefix-$slug"
+          } >> "$GITHUB_OUTPUT"
+          echo "publish $srcdir -> $destrel (branch deck/$prefix-$slug)"
+
+      - name: Dry-run summary (open no PR)
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "DRY RUN — would open a PR:"
+          echo "  branch: ${{ steps.prep.outputs.branch }}"
+          echo "  dest:   ${{ steps.prep.outputs.destrel }}"
+          echo "  title:  Publish: ${{ steps.prep.outputs.slug }} (from ${{ github.repository }})"
+
+      - name: Create/update PR in content repo
+        if: ${{ !inputs.dry_run }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CONTENT_PR_TOKEN }}
+          path: .content-repo
+          branch: ${{ steps.prep.outputs.branch }}
+          base: ${{ env.CONTENT_BRANCH }}
+          add-paths: ${{ env.DEST_SUBDIR }}
+          commit-message: "deck: publish ${{ steps.prep.outputs.slug }} from ${{ github.repository }}"
+          title: "Publish deck: ${{ steps.prep.outputs.slug }} (from ${{ github.repository }})"
+          delete-branch: true
+          body: |
+            Automated deck publication from [`${{ github.repository }}`](${{ github.server_url }}/${{ github.repository }}).
+
+            - Source: `${{ matrix.post }}`
+            - Destination: `${{ steps.prep.outputs.destrel }}`
+            - Origin commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}

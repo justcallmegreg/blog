@@ -124,9 +124,10 @@ slides separated by `---`, five layouts via `<!-- slide: … -->` directives; se
 
 - Location in `blog-content`: `decks/{owner}-{repo}/{slug}/index.md`
   (assets in `assets/` next to it) — served at `/decks/{slug}`.
-- Publishing: open a PR against `blog-content` placing the file there. (The
-  `publish-blogpost` workflow can be copied with `SOURCE_DIR`/`DEST_SUBDIR`
-  set to `decks` — remember to also change the `on.push.paths` glob — but a
-  manual PR works fine until deck volume justifies automation.)
+- Publishing is automated: `publish-deck.yml` (the decks twin of
+  `publish-blogpost.yml`) watches `decks/**` on `main` and opens one PR per
+  deck in `blog-content` under `decks/{owner}-{repo}/{slug}/`. Its PR branches
+  are prefixed `deck/` so a deck and a post sharing a slug never collide. Same
+  `CONTENT_PR_TOKEN` secret, same `workflow_dispatch` + `dry_run` switch.
 - `draft: true` and `publishAt` behave exactly as for posts: hidden from the
   route (404) until live.
