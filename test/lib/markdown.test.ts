@@ -55,6 +55,21 @@ describe('renderMarkdown', () => {
     expect(html).toContain('shiki');
   });
 
+  it('renders inline and display math with KaTeX', async () => {
+    const html = await renderMarkdown(
+      'Inline $z = w_i x_i + b$ and:\n\n$$\\sum_{i=1}^{n} w_i x_i$$',
+      '/2026/06/12'
+    );
+    expect(html).toContain('class="katex');
+    expect(html).toContain('katex-mathml');
+  });
+
+  it('renders math before Shiki so math is not treated as a code language', async () => {
+    const html = await renderMarkdown('$$\\frac{1}{1+e^{-z}}$$', '/2026/06/12');
+    expect(html).toContain('katex');
+    expect(html).not.toContain('language-math');
+  });
+
   it('routes language-less fences through shiki too, with .line spans', async () => {
     const html = await renderMarkdown('```\nplain line one\nplain line two\n```', '/2026/06/12');
     expect(html).toContain('class="shiki');

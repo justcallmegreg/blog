@@ -1,8 +1,10 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
+import rehypeKatex from 'rehype-katex';
 import rehypeShiki from '@shikijs/rehype';
 import rehypeStringify from 'rehype-stringify';
 import { visit, EXIT } from 'unist-util-visit';
@@ -110,8 +112,13 @@ export async function renderMarkdown(
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
+    // remark-math parses $inline$ and $$display$$ TeX; rehype-katex (below)
+    // renders it. rehype-katex must run BEFORE rehypeShiki so Shiki never sees
+    // the language-math code nodes and tries to highlight them.
+    .use(remarkMath)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeKatex)
     .use(mermaidBlocks)
     // defaultLanguage: even fences without a language get Shiki's line-wrapped
     // structure (a <pre class="shiki"> with .line spans), so CSS line numbers
