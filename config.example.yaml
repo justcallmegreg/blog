@@ -38,15 +38,20 @@ social:                             # top-bar social links (handles only; empty 
   medium: ""                        # e.g. "@justcallmegreg" — shown when set
 
 about:
-  enabled: true
-  headline: "Greg — software engineer"
-  bio: "Short background summary — who I am, what I work on."
-  projects:
-    - start: 2021
-      end: 2023
-      description: "Confidential project — what it was (no client name)."
-      responsibilities: "What I owned / led."
-      deliveries: "What I shipped / achieved."
+  enabled: true                  # show the About me tab + page
+  # The About page CONTENT (headline, bio, achievements) lives in the content
+  # repo at about.yaml (repo root), so it can be edited without redeploying:
+  #
+  #   # blog-content/about.yaml
+  #   headline: "Greg — software engineer"
+  #   bio: "Short background summary — who I am, what I work on."
+  #   projects:
+  #     - start: 2021
+  #       end: 2023
+  #       description: "Confidential project — what it was (no client name)."
+  #       responsibilities: "What I owned / led."
+  #       deliveries: "What I shipped / achieved."
+  #
   # CV requests are sent to the CV_WEBHOOK_URL env var (not stored here);
   # stage-mode logs the request when unset.
 

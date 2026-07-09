@@ -63,20 +63,10 @@ const ConfigSchema = z.object({
     .default({}),
   about: z
     .object({
+      // Feature flag only: gates the About tab + CV overlay (rendered
+      // synchronously by the layout). The About *content* — headline, bio,
+      // projects — lives in blog-content/about.yaml, read via the content store.
       enabled: z.boolean().default(true),
-      headline: z.string().default(''),
-      bio: z.string().default(''),
-      projects: z
-        .array(
-          z.object({
-            start: z.number().int(),
-            end: z.number().int(),
-            description: z.string(),
-            responsibilities: z.string().default(''),
-            deliveries: z.string().default(''),
-          })
-        )
-        .default([]),
     })
     .default({}),
   // GDPR: a privacy/erasure contact email + the first-visit consent gate.
