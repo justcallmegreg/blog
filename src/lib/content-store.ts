@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { cloneRepo, fetchReset, lsTreeBlobs, firstAddedDate } from './git';
+import { parseAbout, type AboutData } from './about';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -78,6 +79,7 @@ export interface ContentStoreOptions {
 
 export class ContentStore {
   private index = new Map<string, Post>();
+  private about: AboutData | null = null;
   private started = false;
   // Counts from the most recent reindex, surfaced in the startup/sync logs so a
   // "no posts showing" problem can be diagnosed from the container logs alone.
@@ -266,6 +268,7 @@ export class ContentStore {
       if (!seenUrls.has(url)) this.index.delete(url);
     }
     this.lastScan = { scanned: blobs.size, underSubdir, matched };
+    this.loadAbout();
     return changed;
   }
 
@@ -289,6 +292,28 @@ export class ContentStore {
 
   getPost(url: string): Post | undefined {
     return this.index.get(url);
+  }
+
+  /** Parsed about.yaml from the content repo root, or null if absent/malformed. */
+  getAbout(): AboutData | null {
+    return this.about;
+  }
+
+  // about.yaml is a repo-level file at the cache dir root (sibling of the posts
+  // subdir), so read from cacheDir directly — NOT contentRoot(), which includes
+  // the subdir. Malformed/absent degrades to null; never throws.
+  private loadAbout(): void {
+    const file = join(this.opts.cacheDir, 'about.yaml');
+    if (!existsSync(file)) {
+      this.about = null;
+      return;
+    }
+    try {
+      this.about = parseAbout(readFileSync(file, 'utf8'));
+    } catch (err) {
+      console.warn(`[content] about.yaml ignored: ${(err as Error).message}`);
+      this.about = null;
+    }
   }
 
   /** Like getPost, but returns undefined unless the post is live at `now`. */

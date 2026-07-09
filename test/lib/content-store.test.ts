@@ -256,4 +256,36 @@ describe('ContentStore', () => {
       resolve(cacheDir, NS, 'fa/assets/x.png')
     );
   });
+
+  it('exposes about.yaml from the repo root, refreshed on sync', async () => {
+    // Absent initially → null.
+    const store = makeStore();
+    await store.start();
+    expect(store.getAbout()).toBeNull();
+
+    // Add about.yaml at the repo root (sibling of the posts, NOT under a subdir).
+    writeFileSync(
+      join(originDir, 'about.yaml'),
+      'headline: "Greg"\nbio: "Bio."\nprojects:\n  - start: 2021\n    end: 2023\n    description: "A project."\n'
+    );
+    git(originDir, 'add', '-A');
+    git(originDir, 'commit', '-m', 'add about');
+    await store.sync();
+
+    const about = store.getAbout();
+    expect(about?.headline).toBe('Greg');
+    expect(about?.bio).toBe('Bio.');
+    expect(about?.projects).toEqual([
+      { start: 2021, end: 2023, description: 'A project.', responsibilities: '', deliveries: '' },
+    ]);
+  });
+
+  it('returns null and does not throw on a malformed about.yaml', async () => {
+    writeFileSync(join(originDir, 'about.yaml'), 'projects:\n  - start: 2020\n    description: "no end"\n');
+    git(originDir, 'add', '-A');
+    git(originDir, 'commit', '-m', 'bad about');
+    const store = makeStore();
+    await store.start();
+    expect(store.getAbout()).toBeNull();
+  });
 });
