@@ -27,12 +27,8 @@ const projects = [...(about?.projects ?? [])].sort((a, b) => b.end - a.end || b.
       <li class="about-project">
         <div class="about-years">[ {p.start} – {p.end} ]</div>
         <div class="about-desc">{p.description}</div>
-        {p.responsibilities && (
-          <div class="about-sub"><span class="muted">responsibilities:</span> {p.responsibilities}</div>
-        )}
-        {p.deliveries && (
-          <div class="about-sub"><span class="muted">deliveries:</span> {p.deliveries}</div>
-        )}
+        {p.responsibilities && <div class="about-sub">{p.responsibilities}</div>}
+        {p.deliveries && <div class="about-sub">{p.deliveries}</div>}
       </li>
     ))}
   </ul>
