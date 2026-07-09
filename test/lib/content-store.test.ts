@@ -23,6 +23,13 @@ function commitPost(slug: string, body: string, dateISO?: string) {
     : process.env;
   execFileSync('git', ['commit', '-m', slug], { cwd: originDir, stdio: 'pipe', env });
 }
+function commitDeck(slug: string, body: string) {
+  const full = join(originDir, 'decks', NS, slug, 'index.md');
+  mkdirSync(join(full, '..'), { recursive: true });
+  writeFileSync(full, body);
+  git(originDir, 'add', '-A');
+  execFileSync('git', ['commit', '-m', `deck ${slug}`], { cwd: originDir, stdio: 'pipe' });
+}
 
 beforeEach(() => {
   originDir = mkdtempSync(join(tmpdir(), 'origin-'));
@@ -255,5 +262,94 @@ describe('ContentStore', () => {
     expect(store.resolveAssetPath('fa', 'x.png', new Date('2031-01-01T00:00:00Z'))).toBe(
       resolve(cacheDir, NS, 'fa/assets/x.png')
     );
+  });
+
+  it('indexes a deck: meta, layouts, mermaid + shiki rendering', async () => {
+    commitDeck('demo', `---
+title: "DEMO DECK"
+subtitle: "SUB"
+---
+
+# DEMO DECK
+
+HELLO
+
+---
+
+## FLOW
+
+\`\`\`mermaid
+graph LR
+  A --> B
+\`\`\`
+
+---
+
+<!-- slide: two-col -->
+
+## SPLIT
+
+- LEFT
+
+<!-- col -->
+
+\`\`\`js
+const x = 1;
+\`\`\`
+`);
+    const store = makeStore();
+    await store.start();
+    const deck = store.getDeck('/decks/demo');
+    expect(deck?.title).toBe('DEMO DECK');
+    expect(deck?.subtitle).toBe('SUB');
+    expect(deck?.theme).toBe('pipboy');
+    expect(deck?.slides.map((s) => s.layout)).toEqual(['title', 'default', 'two-col']);
+    expect(deck?.slides[1].html).toContain('<pre class="mermaid">');
+    expect(deck?.slides[2].html).toContain('class="cols"');
+    expect(deck?.slides[2].html).toContain('shiki');
+  });
+
+  it('keeps posts working when decks are present (no cross-contamination)', async () => {
+    commitDeck('demo', '# D\n');
+    const store = makeStore();
+    await store.start();
+    expect(store.listPosts(new Date()).map((p) => p.slug)).toEqual(['first', 'older']);
+    expect(store.getPost('/decks/demo')).toBeUndefined();
+    expect(store.getDeck('/first')).toBeUndefined();
+  });
+
+  it('gates a draft deck and a future-scheduled deck', async () => {
+    commitDeck('draftdeck', '---\ndraft: true\n---\n# D\n');
+    commitDeck('futuredeck', '---\npublishAt: "2030-01-01T00:00:00Z"\n---\n# F\n');
+    const store = makeStore();
+    await store.start();
+    const now = new Date('2025-01-01T00:00:00Z');
+    expect(store.getLiveDeck('/decks/draftdeck', now)).toBeUndefined();
+    expect(store.getLiveDeck('/decks/futuredeck', now)).toBeUndefined();
+    expect(store.getLiveDeck('/decks/futuredeck', new Date('2031-01-01T00:00:00Z'))).toBeDefined();
+    expect(store.getDeck('/decks/draftdeck')).toBeDefined(); // raw lookup still works
+    expect(store.listDecks(now)).toEqual([]);
+  });
+
+  it('resolves deck asset paths with the traversal guard', async () => {
+    commitDeck('withassets', '# A\n');
+    const store = makeStore();
+    await store.start();
+    expect(store.resolveDeckAssetPath('withassets', 'd.png')).toBe(
+      resolve(cacheDir, 'decks', NS, 'withassets/assets/d.png')
+    );
+    expect(store.resolveDeckAssetPath('withassets', '../../../etc/passwd')).toBeNull();
+    expect(store.resolveDeckAssetPath('nope', 'd.png')).toBeNull();
+  });
+
+  it('drops a deck whose file was removed', async () => {
+    commitDeck('gone', '# G\n');
+    const store = makeStore();
+    await store.start();
+    expect(store.getDeck('/decks/gone')).toBeDefined();
+    git(originDir, 'rm', `decks/${NS}/gone/index.md`);
+    git(originDir, 'commit', '-m', 'remove deck');
+    await store.sync();
+    expect(store.getDeck('/decks/gone')).toBeUndefined();
   });
 });

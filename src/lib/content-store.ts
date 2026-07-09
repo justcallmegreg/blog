@@ -38,10 +38,11 @@ async function withRetry<T>(
 import { pickPublishedDate } from './post-date';
 import { estimateReadingMinutes } from './reading-time';
 import { listLocalFiles } from './local-files';
-import { parsePostPath } from './paths';
+import { parsePostPath, parseDeckPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
 import { renderMarkdown, extractExcerpt } from './markdown';
 import { parsePublishAt } from './publish-schedule';
+import { parseDeckSource, renderDeckSlides, type DeckSlideHtml } from './deck';
 
 export interface Post {
   url: string;
@@ -58,6 +59,23 @@ export interface Post {
   readingMinutes: number;
   publishAt?: string;        // resolved UTC instant when validly scheduled
   scheduleInvalid?: boolean; // publishAt was present but unparseable → keep hidden
+}
+
+export interface Deck {
+  url: string;
+  urlPrefix: string;
+  slug: string;
+  contentDir: string;
+  title: string;
+  subtitle?: string;
+  author?: string;
+  date: string;
+  theme: string;
+  draft: boolean;
+  slides: DeckSlideHtml[];
+  blobHash: string;
+  publishAt?: string;
+  scheduleInvalid?: boolean;
 }
 
 export interface ContentStoreOptions {
@@ -80,6 +98,7 @@ export interface ContentStoreOptions {
 
 export class ContentStore {
   private index = new Map<string, Post>();
+  private decksIndex = new Map<string, Deck>();
   private started = false;
   // Counts from the most recent reindex, surfaced in the startup/sync logs so a
   // "no posts showing" problem can be diagnosed from the container logs alone.
@@ -97,6 +116,16 @@ export class ContentStore {
   private toContentRel(repoRel: string): string | null {
     if (!this.opts.subdir) return repoRel;
     const prefix = `${this.opts.subdir.replace(/\/$/, '')}/`;
+    return repoRel.startsWith(prefix) ? repoRel.slice(prefix.length) : null;
+  }
+
+  private decksRoot(): string {
+    return join(this.opts.cacheDir, this.opts.decksSubdir ?? 'decks');
+  }
+
+  /** Repo-relative path -> decks-root-relative path, or null if outside decksSubdir. */
+  private toDeckRel(repoRel: string): string | null {
+    const prefix = `${(this.opts.decksSubdir ?? 'decks').replace(/\/$/, '')}/`;
     return repoRel.startsWith(prefix) ? repoRel.slice(prefix.length) : null;
   }
 
@@ -161,7 +190,7 @@ export class ContentStore {
     await this.reindex();
     const { scanned, underSubdir } = this.lastScan;
     console.log(
-      `[content] indexed ${this.index.size} post(s) — scanned ${scanned} tracked file(s), ` +
+      `[content] indexed ${this.index.size} post(s), ${this.decksIndex.size} deck(s) — scanned ${scanned} tracked file(s), ` +
         `${underSubdir} under subdir '${this.opts.subdir}' (content root ${this.contentRoot()})`
     );
     if (this.index.size === 0) {
@@ -211,11 +240,17 @@ export class ContentStore {
         ? await lsTreeBlobs(this.opts.cacheDir)
         : new Map<string, string>();
     const seenUrls = new Set<string>();
+    const seenDeckUrls = new Set<string>();
     const changed: string[] = [];
     let underSubdir = 0;
     let matched = 0;
 
     for (const [repoRel, hash] of blobs) {
+      const deckRel = this.toDeckRel(repoRel);
+      if (deckRel !== null) {
+        await this.indexDeck(repoRel, deckRel, hash, seenDeckUrls, changed);
+        continue;
+      }
       const contentRel = this.toContentRel(repoRel);
       if (contentRel === null) continue;
       underSubdir++;
@@ -267,19 +302,76 @@ export class ContentStore {
     for (const url of [...this.index.keys()]) {
       if (!seenUrls.has(url)) this.index.delete(url);
     }
+    for (const url of [...this.decksIndex.keys()]) {
+      if (!seenDeckUrls.has(url)) this.decksIndex.delete(url);
+    }
     this.lastScan = { scanned: blobs.size, underSubdir, matched };
     return changed;
+  }
+
+  private async indexDeck(
+    repoRel: string,
+    deckRel: string,
+    hash: string,
+    seenUrls: Set<string>,
+    changed: string[]
+  ): Promise<void> {
+    const info = parseDeckPath(deckRel);
+    if (!info) return;
+    seenUrls.add(info.url);
+    const existing = this.decksIndex.get(info.url);
+    if (existing && existing.blobHash === hash) return;
+
+    const raw = readFileSync(join(this.decksRoot(), deckRel), 'utf8');
+    try {
+      const parsed = parseDeckSource(raw);
+      const slides = await renderDeckSlides(parsed, (md) =>
+        renderMarkdown(md, info.urlPrefix)
+      );
+      const sched = parsePublishAt(parsed.meta.publishAt, this.tz());
+      if (sched.kind === 'invalid') {
+        console.warn(
+          `[content] ${repoRel}: invalid publishAt ${JSON.stringify(parsed.meta.publishAt)} — keeping the deck hidden`
+        );
+      }
+      const publishAtDay = sched.kind === 'scheduled' ? sched.day : null;
+      const gitDate = this.opts.local
+        ? null
+        : await firstAddedDate(this.opts.cacheDir, repoRel);
+      this.decksIndex.set(info.url, {
+        url: info.url,
+        urlPrefix: info.urlPrefix,
+        slug: info.slug,
+        contentDir: info.contentDir,
+        title: parsed.meta.title ?? info.slug,
+        subtitle: parsed.meta.subtitle,
+        author: parsed.meta.author,
+        date: pickPublishedDate(parsed.meta.date, publishAtDay ?? gitDate),
+        theme: parsed.meta.theme,
+        draft: parsed.meta.draft,
+        slides,
+        blobHash: hash,
+        publishAt: sched.kind === 'scheduled' ? sched.instant : undefined,
+        scheduleInvalid: sched.kind === 'invalid' ? true : undefined,
+      });
+      changed.push(repoRel);
+    } catch (err) {
+      console.warn(`Skipping ${repoRel}: ${(err as Error).message}`);
+    }
   }
 
   private tz(): string {
     return this.opts.timezone ?? 'Europe/Budapest';
   }
 
-  /** Visible to readers now? Drafts and not-yet-published posts are not. */
-  private isLive(post: Post, now: Date): boolean {
-    if (post.draft) return false;
-    if (post.scheduleInvalid) return false;
-    if (post.publishAt && Date.parse(post.publishAt) > now.getTime()) return false;
+  /** Visible to readers now? Drafts and not-yet-published entries are not. */
+  private isLive(
+    entry: { draft: boolean; scheduleInvalid?: boolean; publishAt?: string },
+    now: Date
+  ): boolean {
+    if (entry.draft) return false;
+    if (entry.scheduleInvalid) return false;
+    if (entry.publishAt && Date.parse(entry.publishAt) > now.getTime()) return false;
     return true;
   }
 
@@ -305,6 +397,31 @@ export class ContentStore {
     // resolve() makes baseDir absolute so the traversal check holds even when
     // contentRoot/cacheDir is a relative path (e.g. the default './cache').
     const baseDir = resolve(this.contentRoot(), post.contentDir, 'assets');
+    const full = resolve(baseDir, file);
+    if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
+    return full;
+  }
+
+  listDecks(now: Date = new Date()): Deck[] {
+    return [...this.decksIndex.values()]
+      .filter((d) => this.isLive(d, now))
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }
+
+  getDeck(url: string): Deck | undefined {
+    return this.decksIndex.get(url);
+  }
+
+  /** Like getDeck, but undefined unless the deck is live at `now`. */
+  getLiveDeck(url: string, now: Date = new Date()): Deck | undefined {
+    const deck = this.decksIndex.get(url);
+    return deck && this.isLive(deck, now) ? deck : undefined;
+  }
+
+  resolveDeckAssetPath(slug: string, file: string, now: Date = new Date()): string | null {
+    const deck = this.decksIndex.get(`/decks/${slug}`);
+    if (!deck || !this.isLive(deck, now)) return null;
+    const baseDir = resolve(this.decksRoot(), deck.contentDir, 'assets');
     const full = resolve(baseDir, file);
     if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
     return full;
