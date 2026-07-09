@@ -323,6 +323,8 @@ export class ContentStore {
     if (existing && existing.blobHash === hash) return;
 
     const raw = readFileSync(join(this.decksRoot(), deckRel), 'utf8');
+    // Parse failure keeps the last-good render serving (entry stays indexed &
+    // un-pruned) — deliberate: a typo'd edit degrades to stale, never to a 500.
     try {
       const parsed = parseDeckSource(raw);
       const slides = await renderDeckSlides(parsed, (md) =>

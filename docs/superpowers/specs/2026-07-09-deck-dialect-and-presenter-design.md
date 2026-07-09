@@ -98,6 +98,8 @@ Right column content…
   - `stat` — one huge number/short phrase (H1) + label + optional footnote.
   - `two-col` — content split at a `<!-- col -->` comment into two columns.
   - `standby` — closer: centered emblem + H1 + sub line.
+- Directive comments (`<!-- slide: … -->`, `<!-- col -->`) must start at column 0
+  (no indentation) — indented markers are treated as plain content.
 - Mermaid: fenced ```` ```mermaid ```` blocks (rendered by the runtime, themed).
 - Code: fenced blocks with a language → Shiki highlighting.
 - Images: standard Markdown; assets live in a folder next to the deck
