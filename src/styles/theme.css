@@ -71,6 +71,7 @@ pre.mermaid svg { max-width: 100%; height: auto; }
 :is(pre.mermaid, .zoom-pane) svg [fill="#438DD5"] { fill: #0e2a18 !important; stroke: var(--fg) !important; }      /* Container / ContainerDb */
 :is(pre.mermaid, .zoom-pane) svg [fill="#08427B"] { fill: #0c2417 !important; stroke: var(--fg-dim) !important; }  /* Person */
 :is(pre.mermaid, .zoom-pane) svg [fill="#999999"] { fill: #0d1a11 !important; stroke: var(--fg-dim) !important; }  /* External */
+:is(pre.mermaid, .zoom-pane) svg [fill="#85BBF0"] { fill: #0e2a18 !important; stroke: var(--fg) !important; }      /* Component (C4Component) */
 
 /* Zoom: magnifier button on each rendered diagram + the full-screen pane. */
 .mermaid-block { position: relative; }
