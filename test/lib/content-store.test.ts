@@ -309,6 +309,19 @@ const x = 1;
     expect(deck?.slides[2].html).toContain('shiki');
   });
 
+  it('carries vaultIntro/vault from deck frontmatter', async () => {
+    commitDeck('vaultopt', '---\ntitle: V\nvaultIntro: false\nvault: 111\n---\n# S\n');
+    commitDeck('vaultdef', '---\ntitle: D\n---\n# S\n');
+    const store = makeStore();
+    await store.start();
+    const opt = store.getDeck('/decks/vaultopt')!;
+    const def = store.getDeck('/decks/vaultdef')!;
+    expect(opt.vaultIntro).toBe(false);
+    expect(opt.vault).toBe(111);
+    expect(def.vaultIntro).toBe(true);
+    expect(def.vault).toBeUndefined();
+  });
+
   it('keeps posts working when decks are present (no cross-contamination)', async () => {
     commitDeck('demo', '# D\n');
     const store = makeStore();

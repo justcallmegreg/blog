@@ -106,6 +106,20 @@ describe('parseDeckSource', () => {
   });
 });
 
+describe('vault gate frontmatter', () => {
+  it('defaults vaultIntro to true', () => {
+    expect(parseDeckSource('---\ntitle: T\n---\n# S\n').meta.vaultIntro).toBe(true);
+  });
+  it('parses vaultIntro:false and a vault number', () => {
+    const m = parseDeckSource('---\nvaultIntro: false\nvault: 111\n---\n# S\n').meta;
+    expect(m.vaultIntro).toBe(false);
+    expect(m.vault).toBe(111);
+  });
+  it('rejects a non-positive vault number', () => {
+    expect(() => parseDeckSource('---\nvault: -1\n---\n# S\n')).toThrow();
+  });
+});
+
 describe('renderDeckSlides', () => {
   const fake = async (md: string) => `[${md}]`;
 

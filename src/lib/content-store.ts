@@ -73,6 +73,8 @@ export interface Deck {
   date: string;
   theme: string;
   draft: boolean;
+  vaultIntro: boolean;
+  vault?: number;
   slides: DeckSlideHtml[];
   blobHash: string;
   publishAt?: string;
@@ -354,6 +356,8 @@ export class ContentStore {
         date: pickPublishedDate(parsed.meta.date, publishAtDay ?? gitDate),
         theme: parsed.meta.theme,
         draft: parsed.meta.draft,
+        vaultIntro: parsed.meta.vaultIntro,
+        vault: parsed.meta.vault,
         slides,
         blobHash: hash,
         publishAt: sched.kind === 'scheduled' ? sched.instant : undefined,
