@@ -44,6 +44,15 @@ const { deck } = Astro.props;
                 ))}
                 <div class="nav-hint" id="navhint">PRESS ► OR TURN KNOB TO BEGIN</div>
                 <div class="wipe" id="wipe"></div>
+                {deck.vaultIntro && (
+                  <div class="vault-gate" id="vaultgate" data-vault={String(deck.vault ?? 94)}>
+                    <div class="vault-door-wrap">
+                      <svg class="vault-door" id="vaultdoor" viewBox="0 0 600 600" aria-hidden="true"></svg>
+                    </div>
+                    <p class="vault-label">VAULT {deck.vault ?? 94} <span class="vault-sealed">// SEALED</span></p>
+                    <button class="vault-open" id="vaultopen" type="button">[ OPEN ]</button>
+                  </div>
+                )}
               </main>
 
               <footer class="status">
@@ -636,9 +645,64 @@ const { deck } = Astro.props;
       .pb-body .slide pre.mermaid { border: none; background: none; }
       .pb-body .slide pre.mermaid svg { max-height: 48vh; }
       .pb-body .slide img { max-width: 100%; max-height: 55vh; }
+
+      /* ============ VAULT GATE (deck entry) ============ */
+      .vault-gate {
+        position: absolute; inset: 0; z-index: 5;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 2.4vmin;
+        background: radial-gradient(ellipse 95% 90% at 50% 42%, var(--screen-0) 0%, var(--screen-1) 80%);
+      }
+      .vault-gate.gone { display: none; }
+      .vault-door-wrap {
+        width: min(52vmin, 62%); aspect-ratio: 1;
+        /* Tint the steel door to the CRT green (same trick as the site avatar). */
+        filter: grayscale(1) sepia(1) hue-rotate(78deg) saturate(2.4) brightness(0.95);
+      }
+      .vault-door { width: 100%; height: 100%; display: block; }
+      .vault-label {
+        margin: 0; color: var(--fg);
+        font-size: clamp(13px, 2.4vmin, 28px); letter-spacing: 0.24em;
+      }
+      .vault-sealed { color: var(--fg-dim); }
+      .vault-open {
+        font: inherit; cursor: pointer;
+        color: var(--screen-1); background: var(--fg); border: none; text-shadow: none;
+        padding: 0.35em 1.5em; font-size: clamp(14px, 2.6vmin, 30px); letter-spacing: 0.24em;
+        box-shadow: 0 0 1.4vmin rgba(69, 255, 122, 0.5);
+        animation: vault-open-pulse 1.6s steps(1) infinite;
+      }
+      .vault-open:hover { filter: brightness(1.12); }
+      .vault-open:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+      @keyframes vault-open-pulse { 50% { box-shadow: 0 0 0.5vmin rgba(69, 255, 122, 0.3); } }
+
+      /* open sequence: unseal spin, then roll the door off to the right + fade */
+      .vault-gate.opening .vault-label,
+      .vault-gate.opening .vault-open { animation: vault-fade 0.35s ease forwards; }
+      .vault-gate.opening .vault-door-wrap {
+        filter: grayscale(1) sepia(1) hue-rotate(78deg) saturate(2.4) brightness(0.95);
+        animation: vault-roll 1.5s cubic-bezier(0.5, 0, 0.7, 1) forwards;
+      }
+      .vault-gate.opening { animation: vault-gate-fade 1.5s ease forwards; }
+      @keyframes vault-fade { to { opacity: 0; } }
+      @keyframes vault-roll {
+        0%   { transform: rotate(0) translateX(0) scale(1); }
+        30%  { transform: rotate(-42deg) translateX(0) scale(1); }
+        100% { transform: rotate(-42deg) translateX(135%) scale(0.85); opacity: 0; }
+      }
+      @keyframes vault-gate-fade { 0%, 62% { opacity: 1; } 100% { opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        .vault-gate.opening,
+        .vault-gate.opening .vault-door-wrap,
+        .vault-gate.opening .vault-label,
+        .vault-gate.opening .vault-open,
+        .vault-open { animation: none !important; }
+      }
     </style>
 
     <script>
+      import { buildDoor } from '../lib/vault-door';
+
       (() => {
         'use strict';
 
@@ -653,6 +717,15 @@ const { deck } = Astro.props;
         const flick = document.getElementById('flick')!;
         const navhint = document.getElementById('navhint')!;
         const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const gate = document.getElementById('vaultgate') as HTMLElement | null;
+        const openBtn = document.getElementById('vaultopen');
+        let sealed = !!gate;
+        let opening = false;
+        if (gate) {
+          const doorEl = document.getElementById('vaultdoor');
+          try { if (doorEl) buildDoor(doorEl as unknown as SVGSVGElement, gate.dataset.vault || '94'); } catch { /* draw failed — OPEN still reveals */ }
+        }
 
         let idx = 0;
         let rot = 0;
@@ -703,12 +776,13 @@ const { deck } = Astro.props;
         }
 
         function render() {
-          slides.forEach((s, i) => s.classList.toggle('on', i === idx));
-          counter.textContent =
-            String(idx + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
-          const deg = slides.length > 1 ? -55 + (110 * idx) / (slides.length - 1) : 0;
+          slides.forEach((s, i) => s.classList.toggle('on', i === idx && !sealed));
+          counter.textContent = sealed
+            ? '-- / ' + String(slides.length).padStart(2, '0')
+            : String(idx + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+          const deg = !sealed && slides.length > 1 ? -55 + (110 * idx) / (slides.length - 1) : -55;
           needle.style.setProperty('--deg', deg.toFixed(1) + 'deg');
-          navhint.classList.toggle('hide', idx !== 0);
+          navhint.classList.toggle('hide', sealed || idx !== 0);
         }
 
         function go(dir: number) {
@@ -728,15 +802,29 @@ const { deck } = Astro.props;
           render();
         }
 
-        document.getElementById('next')!.addEventListener('click', () => go(1));
-        document.getElementById('prev')!.addEventListener('click', () => go(-1));
-        document.getElementById('hotr')!.addEventListener('click', () => go(1));
-        document.getElementById('hotl')!.addEventListener('click', () => go(-1));
-        knob.addEventListener('click', () => go(1));
+        function reveal() {
+          if (!sealed || opening || !gate) return;
+          opening = true;
+          click();
+          const finish = () => { sealed = false; opening = false; gate.classList.add('gone'); render(); };
+          if (reduce) { finish(); return; }
+          const wrap = gate.querySelector('.vault-door-wrap');
+          gate.classList.add('opening');
+          if (wrap) wrap.addEventListener('animationend', finish, { once: true });
+          else setTimeout(finish, 1600);
+        }
+        function advance() { if (sealed) reveal(); else go(1); }
+
+        document.getElementById('next')!.addEventListener('click', advance);
+        document.getElementById('prev')!.addEventListener('click', () => { if (!sealed) go(-1); });
+        document.getElementById('hotr')!.addEventListener('click', advance);
+        document.getElementById('hotl')!.addEventListener('click', () => { if (!sealed) go(-1); });
+        knob.addEventListener('click', advance);
+        openBtn?.addEventListener('click', reveal);
 
         addEventListener('keydown', (e) => {
-          if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(1); }
-          if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1); }
+          if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); advance(); }
+          if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); if (!sealed) go(-1); }
         });
 
         render();
