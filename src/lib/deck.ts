@@ -12,6 +12,8 @@ const DeckFrontmatterSchema = z.object({
   theme: z.string().default('pipboy'),
   draft: z.boolean().default(false),
   publishAt: z.string().optional(),
+  vaultIntro: z.boolean().default(true),
+  vault: z.number().int().positive().optional(),
 });
 export type DeckFrontmatter = z.infer<typeof DeckFrontmatterSchema>;
 
