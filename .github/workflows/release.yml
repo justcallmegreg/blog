@@ -4,6 +4,15 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  # Manual release of the current main HEAD — for changes pushed straight to main
+  # (which never trigger the pull_request path above). Pick the version bump.
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump'
+        type: choice
+        options: [minor, patch, major]
+        default: minor
 
 concurrency:
   group: release
@@ -17,11 +26,13 @@ permissions:
 jobs:
   # 1) Bump VERSION.txt + tag on main, expose the version + image name.
   prepare:
-    if: github.event.pull_request.merged == true
+    # Run on a merged PR, or a manual dispatch.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
-      IS_MAJOR: ${{ contains(github.event.pull_request.labels.*.name, 'major') }}
-      IS_PATCH: ${{ contains(github.event.pull_request.labels.*.name, 'patch') }}
+      # On dispatch there are no PR labels; fall back to the chosen `bump` input.
+      IS_MAJOR: ${{ contains(github.event.pull_request.labels.*.name, 'major') || github.event.inputs.bump == 'major' }}
+      IS_PATCH: ${{ contains(github.event.pull_request.labels.*.name, 'patch') || github.event.inputs.bump == 'patch' }}
     outputs:
       version: ${{ steps.ver.outputs.next }}
       major: ${{ steps.ver.outputs.major }}
