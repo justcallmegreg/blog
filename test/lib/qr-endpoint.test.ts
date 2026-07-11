@@ -22,4 +22,13 @@ describe('handleQr', () => {
     const b = r.body as Buffer;
     expect(b.subarray(0, 4).toString('hex')).toBe('89504e47'); // \x89PNG
   });
+  it('400 (not 500) when data exceeds the QR capacity for the ecc level', async () => {
+    // Under the 1500-char param cap but over ECC H's ~1273-byte capacity.
+    // Lowercase forces byte mode (uppercase would pack in higher-capacity
+    // alphanumeric mode and fit).
+    const big = 'x'.repeat(1400);
+    const r = await handleQr(u('?data=' + big));
+    expect(r.status).toBe(400);
+    expect(r.contentType).toBe('text/plain');
+  });
 });

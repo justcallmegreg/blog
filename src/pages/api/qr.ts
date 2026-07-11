@@ -14,15 +14,21 @@ export async function handleQr(url: URL): Promise<QrResult> {
   if ('error' in parsed) {
     return { status: 400, contentType: 'text/plain', body: parsed.error };
   }
-  const svg = buildQrSvg(parsed.data, parsed.opts);
-  if (parsed.format === 'png') {
-    const png = await sharp(Buffer.from(svg))
-      .resize(parsed.size, parsed.size, { fit: 'contain' })
-      .png()
-      .toBuffer();
-    return { status: 200, contentType: 'image/png', body: png };
+  try {
+    const svg = buildQrSvg(parsed.data, parsed.opts);
+    if (parsed.format === 'png') {
+      const png = await sharp(Buffer.from(svg))
+        .resize(parsed.size, parsed.size, { fit: 'contain' })
+        .png()
+        .toBuffer();
+      return { status: 200, contentType: 'image/png', body: png };
+    }
+    return { status: 200, contentType: 'image/svg+xml', body: svg };
+  } catch {
+    // `qrcode` throws when the payload exceeds the QR capacity for the chosen
+    // ECC level (H ≈ 1273 bytes; less for multibyte UTF-8). Fail gracefully.
+    return { status: 400, contentType: 'text/plain', body: 'data too large to encode at this ecc level' };
   }
-  return { status: 200, contentType: 'image/svg+xml', body: svg };
 }
 
 export const GET: APIRoute = async ({ request }) => {
