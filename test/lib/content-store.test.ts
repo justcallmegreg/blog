@@ -23,12 +23,15 @@ function commitPost(slug: string, body: string, dateISO?: string) {
     : process.env;
   execFileSync('git', ['commit', '-m', slug], { cwd: originDir, stdio: 'pipe', env });
 }
-function commitDeck(slug: string, body: string) {
+function commitDeck(slug: string, body: string, dateISO?: string) {
   const full = join(originDir, 'decks', NS, slug, 'index.md');
   mkdirSync(join(full, '..'), { recursive: true });
   writeFileSync(full, body);
   git(originDir, 'add', '-A');
-  execFileSync('git', ['commit', '-m', `deck ${slug}`], { cwd: originDir, stdio: 'pipe' });
+  const env = dateISO
+    ? { ...process.env, GIT_AUTHOR_DATE: dateISO, GIT_COMMITTER_DATE: dateISO }
+    : process.env;
+  execFileSync('git', ['commit', '-m', `deck ${slug}`], { cwd: originDir, stdio: 'pipe', env });
 }
 
 beforeEach(() => {
@@ -306,6 +309,13 @@ const x = 1;
     expect(deck?.slides[1].html).toContain('<pre class="mermaid">');
     expect(deck?.slides[2].html).toContain('class="cols"');
     expect(deck?.slides[2].html).toContain('shiki');
+  });
+
+  it('dates a deck by its merge date', async () => {
+    commitDeck('dated', '---\ntitle: Dated\n---\n# D\n', '2020-06-07T10:00:00Z');
+    const store = makeStore();
+    await store.start();
+    expect(store.getDeck('/decks/dated')?.date).toBe('2020-06-07');
   });
 
   it('carries vaultIntro/vault from deck frontmatter', async () => {
