@@ -104,9 +104,38 @@
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderMermaid);
-  } else {
+  // Inline SVGs opted-in with class="zoomable" get the same magnifier button and
+  // full-screen pane as rendered Mermaid diagrams — useful for presenting a
+  // hand-authored diagram enlarged. Runs independently of Mermaid.
+  function addSvgZoom() {
+    const svgs = [
+      ...document.querySelectorAll<SVGElement>('svg.zoomable:not([data-zoom-ready])'),
+    ];
+    for (const svg of svgs) {
+      svg.setAttribute('data-zoom-ready', '');
+      if (svg.closest('.mermaid-block')) continue;
+      const wrap = document.createElement('div');
+      wrap.className = 'mermaid-block';
+      svg.parentNode?.insertBefore(wrap, svg);
+      wrap.appendChild(svg);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'zoom-btn';
+      btn.setAttribute('aria-label', 'Zoom diagram');
+      btn.innerHTML = ZOOM_ICON;
+      btn.addEventListener('click', () => ensurePane().__open(svg));
+      wrap.appendChild(btn);
+    }
+  }
+
+  function enhance() {
     renderMermaid();
+    addSvgZoom();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', enhance);
+  } else {
+    enhance();
   }
 </script>

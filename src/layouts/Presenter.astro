@@ -61,9 +61,6 @@ const { deck } = Astro.props;
                 <button class="navbtn" id="next" aria-label="Next slide">NEXT ►</button>
               </footer>
 
-              <button class="hot hot-l" id="hotl" aria-label="Previous slide">◄</button>
-              <button class="hot hot-r" id="hotr" aria-label="Next slide">►</button>
-
               <div class="scan" aria-hidden="true"></div>
               <div class="vig" aria-hidden="true"></div>
               <div class="flick" id="flick" aria-hidden="true"></div>
@@ -817,8 +814,6 @@ const { deck } = Astro.props;
 
         document.getElementById('next')!.addEventListener('click', advance);
         document.getElementById('prev')!.addEventListener('click', () => { if (!sealed) go(-1); });
-        document.getElementById('hotr')!.addEventListener('click', advance);
-        document.getElementById('hotl')!.addEventListener('click', () => { if (!sealed) go(-1); });
         knob.addEventListener('click', advance);
         openBtn?.addEventListener('click', reveal);
 
