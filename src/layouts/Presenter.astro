@@ -61,9 +61,6 @@ const { deck } = Astro.props;
                 <button class="navbtn" id="next" aria-label="Next slide">NEXT ►</button>
               </footer>
 
-              <button class="hot hot-l" id="hotl" aria-label="Previous slide">◄</button>
-              <button class="hot hot-r" id="hotr" aria-label="Next slide">►</button>
-
               <div class="scan" aria-hidden="true"></div>
               <div class="vig" aria-hidden="true"></div>
               <div class="flick" id="flick" aria-hidden="true"></div>
@@ -775,6 +772,16 @@ const { deck } = Astro.props;
           } catch { /* audio unavailable — stay silent */ }
         }
 
+        // Rewind every SVG's SMIL timeline inside a slide so its animations
+        // replay each time the slide is shown — otherwise build-once diagrams
+        // (repeatCount + freeze) sit on their frozen end state on revisit.
+        function replayAnimations(slide: Element) {
+          slide.querySelectorAll('svg').forEach((el) => {
+            const svg = el as unknown as SVGSVGElement;
+            try { svg.unpauseAnimations?.(); svg.setCurrentTime(0); } catch {}
+          });
+        }
+
         function render() {
           slides.forEach((s, i) => s.classList.toggle('on', i === idx && !sealed));
           counter.textContent = sealed
@@ -783,6 +790,7 @@ const { deck } = Astro.props;
           const deg = !sealed && slides.length > 1 ? -55 + (110 * idx) / (slides.length - 1) : -55;
           needle.style.setProperty('--deg', deg.toFixed(1) + 'deg');
           navhint.classList.toggle('hide', sealed || idx !== 0);
+          if (!sealed) replayAnimations(slides[idx]);
         }
 
         function go(dir: number) {
@@ -817,8 +825,6 @@ const { deck } = Astro.props;
 
         document.getElementById('next')!.addEventListener('click', advance);
         document.getElementById('prev')!.addEventListener('click', () => { if (!sealed) go(-1); });
-        document.getElementById('hotr')!.addEventListener('click', advance);
-        document.getElementById('hotl')!.addEventListener('click', () => { if (!sealed) go(-1); });
         knob.addEventListener('click', advance);
         openBtn?.addEventListener('click', reveal);
 
