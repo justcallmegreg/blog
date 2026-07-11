@@ -38,10 +38,10 @@ beforeEach(() => {
   git(originDir, 'init', '-b', 'main');
   git(originDir, 'config', 'user.email', 't@t.t');
   git(originDir, 'config', 'user.name', 'T');
-  // Dates pinned via frontmatter so ordering is deterministic regardless of commit time.
-  commitPost('first', '---\ntitle: First\ndate: "2026-06-12"\n---\nHello');
-  commitPost('older', '---\ntitle: Older\ndate: "2026-06-10"\n---\nOld');
-  commitPost('draft', '---\ntitle: Draft\ndate: "2026-06-11"\ndraft: true\n---\nWIP');
+  // Commit dates pinned — the git (merge) date is what dates a post now.
+  commitPost('first', '---\ntitle: First\ndate: "2026-06-12"\n---\nHello', '2026-06-12T10:00:00Z');
+  commitPost('older', '---\ntitle: Older\ndate: "2026-06-10"\n---\nOld', '2026-06-10T10:00:00Z');
+  commitPost('draft', '---\ntitle: Draft\ndate: "2026-06-11"\ndraft: true\n---\nWIP', '2026-06-11T10:00:00Z');
 });
 
 afterEach(() => {
@@ -230,19 +230,18 @@ describe('ContentStore', () => {
     warn.mockRestore();
   });
 
-  it('dates a scheduled post by its publishAt day when no explicit date is set', async () => {
-    commitPost('dbs', '---\ntitle: DBS\npublishAt: "2020-03-04T09:00:00Z"\n---\nx');
+  it('dates a scheduled post by its merge date, not its publishAt day', async () => {
+    commitPost('dbs', '---\ntitle: DBS\npublishAt: "2020-03-04T09:00:00Z"\n---\nx', '2020-01-15T10:00:00Z');
     const store = makeStore();
     await store.start();
-    // 09:00Z on Mar 4 is 10:00 in Budapest (CET) → day 2020-03-04
-    expect(store.getPost('/dbs')?.date).toBe('2020-03-04');
+    expect(store.getPost('/dbs')?.date).toBe('2020-01-15');
   });
 
-  it('lets an explicit date override the publishAt day', async () => {
-    commitPost('exp', '---\ntitle: E\ndate: "2019-12-31"\npublishAt: "2020-03-04T09:00:00Z"\n---\nx');
+  it('lets the merge date override an explicit frontmatter date', async () => {
+    commitPost('exp', '---\ntitle: E\ndate: "2019-12-31"\npublishAt: "2020-03-04T09:00:00Z"\n---\nx', '2020-01-15T10:00:00Z');
     const store = makeStore();
     await store.start();
-    expect(store.getPost('/exp')?.date).toBe('2019-12-31');
+    expect(store.getPost('/exp')?.date).toBe('2020-01-15');
   });
 
   it('keeps a draft hidden even after its publishAt has passed', async () => {

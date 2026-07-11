@@ -280,11 +280,10 @@ export class ContentStore {
             `[content] ${contentRel}: invalid publishAt ${JSON.stringify(data.publishAt)} — keeping the post hidden`
           );
         }
-        const publishAtDay = sched.kind === 'scheduled' ? sched.day : null;
         this.index.set(info.url, {
           url: info.url,
           urlPrefix: info.urlPrefix,
-          date: pickPublishedDate(data.date, publishAtDay ?? gitDate),
+          date: pickPublishedDate(data.date, gitDate),
           slug: info.slug,
           contentDir: info.contentDir,
           title: data.title ?? info.slug,
@@ -341,7 +340,6 @@ export class ContentStore {
           `[content] ${repoRel}: invalid publishAt ${JSON.stringify(parsed.meta.publishAt)} — keeping the deck hidden`
         );
       }
-      const publishAtDay = sched.kind === 'scheduled' ? sched.day : null;
       const gitDate = this.opts.local
         ? null
         : await firstAddedDate(this.opts.cacheDir, repoRel);
@@ -353,7 +351,7 @@ export class ContentStore {
         title: parsed.meta.title ?? info.slug,
         subtitle: parsed.meta.subtitle,
         author: parsed.meta.author,
-        date: pickPublishedDate(parsed.meta.date, publishAtDay ?? gitDate),
+        date: pickPublishedDate(parsed.meta.date, gitDate),
         theme: parsed.meta.theme,
         draft: parsed.meta.draft,
         vaultIntro: parsed.meta.vaultIntro,
