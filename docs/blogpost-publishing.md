@@ -13,8 +13,9 @@ project repo: blogs/my-post/index.md   ──merge to main──▶  PR in blog-
 
 The post folder is published under a `blogs/{owner}-{repo}/` prefix so posts from different repos
 never collide. The post is served at its **slug** (`/my-post`), and its published **date comes from
-git** — the first commit that added it to `blog-content` — overridable with a `date:` frontmatter
-field.
+git** — the day its PR was merged into `blog-content` (the first mainline commit containing the
+file). A `date:` frontmatter field is only a fallback for environments without git history (e.g.
+local dev).
 
 ## One-time setup
 
@@ -70,8 +71,8 @@ In the engine's `config.yaml`, set `content.subdir: "blogs"` so it serves posts 
   (`blogpost/{owner}-{repo}-{slug}`), so editing a post and re-merging **updates the same PR**
   instead of opening a duplicate.
 - **Review:** a human reviews and merges the `blog-content` PR; the engine then syncs and serves
-  the post at `/{slug}`. Its published date is derived from git (the first commit that added it),
-  overridable with a `date:` frontmatter field.
+  the post at `/{slug}`. Its published date is the day the `blog-content` PR was merged; a `date:`
+  frontmatter field is only a fallback when git history is unavailable.
 
 ## Testing it safely
 

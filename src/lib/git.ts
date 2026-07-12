@@ -72,12 +72,17 @@ export async function lsTreeBlobs(dir: string): Promise<Map<string, string>> {
   return map;
 }
 
-/** Date (YYYY-MM-DD) of the first commit that added `repoRelPath`, or null. */
+/**
+ * Date (YYYY-MM-DD) the file first landed on the mainline, or null.
+ * `--first-parent` walks only mainline commits and diffs merges against their
+ * first parent, so the returned date is the PR's merge/squash commit date —
+ * not the author's branch commit date.
+ */
 export async function firstAddedDate(dir: string, repoRelPath: string): Promise<string | null> {
   if (!existsSync(dir)) return null;
   try {
     const out = await git(
-      ['log', '--diff-filter=A', '--reverse', '--format=%cI', '--', repoRelPath],
+      ['log', '--first-parent', '--diff-filter=A', '--reverse', '--format=%cI', '--', repoRelPath],
       dir
     );
     const first = out.split('\n').find((l) => l.trim());

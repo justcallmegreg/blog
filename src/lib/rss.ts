@@ -1,6 +1,6 @@
 export interface RssItem {
   title: string;
-  url: string; // site-root-relative, e.g. /2026/06/12/slug
+  url: string; // site-root-relative, e.g. /my-post
   date: string; // YYYY-MM-DD
   description?: string;
 }

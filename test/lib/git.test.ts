@@ -109,6 +109,32 @@ describe('firstAddedDate', () => {
     });
     expect(await firstAddedDate(dir, 'post.md')).toBe('2021-03-04');
   });
+  it('returns the merge date, not the branch commit date, for a merged PR', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gitdate-'));
+    const at = (iso: string) => ({
+      ...process.env,
+      GIT_AUTHOR_DATE: iso,
+      GIT_COMMITTER_DATE: iso,
+    });
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: dir });
+    execFileSync('git', ['config', 'user.email', 't@t'], { cwd: dir });
+    execFileSync('git', ['config', 'user.name', 'T'], { cwd: dir });
+    writeFileSync(join(dir, 'seed.txt'), 'seed');
+    execFileSync('git', ['add', '-A'], { cwd: dir });
+    execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: dir, env: at('2021-01-01T10:00:00Z') });
+    // Author writes the post on a branch on 2021-03-04...
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir });
+    writeFileSync(join(dir, 'post.md'), 'hello');
+    execFileSync('git', ['add', 'post.md'], { cwd: dir });
+    execFileSync('git', ['commit', '-q', '-m', 'write post'], { cwd: dir, env: at('2021-03-04T10:00:00Z') });
+    // ...and the PR is merged into main on 2022-05-06.
+    execFileSync('git', ['checkout', '-q', 'main'], { cwd: dir });
+    execFileSync('git', ['merge', '--no-ff', '-q', '-m', 'Merge PR', 'feature'], {
+      cwd: dir,
+      env: at('2022-05-06T10:00:00Z'),
+    });
+    expect(await firstAddedDate(dir, 'post.md')).toBe('2022-05-06');
+  });
   it('returns null for an unknown file', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'gitdate-'));
     execFileSync('git', ['init', '-q'], { cwd: dir });
