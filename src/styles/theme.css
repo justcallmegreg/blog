@@ -316,6 +316,13 @@ pre.shiki code .line:last-child:empty { display: none; }
 }
 .tab:hover { text-decoration: none; background: rgba(51, 255, 102, 0.12); }
 .tab.is-active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tab.is-disabled {
+  color: var(--fg-dim);
+  border-color: var(--fg-dim);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.tab.is-disabled:hover { background: transparent; }
 
 .muted { color: var(--fg-dim); }
 .error { color: var(--accent); }

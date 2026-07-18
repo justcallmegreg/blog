@@ -40,13 +40,16 @@ try {
 }
 
 // Pip-Boy top tab bar. Data-driven so new tabs slot in here later.
+// `disabled` tabs render as non-clickable placeholders (coming soon).
 const tabs = [
   { label: 'Blogs', href: '/' },
   { label: 'Contributions', href: '/contributions' },
   ...(cfg.about.enabled ? [{ label: 'About me', href: '/about' }] : []),
+  { label: 'Transmissions', href: '', disabled: true },
+  { label: 'Computer Programs', href: '', disabled: true },
 ];
 const path = Astro.url.pathname;
-const nonRootTabs = tabs.filter((t) => t.href !== '/').map((t) => t.href);
+const nonRootTabs = tabs.filter((t) => !t.disabled && t.href !== '/').map((t) => t.href);
 function isActive(href: string): boolean {
   // The Blogs (root) tab covers the index and individual post pages (now /{slug}),
   // i.e. any path that isn't one of the other tabs.
@@ -90,7 +93,11 @@ function isActive(href: string): boolean {
       <div class="topbar-row">
         <nav class="tabs" aria-label="Primary">
           {tabs.map((t) => (
-            <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
+            t.disabled ? (
+              <span class="tab is-disabled" aria-disabled="true">{t.label}</span>
+            ) : (
+              <a class:list={['tab', { 'is-active': isActive(t.href) }]} href={t.href}>{t.label}</a>
+            )
           ))}
           {cfg.contact.enabled && (
             <button type="button" class="tab contact-tab" id="contact-tab">Contact</button>
