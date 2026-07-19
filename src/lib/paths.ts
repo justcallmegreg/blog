@@ -35,3 +35,20 @@ export function parseDeckPath(relPath: string): PostPathInfo | null {
     contentDir: `${ns}/${slug}`,
   };
 }
+
+/**
+ * {namespace}/{slug}/index.md under the TRANSMISSIONS root — served at
+ * /transmissions/{slug}. Same shape as posts/decks so it rides the same
+ * publish conventions.
+ */
+export function parseTransmissionPath(relPath: string): PostPathInfo | null {
+  const match = POST_PATH.exec(relPath);
+  if (!match) return null;
+  const [, ns, slug] = match;
+  return {
+    slug,
+    url: `/transmissions/${slug}`,
+    urlPrefix: `/transmissions/${slug}`,
+    contentDir: `${ns}/${slug}`,
+  };
+}
