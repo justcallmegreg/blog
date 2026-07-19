@@ -151,3 +151,9 @@ transmission is a Markdown entry with frontmatter and an associated HLS video fi
   - `draft: true` and `publishAt`: hide the transmission exactly as for posts/decks — it is absent from the list, returns 404 on direct hit, and becomes visible automatically when `publishAt` passes
 - **Media storage:** HLS media files are stored in R2 (Cloudflare) and are NOT committed to git. The `video` field references them by their relative path within the R2 bucket; the engine's `transmissions.mediaBaseUrl` config setting provides the base URL.
 - **Publishing:** transmissions are authored directly in the content repo (no automated publish workflow yet). Future versions will mirror the `publish-deck.yml` pattern for transmissions authored in project repos.
+
+### Overseer: managing transmissions
+
+Transmissions can be managed from the overseer console at `/overseer/transmissions`. After uploading an HLS bundle to R2 via the local publishing tool, the overseer allows you to create a transmission entry, edit its metadata, hide/unhide it, or delete it entirely. Each action commits to `blog-content` via the GitHub API; delete also removes the associated media from R2. The overseer must stay on the private ingress and receive only the necessary R2 and GitHub credentials.
+
+**Known limitation:** overseer edit and hide operations do not preserve a `publishAt` schedule; the console forms don't expose that field. If you need to schedule a transmission, edit the `index.md` file directly in a git PR or commit.
