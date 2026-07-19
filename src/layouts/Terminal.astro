@@ -44,6 +44,7 @@ const tabs = [
   { label: 'Blogs', href: '/' },
   { label: 'Contributions', href: '/contributions' },
   ...(cfg.about.enabled ? [{ label: 'About me', href: '/about' }] : []),
+  ...(cfg.transmissions.enabled ? [{ label: 'Transmissions', href: '/transmissions' }] : []),
 ];
 const path = Astro.url.pathname;
 const nonRootTabs = tabs.filter((t) => t.href !== '/').map((t) => t.href);

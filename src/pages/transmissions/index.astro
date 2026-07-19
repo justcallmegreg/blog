@@ -1,0 +1,45 @@
+---
+import Terminal from '../../layouts/Terminal.astro';
+import { ensureStarted } from '../../lib/store-singleton';
+import { getConfig } from '../../lib/config';
+
+const cfg = getConfig();
+if (!cfg.transmissions.enabled) {
+  return new Response('Not found', { status: 404 });
+}
+const store = await ensureStarted();
+const items = store.listTransmissions(new Date());
+---
+<Terminal title="Transmissions">
+  <h1 class="page-title">TRANSMISSIONS</h1>
+  <p class="lede">Recorded broadcasts, newest first. Select a feed to begin playback.</p>
+  {items.length === 0 && <p class="muted">&gt; no transmissions yet.</p>}
+  <ul class="tx-feed">
+    {items.map((t) => (
+      <li class="tx-entry">
+        <a class="tx-thumb" href={t.url} aria-label={`Play ${t.title}`}>
+          <img src={`${t.urlPrefix}/assets/${t.poster}`} alt="" loading="lazy" />
+          <span class="tx-play" aria-hidden="true"></span>
+          {t.duration && <span class="tx-dur">{t.duration}</span>}
+        </a>
+        <div class="tx-meta">
+          <h2 class="entry-title"><a href={t.url}>{t.title}</a></h2>
+          <p class="entry-meta">{t.date}{t.duration ? ` · ${t.duration}` : ''}</p>
+          {t.description && <p class="entry-teaser">{t.description}</p>}
+        </div>
+      </li>
+    ))}
+  </ul>
+</Terminal>
+
+<style>
+  .tx-feed { list-style: none; padding: 0; margin: 1.5rem 0 0; }
+  .tx-entry { display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; padding: 1.1rem 0; border-top: 1px dashed var(--fg-dim); }
+  .tx-entry:first-child { border-top: none; }
+  .tx-thumb { position: relative; display: block; aspect-ratio: 16 / 9; border: 1px solid var(--fg-dim); overflow: hidden; }
+  .tx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tx-thumb:hover { border-color: var(--fg); box-shadow: 0 0 12px rgba(51, 255, 102, 0.35); }
+  .tx-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 0; height: 0; border-style: solid; border-width: 16px 0 16px 26px; border-color: transparent transparent transparent var(--fg); filter: drop-shadow(0 0 6px rgba(51,255,102,0.6)); }
+  .tx-dur { position: absolute; right: 6px; bottom: 6px; font-size: 0.85rem; background: rgba(0,0,0,0.55); border: 1px solid var(--fg-dim); padding: 0 0.35rem; }
+  @media (max-width: 640px) { .tx-entry { grid-template-columns: 1fr; } .tx-thumb { max-width: 420px; } }
+</style>
