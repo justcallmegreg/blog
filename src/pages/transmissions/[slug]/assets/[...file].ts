@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { readFile, stat } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { ensureStarted } from '../../../../lib/store-singleton';
+import { getConfig } from '../../../../lib/config';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -13,6 +14,8 @@ const MIME: Record<string, string> = {
 };
 
 export const GET: APIRoute = async ({ params }) => {
+  if (!getConfig().transmissions.enabled) return new Response('Not found', { status: 404 });
+
   const { slug, file } = params;
   if (!slug || !file) return new Response('Not found', { status: 404 });
 
