@@ -39,11 +39,12 @@ async function withRetry<T>(
 import { pickPublishedDate } from './post-date';
 import { estimateReadingMinutes } from './reading-time';
 import { listLocalFiles } from './local-files';
-import { parsePostPath, parseDeckPath } from './paths';
+import { parsePostPath, parseDeckPath, parseTransmissionPath } from './paths';
 import { parseFrontmatter } from './frontmatter';
 import { renderMarkdown, extractExcerpt } from './markdown';
 import { parsePublishAt } from './publish-schedule';
 import { parseDeckSource, renderDeckSlides, type DeckSlideHtml } from './deck';
+import { parseTransmissionFrontmatter } from './transmission';
 
 export interface Post {
   url: string;
@@ -81,6 +82,23 @@ export interface Deck {
   scheduleInvalid?: boolean;
 }
 
+export interface Transmission {
+  url: string;
+  urlPrefix: string;
+  slug: string;
+  contentDir: string;
+  title: string;
+  date: string;
+  description?: string;
+  video: string;
+  duration?: string;
+  poster: string;
+  draft: boolean;
+  blobHash: string;
+  publishAt?: string;
+  scheduleInvalid?: boolean;
+}
+
 export interface ContentStoreOptions {
   repo: string;
   branch: string;
@@ -91,6 +109,8 @@ export interface ContentStoreOptions {
   timezone?: string;
   /** Content-repo subdirectory holding decks. Defaults to "decks". */
   decksSubdir?: string;
+  /** Content-repo subdirectory holding transmissions. Defaults to 'transmissions'. */
+  transmissionsSubdir?: string;
   /**
    * Local (dev) mode: treat `cacheDir` as a directory to read content from
    * directly — no git clone or fetch. Change detection uses file mtime+size
@@ -102,6 +122,7 @@ export interface ContentStoreOptions {
 export class ContentStore {
   private index = new Map<string, Post>();
   private decksIndex = new Map<string, Deck>();
+  private transmissionsIndex = new Map<string, Transmission>();
   private about: AboutData | null = null;
   private started = false;
   // Counts from the most recent reindex, surfaced in the startup/sync logs so a
@@ -130,6 +151,16 @@ export class ContentStore {
   /** Repo-relative path -> decks-root-relative path, or null if outside decksSubdir. */
   private toDeckRel(repoRel: string): string | null {
     const prefix = `${(this.opts.decksSubdir ?? 'decks').replace(/\/$/, '')}/`;
+    return repoRel.startsWith(prefix) ? repoRel.slice(prefix.length) : null;
+  }
+
+  private transmissionsRoot(): string {
+    return join(this.opts.cacheDir, this.opts.transmissionsSubdir ?? 'transmissions');
+  }
+
+  /** Repo-relative path -> transmissions-root-relative path, or null if outside. */
+  private toTransmissionRel(repoRel: string): string | null {
+    const prefix = `${(this.opts.transmissionsSubdir ?? 'transmissions').replace(/\/$/, '')}/`;
     return repoRel.startsWith(prefix) ? repoRel.slice(prefix.length) : null;
   }
 
@@ -194,7 +225,7 @@ export class ContentStore {
     await this.reindex();
     const { scanned, underSubdir } = this.lastScan;
     console.log(
-      `[content] indexed ${this.index.size} post(s), ${this.decksIndex.size} deck(s) — scanned ${scanned} tracked file(s), ` +
+      `[content] indexed ${this.index.size} post(s), ${this.decksIndex.size} deck(s), ${this.transmissionsIndex.size} transmission(s) — scanned ${scanned} tracked file(s), ` +
         `${underSubdir} under subdir '${this.opts.subdir}' (content root ${this.contentRoot()})`
     );
     if (this.index.size === 0) {
@@ -245,6 +276,7 @@ export class ContentStore {
         : new Map<string, string>();
     const seenUrls = new Set<string>();
     const seenDeckUrls = new Set<string>();
+    const seenTransmissionUrls = new Set<string>();
     const changed: string[] = [];
     let underSubdir = 0;
     let matched = 0;
@@ -253,6 +285,11 @@ export class ContentStore {
       const deckRel = this.toDeckRel(repoRel);
       if (deckRel !== null) {
         await this.indexDeck(repoRel, deckRel, hash, seenDeckUrls, changed);
+        continue;
+      }
+      const transRel = this.toTransmissionRel(repoRel);
+      if (transRel !== null) {
+        await this.indexTransmission(repoRel, transRel, hash, seenTransmissionUrls, changed);
         continue;
       }
       const contentRel = this.toContentRel(repoRel);
@@ -308,6 +345,9 @@ export class ContentStore {
     for (const url of [...this.decksIndex.keys()]) {
       if (!seenDeckUrls.has(url)) this.decksIndex.delete(url);
     }
+    for (const url of [...this.transmissionsIndex.keys()]) {
+      if (!seenTransmissionUrls.has(url)) this.transmissionsIndex.delete(url);
+    }
     this.lastScan = { scanned: blobs.size, underSubdir, matched };
     this.loadAbout();
     return changed;
@@ -357,6 +397,53 @@ export class ContentStore {
         vaultIntro: parsed.meta.vaultIntro,
         vault: parsed.meta.vault,
         slides,
+        blobHash: hash,
+        publishAt: sched.kind === 'scheduled' ? sched.instant : undefined,
+        scheduleInvalid: sched.kind === 'invalid' ? true : undefined,
+      });
+      changed.push(repoRel);
+    } catch (err) {
+      console.warn(`Skipping ${repoRel}: ${(err as Error).message}`);
+    }
+  }
+
+  private async indexTransmission(
+    repoRel: string,
+    transRel: string,
+    hash: string,
+    seenUrls: Set<string>,
+    changed: string[]
+  ): Promise<void> {
+    const info = parseTransmissionPath(transRel);
+    if (!info) return;
+    seenUrls.add(info.url);
+    const existing = this.transmissionsIndex.get(info.url);
+    if (existing && existing.blobHash === hash) return;
+
+    const raw = readFileSync(join(this.transmissionsRoot(), transRel), 'utf8');
+    // Parse failure keeps the last-good entry serving (indexed & un-pruned) —
+    // a typo'd edit degrades to stale, never to a 500.
+    try {
+      const { data } = parseTransmissionFrontmatter(raw);
+      const sched = parsePublishAt(data.publishAt, this.tz());
+      if (sched.kind === 'invalid') {
+        console.warn(
+          `[content] ${repoRel}: invalid publishAt ${JSON.stringify(data.publishAt)} — keeping the transmission hidden`
+        );
+      }
+      const gitDate = this.opts.local ? null : await firstAddedDate(this.opts.cacheDir, repoRel);
+      this.transmissionsIndex.set(info.url, {
+        url: info.url,
+        urlPrefix: info.urlPrefix,
+        slug: info.slug,
+        contentDir: info.contentDir,
+        title: data.title ?? info.slug,
+        date: pickPublishedDate(data.date, gitDate),
+        description: data.description,
+        video: data.video,
+        duration: data.duration,
+        poster: data.poster,
+        draft: data.draft,
         blobHash: hash,
         publishAt: sched.kind === 'scheduled' ? sched.instant : undefined,
         scheduleInvalid: sched.kind === 'invalid' ? true : undefined,
@@ -451,6 +538,31 @@ export class ContentStore {
     const deck = this.decksIndex.get(`/decks/${slug}`);
     if (!deck || !this.isLive(deck, now)) return null;
     const baseDir = resolve(this.decksRoot(), deck.contentDir, 'assets');
+    const full = resolve(baseDir, file);
+    if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
+    return full;
+  }
+
+  listTransmissions(now: Date = new Date()): Transmission[] {
+    return [...this.transmissionsIndex.values()]
+      .filter((t) => this.isLive(t, now))
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }
+
+  getTransmission(url: string): Transmission | undefined {
+    return this.transmissionsIndex.get(url);
+  }
+
+  /** Like getTransmission, but undefined unless live at `now`. */
+  getLiveTransmission(url: string, now: Date = new Date()): Transmission | undefined {
+    const tx = this.transmissionsIndex.get(url);
+    return tx && this.isLive(tx, now) ? tx : undefined;
+  }
+
+  resolveTransmissionAssetPath(slug: string, file: string, now: Date = new Date()): string | null {
+    const tx = this.transmissionsIndex.get(`/transmissions/${slug}`);
+    if (!tx || !this.isLive(tx, now)) return null;
+    const baseDir = resolve(this.transmissionsRoot(), tx.contentDir, 'assets');
     const full = resolve(baseDir, file);
     if (full !== baseDir && !full.startsWith(baseDir + sep)) return null;
     return full;
