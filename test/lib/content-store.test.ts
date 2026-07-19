@@ -491,5 +491,14 @@ const x = 1;
       expect(store.resolveTransmissionAssetPath('asset-tx', '../../../etc/passwd')).toBeNull();
       expect(store.resolveTransmissionAssetPath('nope', 'poster.jpg')).toBeNull();
     });
+
+    it('listAllTransmissions includes drafts that listTransmissions excludes', async () => {
+      commitTransmission('shown', '---\ntitle: Shown\nvideo: "shown/master.m3u8"\n---\n');
+      commitTransmission('hidden', '---\ntitle: Hidden\nvideo: "hidden/master.m3u8"\ndraft: true\n---\n');
+      const store = makeStore();
+      await store.start();
+      expect(store.listTransmissions().map((t) => t.slug)).not.toContain('hidden');
+      expect(store.listAllTransmissions().map((t) => t.slug).sort()).toEqual(['hidden', 'shown']);
+    });
   });
 });

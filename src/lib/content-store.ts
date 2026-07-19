@@ -549,6 +549,13 @@ export class ContentStore {
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   }
 
+  /** Every transmission incl. hidden/scheduled (for the overseer), newest-first. */
+  listAllTransmissions(): Transmission[] {
+    return [...this.transmissionsIndex.values()].sort((a, b) =>
+      a.date < b.date ? 1 : a.date > b.date ? -1 : 0
+    );
+  }
+
   getTransmission(url: string): Transmission | undefined {
     return this.transmissionsIndex.get(url);
   }
