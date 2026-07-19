@@ -103,6 +103,12 @@ matomo:
 # separately with OVERSEER_ENABLED=true and SES credentials. Disabled by default;
 # existing installs are unaffected. The public blog-engine holds no AWS creds and
 # 404s /overseer.
+#
+# The overseer additionally requires (for transmissions & content management):
+#   CONTENT_REPO_TOKEN (GitHub PAT with contents:write on blog-content, for commits)
+#   R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (for media deletion)
+# IMPORTANT: The PUBLIC blog-engine MUST NOT receive these R2 write/delete creds.
+# The public engine needs only read scope on CONTENT_REPO_TOKEN (no contents:write).
 overseer:
   enabled: false
   replicas: 1

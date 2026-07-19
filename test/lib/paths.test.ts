@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePostPath, parseDeckPath } from '../../src/lib/paths';
+import { parsePostPath, parseDeckPath, parseTransmissionPath } from '../../src/lib/paths';
 
 describe('parsePostPath', () => {
   it('parses {ns}/{slug}/index.md into a slug URL + content dir', () => {
@@ -33,5 +33,19 @@ describe('parseDeckPath', () => {
   it('returns null for non-matching paths', () => {
     expect(parseDeckPath('demo-deck/index.md')).toBeNull();
     expect(parseDeckPath('ns/demo-deck/other.md')).toBeNull();
+  });
+});
+
+describe('parseTransmissionPath', () => {
+  it('maps {ns}/{slug}/index.md to the /transmissions/{slug} url', () => {
+    expect(parseTransmissionPath('justcallmegreg-blog/first-tx/index.md')).toEqual({
+      slug: 'first-tx',
+      url: '/transmissions/first-tx',
+      urlPrefix: '/transmissions/first-tx',
+      contentDir: 'justcallmegreg-blog/first-tx',
+    });
+  });
+  it('returns null for a non-matching path', () => {
+    expect(parseTransmissionPath('justcallmegreg-blog/first-tx/assets/poster.jpg')).toBeNull();
   });
 });

@@ -34,6 +34,17 @@ function commitDeck(slug: string, body: string, dateISO?: string) {
   execFileSync('git', ['commit', '-m', `deck ${slug}`], { cwd: originDir, stdio: 'pipe', env });
 }
 
+function commitTransmission(slug: string, body: string, dateISO?: string) {
+  const full = join(originDir, 'transmissions', NS, slug, 'index.md');
+  mkdirSync(join(full, '..'), { recursive: true });
+  writeFileSync(full, body);
+  git(originDir, 'add', '-A');
+  const env = dateISO
+    ? { ...process.env, GIT_AUTHOR_DATE: dateISO, GIT_COMMITTER_DATE: dateISO }
+    : process.env;
+  execFileSync('git', ['commit', '-m', `tx ${slug}`], { cwd: originDir, stdio: 'pipe', env });
+}
+
 beforeEach(() => {
   originDir = mkdtempSync(join(tmpdir(), 'origin-'));
   cacheDir = mkdtempSync(join(tmpdir(), 'cache-'));
@@ -432,5 +443,62 @@ const x = 1;
     expect(store.listPosts().map((p) => p.slug)).toEqual(['reactor']);
     // …and about.yaml is still found at the ROOT (would be null if read from contentRoot()).
     expect(store.getAbout()?.headline).toBe('Root-level');
+  });
+
+  describe('transmissions', () => {
+    it('indexes a transmission with its video/duration/poster and dates it by git', async () => {
+      commitTransmission(
+        'first-tx',
+        '---\ntitle: First TX\ndescription: "Channel zero."\nvideo: "first-tx/master.m3u8"\nduration: "05:52"\n---\n',
+        '2026-06-02T10:00:00Z'
+      );
+      const store = makeStore();
+      await store.start();
+      const tx = store.getTransmission('/transmissions/first-tx');
+      expect(tx?.title).toBe('First TX');
+      expect(tx?.video).toBe('first-tx/master.m3u8');
+      expect(tx?.duration).toBe('05:52');
+      expect(tx?.poster).toBe('poster.jpg');
+      expect(tx?.date).toBe('2026-06-02');
+      expect(store.listTransmissions().map((t) => t.slug)).toContain('first-tx');
+    });
+
+    it('hides a draft transmission from the list and its live lookup', async () => {
+      commitTransmission('hidden-tx', '---\ntitle: Hidden\nvideo: "hidden-tx/master.m3u8"\ndraft: true\n---\n');
+      const store = makeStore();
+      await store.start();
+      expect(store.listTransmissions().map((t) => t.slug)).not.toContain('hidden-tx');
+      expect(store.getLiveTransmission('/transmissions/hidden-tx')).toBeUndefined();
+      expect(store.getTransmission('/transmissions/hidden-tx')).toBeDefined(); // raw still there
+    });
+
+    it('hides a future-scheduled transmission until its publishAt', async () => {
+      commitTransmission('future-tx', '---\ntitle: Later\nvideo: "future-tx/master.m3u8"\npublishAt: "2030-01-01T00:00:00Z"\n---\n');
+      const store = makeStore();
+      await store.start();
+      const now = new Date('2025-01-01T00:00:00Z');
+      expect(store.listTransmissions(now).map((t) => t.slug)).not.toContain('future-tx');
+      expect(store.getLiveTransmission('/transmissions/future-tx', now)).toBeUndefined();
+    });
+
+    it('resolves a transmission poster asset path with the traversal guard', async () => {
+      commitTransmission('asset-tx', '---\ntitle: A\nvideo: "asset-tx/master.m3u8"\n---\n');
+      const store = makeStore();
+      await store.start();
+      expect(store.resolveTransmissionAssetPath('asset-tx', 'poster.jpg')).toBe(
+        resolve(cacheDir, 'transmissions', NS, 'asset-tx/assets/poster.jpg')
+      );
+      expect(store.resolveTransmissionAssetPath('asset-tx', '../../../etc/passwd')).toBeNull();
+      expect(store.resolveTransmissionAssetPath('nope', 'poster.jpg')).toBeNull();
+    });
+
+    it('listAllTransmissions includes drafts that listTransmissions excludes', async () => {
+      commitTransmission('shown', '---\ntitle: Shown\nvideo: "shown/master.m3u8"\n---\n');
+      commitTransmission('hidden', '---\ntitle: Hidden\nvideo: "hidden/master.m3u8"\ndraft: true\n---\n');
+      const store = makeStore();
+      await store.start();
+      expect(store.listTransmissions().map((t) => t.slug)).not.toContain('hidden');
+      expect(store.listAllTransmissions().map((t) => t.slug).sort()).toEqual(['hidden', 'shown']);
+    });
   });
 });

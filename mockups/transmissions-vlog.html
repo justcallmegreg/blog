@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transmissions — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0f0b;
+    --fg: #33ff66;
+    --fg-dim: #1f9a3f;
+    --accent: #b6ff00;
+    --font: 'VT323', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font); font-size: 22px; line-height: 1.35;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  h1, h2, h3 { color: var(--accent); margin: 0; }
+  /* Global scanline overlay (matches .crt::after) */
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    background: repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+
+  /* --- top bar (abbreviated from Terminal.astro) --- */
+  .brand { font-size: 1.6rem; color: var(--fg); margin-bottom: 0.25rem; }
+  .brand .accent { color: var(--fg); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--fg-dim); margin-bottom: 1.5rem; }
+  .tab {
+    padding: 0.1rem 1.1rem; color: var(--fg); background: transparent;
+    border: 1px solid var(--fg-dim); border-bottom: none;
+    font: inherit; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+  }
+  .tab:hover { background: rgba(51,255,102,0.12); }
+  .tab.is-active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .tab.is-disabled { color: var(--fg-dim); border-color: var(--fg-dim); cursor: not-allowed; opacity: 0.55; }
+  .tab.is-disabled:hover { background: transparent; }
+
+  .page-title { font-size: 2rem; letter-spacing: 0.06em; }
+  .page-lede { color: var(--fg-dim); margin: 0.2rem 0 1.75rem; }
+
+  /* --- vlog list --- */
+  .feed { list-style: none; padding: 0; margin: 0; }
+  .vid {
+    display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem;
+    padding: 1.1rem 0; border-top: 1px dashed var(--fg-dim);
+  }
+  .vid:first-child { border-top: none; }
+  .thumb {
+    position: relative; display: block; width: 100%; aspect-ratio: 16 / 9;
+    border: 1px solid var(--fg-dim); overflow: hidden; cursor: pointer;
+    background: #0e150e; padding: 0;
+  }
+  /* faux thumbnail texture so the mockup reads without real images */
+  .thumb .frame {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% 20%, rgba(51,255,102,0.18), transparent 60%),
+      repeating-linear-gradient(115deg, rgba(51,255,102,0.05) 0 8px, transparent 8px 16px);
+  }
+  .thumb .scan { position: absolute; inset: 0;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.25) 3px); }
+  .thumb .code { position: absolute; left: 8px; bottom: 6px; font-size: 0.85rem; color: var(--fg-dim); }
+  .thumb .dur { position: absolute; right: 8px; bottom: 6px; font-size: 0.85rem; color: var(--fg);
+    background: rgba(0,0,0,0.55); padding: 0 0.35rem; border: 1px solid var(--fg-dim); }
+  .thumb:hover { border-color: var(--fg); box-shadow: 0 0 12px rgba(51,255,102,0.35); }
+  .thumb:hover .play { transform: translate(-50%,-50%) scale(1.08); color: var(--accent); }
+  .play {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 68px; height: 68px; border: 2px solid var(--fg); border-radius: 50%;
+    display: grid; place-items: center; color: var(--fg);
+    background: rgba(11,15,11,0.45); transition: transform 0.12s ease, color 0.12s ease;
+  }
+  .play::before { content: ''; margin-left: 6px;
+    border-style: solid; border-width: 14px 0 14px 22px; border-color: transparent transparent transparent currentColor; }
+
+  .meta h2 { font-size: 1.55rem; line-height: 1.05; }
+  .meta .sub { color: var(--fg-dim); font-size: 0.95rem; margin: 0.25rem 0 0.5rem; letter-spacing: 0.04em; }
+  .meta .desc { color: var(--fg-dim); margin: 0; max-width: 62ch; }
+  .meta h2 button { all: unset; cursor: pointer; color: var(--accent); }
+  .meta h2 button:hover { text-shadow: 0 0 10px rgba(182,255,0,0.5); }
+
+  /* --- player view (fills content area) --- */
+  .player { display: none; }
+  .player.on { display: block; }
+  .list.off { display: none; }
+  .back { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+    border: 1px solid var(--fg-dim); padding: 0.05rem 0.8rem; cursor: pointer;
+    background: transparent; color: var(--fg); font: inherit; text-transform: uppercase; letter-spacing: 0.05em; }
+  .back:hover { background: rgba(51,255,102,0.12); }
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 16 / 9;
+    border: 1px solid var(--fg); background: #0e150e; overflow: hidden;
+    display: grid; place-items: center; box-shadow: 0 0 22px rgba(51,255,102,0.22);
+  }
+  .stage .frame { position: absolute; inset: 0;
+    background: radial-gradient(120% 80% at 50% 30%, rgba(51,255,102,0.16), transparent 60%),
+      repeating-linear-gradient(115deg, rgba(51,255,102,0.04) 0 10px, transparent 10px 20px); }
+  .stage .scan { position: absolute; inset: 0;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.3) 3px); }
+  .stage .fakeui { position: relative; text-align: center; color: var(--fg); }
+  .stage .fakeui .big { font-size: 1.1rem; letter-spacing: 0.12em; }
+  .stage .fakeui .bar { margin-top: 0.75rem; width: 260px; height: 8px; border: 1px solid var(--fg-dim); }
+  .stage .fakeui .bar > i { display: block; height: 100%; width: 34%; background: var(--fg); }
+  .player h1 { font-size: 1.9rem; margin-top: 1rem; }
+  .player .sub { color: var(--fg-dim); margin: 0.25rem 0 0.75rem; letter-spacing: 0.04em; }
+  .player .desc { color: var(--fg); max-width: 70ch; }
+
+  .hint { position: fixed; bottom: 0; left: 0; right: 0; text-align: center;
+    color: var(--fg-dim); font-size: 0.8rem; padding: 0.4rem; border-top: 1px dashed var(--fg-dim);
+    background: var(--bg); z-index: 60; }
+
+  @media (max-width: 640px) {
+    .vid { grid-template-columns: 1fr; }
+    .thumb { max-width: 420px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">&gt; RobCo Termlink — <span class="accent">justcallmegreg</span></div>
+    <nav class="tabs" aria-label="Primary (mockup)">
+      <span class="tab">Blogs</span>
+      <span class="tab">Contributions</span>
+      <span class="tab">About me</span>
+      <span class="tab is-active">Transmissions</span>
+      <span class="tab is-disabled" aria-disabled="true">Computer Programs</span>
+    </nav>
+
+    <!-- ============ LIST VIEW ============ -->
+    <section class="list" id="listView">
+      <h1 class="page-title">TRANSMISSIONS</h1>
+      <p class="page-lede">Recorded broadcasts, newest first. Select a feed to begin playback.</p>
+
+      <ul class="feed" id="feed"></ul>
+    </section>
+
+    <!-- ============ PLAYER VIEW ============ -->
+    <section class="player" id="playerView">
+      <button class="back" id="backBtn">◀ Back to transmissions</button>
+      <div class="stage">
+        <div class="frame"></div>
+        <div class="scan"></div>
+        <div class="fakeui">
+          <div class="big" id="stageTitle">▶ NOW PLAYING</div>
+          <div class="bar"><i></i></div>
+        </div>
+      </div>
+      <h1 id="pTitle"></h1>
+      <p class="sub" id="pSub"></p>
+      <p class="desc" id="pDesc"></p>
+    </section>
+  </div>
+
+  <div class="hint">MOCKUP — click any thumbnail (or title) to play · click “Back” to return</div>
+
+<script>
+  // Reverse-chronological (latest first)
+  const videos = [
+    { code: 'TX-003', date: '2026-07-15', dur: '12:41', title: 'Serving a Public Site From My Home Cluster',
+      desc: 'Walking through the Tailscale + k3s setup that puts justcallmegreg.io online with no public IP — and what breaks when a Pi reboots mid-broadcast.' },
+    { code: 'TX-002', date: '2026-06-28', dur: '08:17', title: 'The Blog That Forgets Everything',
+      desc: 'A screen-capture tour of the stateless Astro engine: git-pull content, live Markdown render, and why there is no database anywhere in sight.' },
+    { code: 'TX-001', date: '2026-06-02', dur: '05:52', title: 'Booting the Vault — First Transmission',
+      desc: 'Channel zero. Why I am recording these, what the RobCo terminal aesthetic is about, and where this feed is headed.' },
+  ];
+
+  const feed = document.getElementById('feed');
+  videos.forEach((v, i) => {
+    const li = document.createElement('li');
+    li.className = 'vid';
+    li.innerHTML = `
+      <button class="thumb" data-i="${i}" aria-label="Play ${v.title}">
+        <span class="frame"></span><span class="scan"></span>
+        <span class="play"></span>
+        <span class="code">${v.code}</span>
+        <span class="dur">${v.dur}</span>
+      </button>
+      <div class="meta">
+        <h2><button data-i="${i}">${v.title}</button></h2>
+        <p class="sub">${v.date} · ${v.dur}</p>
+        <p class="desc">${v.desc}</p>
+      </div>`;
+    feed.appendChild(li);
+  });
+
+  const listView = document.getElementById('listView');
+  const playerView = document.getElementById('playerView');
+
+  function play(i) {
+    const v = videos[i];
+    document.getElementById('pTitle').textContent = v.title;
+    document.getElementById('pSub').textContent = v.date + ' · ' + v.dur;
+    document.getElementById('pDesc').textContent = v.desc;
+    document.getElementById('stageTitle').textContent = '▶ NOW PLAYING — ' + v.code;
+    listView.classList.add('off');
+    playerView.classList.add('on');
+    window.scrollTo(0, 0);
+  }
+  function back() {
+    playerView.classList.remove('on');
+    listView.classList.remove('off');
+  }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-i]');
+    if (t) { play(Number(t.dataset.i)); return; }
+    if (e.target.closest('#backBtn')) back();
+  });
+</script>
+</body>
+</html>

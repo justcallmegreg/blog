@@ -44,6 +44,8 @@ content repo and an in-memory render index.
   (config-driven blurb: `summaryDays`, `timezone`, `schedule`); slide-puzzle captcha, a typed
   "transferring message sequence" status, and a JSON POST routed to the subscribe/unsubscribe
   webhooks. The Subscribe button carries a localized CRT effect.
+- **Transmissions** (`/transmissions`) — a video vlog; entries list newest-first with a poster
+  thumbnail, each opening an HLS player page (segmented/adaptive via hls.js, served from R2).
 
 **Privacy & integrity**
 - A **GDPR consent gate** on first visit (choice stored in a cookie) + a configurable
@@ -183,7 +185,7 @@ Secrets and runtime settings live in the environment, never in `config.yaml`:
 |---|---|
 | `CONFIG_PATH` | Path to `config.yaml` (default `./config.yaml`; the Docker image mounts `/config/config.yaml`). |
 | `PORT` / `HOST` | Server bind address (read by the `@astrojs/node` server; default port `4321`). |
-| `CONTENT_REPO_TOKEN` | Read-only token for a **private** content repo; spliced into the clone URL. |
+| `CONTENT_REPO_TOKEN` | Read-only token for a **private** content repo; spliced into the clone URL. (The **overseer** needs a `contents:write` token instead — see [Overseer](#overseer-admin).) |
 | `CONTENT_LOCAL_DIR` | Dev mode: serve a local content folder directly instead of cloning (see below). |
 | `CACHE_DIR` | Where the content repo is cloned + the Contributions cache is stored (ephemeral; defaults to a temp dir). |
 | `GITHUB_TOKEN` | Optional: raises GitHub API rate limits for the Contributions tab. |
@@ -247,13 +249,44 @@ re-syncs on a timer. No volumes are required for content.
 ## Overseer (admin)
 
 An internal admin console, served from the **same image** as the blog engine but deployed
-separately on its own ingress host — there's no auth yet, so it must never be exposed publicly.
-Enable it by setting `overseer.enabled: true` in the Helm chart (which sets `OVERSEER_ENABLED=true`
-and points it at your SES credentials via `overseer.existingSecret`, e.g. the `mailer-secrets`
-secret); the route guard 404s the whole `/overseer` path when the flag is off. Its first tab,
-**Subscribers**, shows a newsletter signup heatmap and a table of subscribers with an
-APPROVE-guarded delete (you must type `APPROVE` to confirm — enforced server-side, not just in
-the UI).
+separately on its own ingress host. **There's no auth yet — the private ingress is the only
+boundary, so it must never be exposed publicly.** The route guard 404s the whole `/overseer`
+path (pages *and* APIs) whenever `OVERSEER_ENABLED` is off, so the public engine never serves it.
+
+Tabs:
+
+- **Subscribers** — a newsletter-signup heatmap and a subscriber table with an APPROVE-guarded
+  delete (you must type `APPROVE` to confirm — enforced server-side, not just in the UI).
+- **Transmissions** — manage the video vlog: create, edit, hide/unhide, and delete entries. Each
+  action commits to the `blog-content` repo via the GitHub API (create/edit also commit the small
+  poster; delete also removes the video's media from R2). The video files themselves are transcoded
+  and uploaded to R2 out-of-band (locally), so the overseer pod only handles metadata + the poster +
+  the git commit — it never touches video bytes.
+
+### Setup
+
+1. **Enable it** in the Helm chart: `overseer.enabled: true` (sets `OVERSEER_ENABLED=true`) with its
+   own private `overseer.ingress` host. Keep it off the public internet.
+2. **Give the overseer these secrets** (via `overseer.existingSecret` / `overseer.env`) — the public
+   `blog-engine` deployment must **not** have them:
+
+   | Variable | Purpose |
+   |---|---|
+   | `CONTENT_REPO_TOKEN` | GitHub PAT with **`contents:write`** on `blog-content` — the overseer commits transmission entries. (The public engine only needs a **read-scoped** token for cloning.) |
+   | `R2_ENDPOINT` | Cloudflare R2 S3-API endpoint, e.g. `https://<account-id>.r2.cloudflarestorage.com`. |
+   | `R2_BUCKET` | R2 bucket holding the transmission media. |
+   | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 API-token credentials — used to delete a transmission's media when you delete the entry. |
+   | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | SES credentials for the Subscribers tab (you can reuse the mailer's Secret, e.g. `mailer-secrets`, for now). |
+
+   **Never put the `R2_*` credentials on the public `blog-engine` deployment**, and keep its
+   `CONTENT_REPO_TOKEN` read-only — only the overseer needs write + R2 access.
+3. **Point the public engine at your media**: set `transmissions.mediaBaseUrl` in `config.yaml` to
+   your R2 public domain so the blog can play the HLS. See the Transmissions notes in
+   [docs/blogpost-publishing.md](docs/blogpost-publishing.md).
+
+> **Known limitation:** the overseer's edit/hide forms don't carry a transmission's `publishAt`
+> schedule or a custom `poster:` filename — editing or hiding such an entry reverts those to their
+> defaults. Schedule a transmission (or set a non-default poster) with a direct git edit instead.
 
 ## Deploy with Helm
 
