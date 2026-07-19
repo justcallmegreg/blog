@@ -9,6 +9,7 @@ content:
   syncIntervalSeconds: 300
   timezone: "Europe/Budapest"     # IANA zone for interpreting bare publishAt times (default: Europe/Budapest)
   decksSubdir: "decks"           # content-repo subdir holding presentation decks (default: decks)
+  transmissionsSubdir: "transmissions"  # content-repo subdir holding video vlogs (default: transmissions)
 effects:
   matrixRain: true
   matrixRainDurationSeconds: 3      # matrix runs this long on the index, then fades out (shown once per visitor)
@@ -73,3 +74,8 @@ newsletter:
   # Subscribe/unsubscribe POST to the NEWSLETTER_SUBSCRIBE_WEBHOOK_URL /
   # NEWSLETTER_UNSUBSCRIBE_WEBHOOK_URL env vars (not stored here). Stage-mode
   # logs the request when a URL is unset. Captcha reuses contact.captcha.
+transmissions:
+  enabled: true
+  # Public base URL of the R2 media bucket (Cloudflare custom domain). Playback
+  # URL is ${mediaBaseUrl}/transmissions/${video}. Leave blank to disable playback.
+  mediaBaseUrl: "https://media.justcallmegreg.io"

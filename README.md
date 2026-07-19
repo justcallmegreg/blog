@@ -44,6 +44,8 @@ content repo and an in-memory render index.
   (config-driven blurb: `summaryDays`, `timezone`, `schedule`); slide-puzzle captcha, a typed
   "transferring message sequence" status, and a JSON POST routed to the subscribe/unsubscribe
   webhooks. The Subscribe button carries a localized CRT effect.
+- **Transmissions** (`/transmissions`) — a video vlog; entries list newest-first with a poster
+  thumbnail, each opening an HLS player page (segmented/adaptive via hls.js, served from R2).
 
 **Privacy & integrity**
 - A **GDPR consent gate** on first visit (choice stored in a cookie) + a configurable
