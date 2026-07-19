@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",
+    "@aws-sdk/client-s3": "^3.1090.0",
     "@aws-sdk/client-sesv2": "^3.1082.0",
     "@shikijs/rehype": "^1.24.0",
     "astro": "^5.0.0",
     "gray-matter": "^4.0.3",
+    "hls.js": "^1.6.16",
     "katex": "^0.17.0",
     "mermaid": "^11.16.0",
     "qrcode": "^1.5.4",

@@ -24,9 +24,11 @@ function hostAddress(): string {
 }
 const hostIp = hostAddress();
 
-// Header tabs — the console's sections. Only Subscribers exists today; add
-// entries here as new tabs are built.
-const tabs = [{ id: 'subscribers', label: 'Subscribers', href: '/overseer' }];
+// Header tabs — the console's sections.
+const tabs = [
+  { id: 'subscribers', label: 'Subscribers', href: '/overseer' },
+  { id: 'transmissions', label: 'Transmissions', href: '/overseer/transmissions' },
+];
 ---
 <!doctype html>
 <html lang="en">

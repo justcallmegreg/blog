@@ -18,6 +18,8 @@ const ConfigSchema = z.object({
       timezone: z.string().default('Europe/Budapest'),
       // Content-repo subdirectory holding presentation decks (deck dialect).
       decksSubdir: z.string().default('decks'),
+      // Content-repo subdirectory holding transmissions (vlog entries).
+      transmissionsSubdir: z.string().default('transmissions'),
     })
     .default({}),
   effects: z
@@ -95,6 +97,14 @@ const ConfigSchema = z.object({
       summaryDays: z.number().int().default(7),
       timezone: z.string().default(''),
       schedule: z.string().default(''),
+    })
+    .default({}),
+  transmissions: z
+    .object({
+      enabled: z.boolean().default(true),
+      // Public base URL of the R2 media bucket (custom domain). Playback URL is
+      // `${mediaBaseUrl}/transmissions/${video}`. Must be set for playback.
+      mediaBaseUrl: z.string().default(''),
     })
     .default({}),
 });
