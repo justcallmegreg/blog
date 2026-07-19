@@ -54,8 +54,9 @@ export async function handleCreate(
         { path: paths.posterAsset, bytes: input.posterBytes! },
       ],
     });
-  } catch {
-    return { status: 502, body: { ok: false, error: 'commit failed' } };
+  } catch (err) {
+    console.error('[overseer] transmission create commit failed:', err);
+    return { status: 502, body: { ok: false, error: `commit failed: ${(err as Error).message}` } };
   }
   await Promise.resolve(deps.sync()).catch(() => {});
   return { status: 200, body: { ok: true, slug: v.slug } };
@@ -84,8 +85,9 @@ export async function handleUpdate(input: UpdateInput, deps: WriteDeps): Promise
   if (input.posterBytes) put.push({ path: paths.posterAsset, bytes: input.posterBytes });
   try {
     await deps.commit({ message: `transmission: update ${slug}`, put });
-  } catch {
-    return { status: 502, body: { ok: false, error: 'commit failed' } };
+  } catch (err) {
+    console.error('[overseer] transmission update commit failed:', err);
+    return { status: 502, body: { ok: false, error: `commit failed: ${(err as Error).message}` } };
   }
   await Promise.resolve(deps.sync()).catch(() => {});
   return { status: 200, body: { ok: true, slug } };
@@ -118,13 +120,15 @@ export async function handleDelete(
   const plan = deletePlan(slug);
   try {
     await deps.commit({ message: `transmission: remove ${slug}`, remove: plan.gitPaths });
-  } catch {
-    return { status: 502, body: { ok: false, error: 'git delete failed' } };
+  } catch (err) {
+    console.error('[overseer] transmission delete commit failed:', err);
+    return { status: 502, body: { ok: false, error: `git delete failed: ${(err as Error).message}` } };
   }
   let warning: string | undefined;
   try {
     await deps.deleteMedia(plan.r2Prefix);
-  } catch {
+  } catch (err) {
+    console.error('[overseer] transmission R2 media cleanup failed:', err);
     warning = 'entry removed, but R2 media cleanup failed (orphaned objects)';
   }
   await Promise.resolve(deps.sync()).catch(() => {});

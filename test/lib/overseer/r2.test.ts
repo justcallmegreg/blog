@@ -17,7 +17,7 @@ describe('deletePrefix', () => {
             : { Contents: [{ Key: 'transmissions/x/b.ts' }], IsTruncated: false };
         }
         if (cmd instanceof DeleteObjectsCommand) {
-          for (const o of cmd.input.Delete.Objects) deleted.push(o.Key);
+          for (const o of cmd.input.Delete!.Objects!) deleted.push(o.Key!);
           return {};
         }
         throw new Error('unexpected command');

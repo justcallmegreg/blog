@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { commitFiles, githubConfig, type GitHubLike } from '../../../src/lib/overseer/github';
 
 const CFG = { owner: 'o', repo: 'r', branch: 'main', token: 't' };
