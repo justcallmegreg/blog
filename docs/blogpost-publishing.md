@@ -139,14 +139,15 @@ The engine also serves video vlogs (Transmissions) from the content repo. A
 transmission is a Markdown entry with frontmatter and an associated HLS video file.
 
 - **Location in `blog-content`:** `transmissions/{owner}-{repo}/{slug}/index.md`
-  (with a sibling `assets/poster.jpg` for the thumbnail) — served at `/transmissions/{slug}`, 
+  (with a sibling `assets/poster.jpg` for the thumbnail) — served at `/transmissions/{slug}`,
   with a list view at `/transmissions`.
-- **Frontmatter** (required fields: `title`, `date`, `video`; optional: `description`, `duration`, `draft`):
-  - `title`: display title for the transmission entry
-  - `date`: publication date (ISO 8601 format; alternatively, git-derived like posts)
+- **Frontmatter** (required field: `video`; optional: `title`, `date`, `description`, `duration`, `poster`, `draft`, `publishAt`):
+  - `video`: relative HLS path (e.g. `hls/my-vlog.m3u8`) — required; the engine composes the playback URL as `${transmissions.mediaBaseUrl}/transmissions/${video}`
+  - `title`: display title for the transmission entry (optional; falls back to slug, like posts)
+  - `date`: publication date (ISO 8601 format; optional; falls back to git merge date like posts)
   - `description`: shown in the entry preview
-  - `video`: relative HLS path (e.g. `hls/my-vlog.m3u8`) — the engine composes the playback URL as `${transmissions.mediaBaseUrl}/transmissions/${video}`
   - `duration`: human-readable video length (e.g. `"12:34"`)
-  - `draft: true`: hides the entry from `/transmissions` and returns 404 on direct hit
+  - `poster`: thumbnail image path (optional; defaults to `poster.jpg`)
+  - `draft: true` and `publishAt`: hide the transmission exactly as for posts/decks — it is absent from the list, returns 404 on direct hit, and becomes visible automatically when `publishAt` passes
 - **Media storage:** HLS media files are stored in R2 (Cloudflare) and are NOT committed to git. The `video` field references them by their relative path within the R2 bucket; the engine's `transmissions.mediaBaseUrl` config setting provides the base URL.
 - **Publishing:** transmissions are authored directly in the content repo (no automated publish workflow yet). Future versions will mirror the `publish-deck.yml` pattern for transmissions authored in project repos.

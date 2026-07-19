@@ -77,5 +77,6 @@ newsletter:
 transmissions:
   enabled: true
   # Public base URL of the R2 media bucket (Cloudflare custom domain). Playback
-  # URL is ${mediaBaseUrl}/transmissions/${video}. Leave blank to disable playback.
+  # URL is ${mediaBaseUrl}/transmissions/${video}. Must be set for playback.
+  # Set enabled: false to disable the feature entirely.
   mediaBaseUrl: "https://media.justcallmegreg.io"
