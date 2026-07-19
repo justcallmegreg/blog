@@ -19,7 +19,7 @@ const items = store.listAllTransmissions();
             <td>{t.draft ? 'HIDDEN' : 'LIVE'}</td>
             <td class="ov-c">
               <a href={`/overseer/transmissions/${t.slug}`}>edit</a>
-              <button type="button" class="tx-hide" data-slug={t.slug} data-draft={String(t.draft)} data-title={t.title}>{t.draft ? 'unhide' : 'hide'}</button>
+              <button type="button" class="tx-hide" data-slug={t.slug} data-draft={String(t.draft)}>{t.draft ? 'unhide' : 'hide'}</button>
               <button type="button" class="tx-del" data-slug={t.slug}>delete</button>
             </td>
           </tr>
@@ -62,11 +62,10 @@ const items = store.listAllTransmissions();
   });
 
   document.querySelectorAll<HTMLButtonElement>('.tx-hide').forEach((b) => b.addEventListener('click', async () => {
-    const fd = new FormData();
-    fd.set('slug', b.dataset.slug!);
-    fd.set('title', b.dataset.title!);
-    fd.set('draft', b.dataset.draft === 'true' ? '' : 'on'); // toggle
-    const res = await fetch('/overseer/transmissions/api/update', { method: 'POST', body: fd });
+    const res = await fetch('/overseer/transmissions/api/hide', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ slug: b.dataset.slug, draft: b.dataset.draft !== 'true' }),
+    });
     if (res.ok) location.reload(); else say('> hide/unhide failed');
   }));
 

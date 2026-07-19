@@ -11,6 +11,7 @@ import {
 import { commitFiles, githubConfig } from '../../../../lib/overseer/github';
 import { deletePrefix, r2ConfigFromEnv } from '../../../../lib/overseer/r2';
 import { ensureStarted } from '../../../../lib/store-singleton';
+import type { Transmission } from '../../../../lib/content-store';
 
 export interface HandlerResult {
   status: number;
@@ -88,6 +89,23 @@ export async function handleUpdate(input: UpdateInput, deps: WriteDeps): Promise
   }
   await Promise.resolve(deps.sync()).catch(() => {});
   return { status: 200, body: { ok: true, slug } };
+}
+
+/**
+ * Build an UpdateInput that preserves every field of an existing entry,
+ * flipping only `draft`. Used by the quick hide/unhide action so it never
+ * has to resend (and risk dropping) the full form data.
+ */
+export function hideUpdateFromEntry(tx: Transmission, draft: boolean): UpdateInput {
+  return {
+    slug: tx.slug,
+    title: tx.title,
+    description: tx.description,
+    date: tx.date,
+    duration: tx.duration,
+    video: tx.video,
+    draft,
+  };
 }
 
 export async function handleDelete(
