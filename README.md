@@ -45,7 +45,7 @@ content repo and an in-memory render index.
   "transferring message sequence" status, and a JSON POST routed to the subscribe/unsubscribe
   webhooks. The Subscribe button carries a localized CRT effect.
 - **Transmissions** (`/transmissions`) — a video vlog; entries list newest-first with a poster
-  thumbnail, each opening an HLS player page (segmented/adaptive via hls.js, served from R2).
+  thumbnail, each opening a player page that streams the video (progressive mp4, served from R2).
 
 **Privacy & integrity**
 - A **GDPR consent gate** on first visit (choice stored in a cookie) + a configurable
@@ -275,13 +275,23 @@ Tabs:
    | `CONTENT_REPO_TOKEN` | GitHub PAT with **`contents:write`** on `blog-content` — the overseer commits transmission entries. (The public engine only needs a **read-scoped** token for cloning.) |
    | `R2_ENDPOINT` | Cloudflare R2 S3-API endpoint, e.g. `https://<account-id>.r2.cloudflarestorage.com`. |
    | `R2_BUCKET` | R2 bucket holding the transmission media. |
-   | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 API-token credentials — used to delete a transmission's media when you delete the entry. |
+   | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 API-token credentials with **`PutObject` (upload) and `DeleteObject` scope** — the overseer uploads video via presigned URLs and deletes media when transmission entries are removed. |
    | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | SES credentials for the Subscribers tab (you can reuse the mailer's Secret, e.g. `mailer-secrets`, for now). |
 
+   **R2 bucket CORS:** The bucket must allow `PUT` requests from the overseer's origin, otherwise browser uploads are blocked. Add this CORS rule:
+
+   ```json
+   [{ "AllowedOrigins": ["https://overseer.<your-domain>"],
+      "AllowedMethods": ["PUT"],
+      "AllowedHeaders": ["content-type"],
+      "MaxAgeSeconds": 3600 }]
+   ```
+
    **Never put the `R2_*` credentials on the public `blog-engine` deployment**, and keep its
-   `CONTENT_REPO_TOKEN` read-only — only the overseer needs write + R2 access.
+   `CONTENT_REPO_TOKEN` read-only — only the overseer needs write + R2 access. The public engine
+   serves R2 objects for playback via `transmissions.mediaBaseUrl`.
 3. **Point the public engine at your media**: set `transmissions.mediaBaseUrl` in `config.yaml` to
-   your R2 public domain so the blog can play the HLS. See the Transmissions notes in
+   your R2 public domain. See the Transmissions notes in
    [docs/blogpost-publishing.md](docs/blogpost-publishing.md).
 
 > **Known limitation:** the overseer's edit/hide forms don't carry a transmission's `publishAt`

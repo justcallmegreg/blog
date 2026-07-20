@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import { deletePrefix, type S3Like } from '../../../src/lib/overseer/r2';
+import { deletePrefix, presignPut, type S3Like } from '../../../src/lib/overseer/r2';
 
 const CFG = { endpoint: 'https://r2', bucket: 'b', accessKeyId: 'k', secretAccessKey: 's' };
 
@@ -40,5 +40,15 @@ describe('deletePrefix', () => {
     const res = await deletePrefix(CFG, 'transmissions/none/', s3);
     expect(res.deleted).toBe(0);
     expect(deletes).toBe(0);
+  });
+});
+
+describe('presignPut', () => {
+  it('delegates to the injected presigner with the key + content type', async () => {
+    const calls: any[] = [];
+    const fake = async (key: string, ct: string, exp: number) => { calls.push([key, ct, exp]); return 'https://signed/' + key; };
+    const url = await presignPut(CFG, 'transmissions/x/video.mp4', 'video/mp4', 900, fake);
+    expect(url).toBe('https://signed/transmissions/x/video.mp4');
+    expect(calls[0]).toEqual(['transmissions/x/video.mp4', 'video/mp4', 900]);
   });
 });

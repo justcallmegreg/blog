@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>New Transmission — modal mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0f0b;--fg:#33ff66;--fg-dim:#1f9a3f;--accent:#b6ff00;--red:#ff4d4d;--font:'VT323',monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:22px;line-height:1.35}
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:90;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.18) 3px)}
+  .wrap{max-width:900px;margin:0 auto;padding:2rem 1.25rem}
+  h1{color:var(--accent);letter-spacing:.06em}
+  .muted{color:var(--fg-dim)}
+
+  /* wide glowing button */
+  .new-btn{display:block;width:100%;padding:.7rem 1rem;margin:1.25rem 0;font:inherit;font-size:1.4rem;
+    text-transform:uppercase;letter-spacing:.18em;color:var(--bg);background:var(--fg);border:1px solid var(--fg);
+    cursor:pointer;position:relative;overflow:hidden;box-shadow:0 0 18px rgba(51,255,102,.45);animation:pulse 2.4s ease-in-out infinite}
+  .new-btn:hover{background:var(--accent);border-color:var(--accent);box-shadow:0 0 26px rgba(182,255,0,.6)}
+  .new-btn::after{content:"";position:absolute;top:0;left:-45%;width:45%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:sweep 3s linear infinite}
+  @keyframes sweep{0%{left:-45%}60%,100%{left:130%}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 14px rgba(51,255,102,.4)}50%{box-shadow:0 0 26px rgba(51,255,102,.75)}}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(3,6,3,.82);backdrop-filter:blur(2px)}
+  .overlay.on{display:grid}
+  .modal{width:min(680px,94vw);max-height:92vh;overflow:auto;background:var(--bg);border:1px solid var(--fg);
+    box-shadow:0 0 30px rgba(51,255,102,.3);padding:1.25rem 1.4rem 1.6rem}
+  .modal h2{margin:.1rem 0 0;color:var(--accent);letter-spacing:.1em}
+  .modal .sub{color:var(--fg-dim);margin:.1rem 0 1rem;font-size:.95rem}
+  .x{float:right;cursor:pointer;color:var(--fg-dim);border:1px solid var(--fg-dim);padding:0 .5rem}
+  .x:hover{color:var(--fg);border-color:var(--fg)}
+
+  .field{margin:.9rem 0;position:relative}
+  .field > label{display:flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.06em;font-size:.95rem;color:var(--fg)}
+  .req{color:var(--accent)}
+  .qmark{position:relative;display:inline-grid;place-items:center;width:1.1em;height:1.1em;border:1px solid var(--fg-dim);border-radius:50%;
+    font-size:.8em;color:var(--fg-dim);cursor:help}
+  .qmark:hover,.qmark:focus{color:var(--fg);border-color:var(--fg);outline:none}
+  /* position:fixed + JS placement so the tooltip escapes the modal's overflow and is always on top */
+  .tip{position:fixed;z-index:9999;width:max-content;max-width:40ch;
+    background:#08120a;border:1px solid var(--fg);color:var(--fg);padding:.35rem .55rem;
+    font-size:1rem;line-height:1.25;text-align:left;text-transform:none;letter-spacing:normal;
+    display:none;box-shadow:0 0 14px rgba(51,255,102,.4)}
+
+  /* text inputs with block cursor */
+  .inp{position:relative;border:1px solid var(--fg-dim);background:#060a06;padding:.25rem .5rem;margin-top:.25rem;min-height:1.8em;line-height:1.3}
+  .inp:focus-within{border-color:var(--fg);box-shadow:0 0 8px rgba(51,255,102,.25)}
+  /* single-line: visible mirror of the typed text + block cursor; a transparent overlay input captures keys */
+  .mirror{color:var(--fg);white-space:pre-wrap;word-break:break-all}
+  .inp > input{position:absolute;inset:0;width:100%;height:100%;padding:.25rem .5rem;background:transparent;border:none;outline:none;
+    color:transparent;caret-color:transparent;font:inherit}
+  .cursor{display:inline-block;width:.55ch;height:1.05em;background:var(--fg);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+  .inp:not(:focus-within) .cursor{opacity:.25}
+  @keyframes blink{50%{opacity:0}}
+  /* multiline: plain textarea with a green native caret */
+  .inp > textarea{width:100%;min-height:4.5rem;background:transparent;border:none;outline:none;color:var(--fg);caret-color:var(--fg);font:inherit;resize:vertical;line-height:1.3}
+  .counter{text-align:right;font-size:.8rem;color:var(--fg-dim);margin-top:.15rem}
+  .counter.over{color:var(--red)}
+
+  input[type=date]{background:#060a06;border:1px solid var(--fg-dim);color:var(--fg);font:inherit;padding:.25rem .5rem;margin-top:.25rem;color-scheme:dark}
+  input[type=date]:focus{border-color:var(--fg);outline:none}
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(64%) sepia(88%) saturate(500%) hue-rotate(75deg)}
+
+  /* fallout file picker */
+  .file-row{display:flex;gap:.6rem;align-items:center;margin-top:.3rem;flex-wrap:wrap}
+  .file-btn{font:inherit;text-transform:uppercase;letter-spacing:.06em;color:var(--fg);background:transparent;border:1px solid var(--fg-dim);
+    border-bottom:none;padding:.15rem 1rem;cursor:pointer}
+  .file-btn:hover{background:rgba(51,255,102,.12);border-color:var(--fg)}
+  .file-name{color:var(--fg-dim);font-size:.9rem}
+  .file-btn.disabled{opacity:.4;cursor:not-allowed}
+
+  /* preview + duration */
+  .preview{display:flex;gap:.8rem;margin-top:.6rem;align-items:flex-start}
+  .preview canvas{width:150px;aspect-ratio:16/9;border:1px solid var(--fg-dim);object-fit:cover;background:#060a06;display:none}
+  .preview .dur{color:var(--fg-dim);font-size:.9rem}
+
+  /* progress bar */
+  .prog{margin-top:.6rem;display:none}
+  .prog .bar{height:16px;border:1px solid var(--fg-dim);background:#060a06;position:relative;overflow:hidden}
+  .prog .fill{height:100%;width:0;background:repeating-linear-gradient(90deg,var(--fg) 0 10px,transparent 10px 13px);
+    box-shadow:0 0 8px rgba(51,255,102,.5);transition:width .12s linear}
+  .prog .stat{display:flex;justify-content:space-between;gap:1rem;color:var(--fg-dim);font-size:.85rem;margin-top:.2rem;flex-wrap:wrap}
+  .prog.done .fill{background:var(--fg)}
+  .prog.done .pct{color:var(--fg)}
+
+  /* vertical fallout toggle */
+  .toggle-row{display:flex;align-items:center;gap:1rem;margin-top:.35rem}
+  .vtoggle{--w:34px;--h:64px;width:var(--w);height:var(--h);border:1px solid var(--fg-dim);background:#060a06;position:relative;cursor:pointer;flex:none}
+  .vtoggle .knob{position:absolute;left:2px;right:2px;height:calc(50% - 3px);background:var(--red);box-shadow:0 0 10px rgba(255,77,77,.6);
+    bottom:2px;transition:bottom .12s ease,background .12s ease,box-shadow .12s ease}
+  .vtoggle.on .knob{bottom:calc(50% + 1px);background:var(--fg);box-shadow:0 0 10px rgba(51,255,102,.7)}
+  .vtoggle .mark{position:absolute;left:0;right:0;text-align:center;font-size:.7rem;color:var(--fg-dim)}
+  .vtoggle .mark.top{top:2px}.vtoggle .mark.bot{bottom:2px}
+  .toggle-state{font-size:.9rem;letter-spacing:.08em}
+  .toggle-state.hidden-on{color:var(--fg)} .toggle-state.hidden-off{color:var(--red)}
+
+  /* create button */
+  .create{margin-top:1.3rem;width:100%;padding:.55rem;font:inherit;font-size:1.3rem;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--fg-dim);background:transparent;border:1px solid var(--fg-dim);cursor:not-allowed}
+  .create.ready{color:var(--bg);background:var(--fg);border-color:var(--fg);cursor:pointer;box-shadow:0 0 16px rgba(51,255,102,.5);animation:pulse 2.4s ease-in-out infinite}
+  .hint{position:fixed;bottom:0;left:0;right:0;text-align:center;color:var(--fg-dim);font-size:.8rem;padding:.4rem;
+    border-top:1px dashed var(--fg-dim);background:var(--bg);z-index:95}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="muted">&gt; OVERSEER // TRANSMISSIONS</div>
+    <button class="new-btn" id="open">＋ New Transmission</button>
+    <p class="muted">(the list of existing transmissions would sit below)</p>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-label="New transmission">
+      <span class="x" id="close">✕</span>
+      <h2>// NEW TRANSMISSION</h2>
+      <p class="sub">Upload a video — it streams straight to storage. A poster frame and duration are captured automatically.</p>
+
+      <div class="field">
+        <label>Title <span class="req">*</span><span class="qmark" tabindex="0">?<span class="tip">The transmission's display title, shown on the vlog list and the player page.</span></span></label>
+        <div class="inp" data-cursor><span class="mirror"></span><span class="cursor"></span><input id="title" autocomplete="off" /></div>
+      </div>
+
+      <div class="field">
+        <label>Date <span class="qmark" tabindex="0">?<span class="tip">Publish/display date. Defaults to today.</span></span></label>
+        <input type="date" id="date" />
+      </div>
+
+      <div class="field">
+        <label>Description <span class="qmark" tabindex="0">?<span class="tip">A short teaser shown under the title. Max 355 characters.</span></span></label>
+        <div class="inp"><textarea id="desc" maxlength="355"></textarea></div>
+        <div class="counter" id="counter">0 / 355</div>
+      </div>
+
+      <div class="field">
+        <label>Video <span class="req">*</span><span class="qmark" tabindex="0">?<span class="tip">The video file (mp4 / webm). Uploads directly to storage with a live progress bar; the poster and duration are read from it.</span></span></label>
+        <div class="file-row">
+          <button type="button" class="file-btn disabled" id="filebtn">Select file ▸</button>
+          <button type="button" class="file-btn" id="demobtn">▶ Simulate upload</button>
+          <span class="file-name" id="filename">no file — enter a title first</span>
+        </div>
+        <input type="file" id="file" accept="video/mp4,video/webm" hidden />
+        <div class="preview">
+          <canvas id="poster" width="320" height="180"></canvas>
+          <div class="dur" id="dur"></div>
+        </div>
+        <div class="prog" id="prog">
+          <div class="bar"><div class="fill" id="fill"></div></div>
+          <div class="stat">
+            <span class="pct" id="pct">0%</span>
+            <span id="bytes">0 / 0</span>
+            <span id="speed">— MB/s</span>
+            <span id="eta">ETA —</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Hidden <span class="qmark" tabindex="0">?<span class="tip">When ON (green), the transmission is a draft — not listed and not publicly reachable. Default OFF (red).</span></span></label>
+        <div class="toggle-row">
+          <div class="vtoggle" id="toggle" role="switch" aria-checked="false" tabindex="0">
+            <span class="mark top">ON</span><span class="mark bot">OFF</span>
+            <span class="knob"></span>
+          </div>
+          <span class="toggle-state hidden-off" id="tstate">OFF — public</span>
+        </div>
+      </div>
+
+      <button class="create" id="create" disabled>Upload Transmission</button>
+    </div>
+  </div>
+
+  <div class="hint">MOCKUP — fill title, pick a video (any small mp4) to see real poster-grab + simulated upload. Hover a “?” for its tooltip. UPLOAD TRANSMISSION lights up when ready.</div>
+
+<script>
+  // --- CRT click sound (WebAudio) ---
+  let ac;
+  function crtClick(){
+    try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='square';o.frequency.value=520;g.gain.value=.06;
+      o.connect(g);g.connect(ac.destination);o.start();
+      g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.08);o.stop(ac.currentTime+.09);
+    }catch(e){}
+  }
+
+  const $=id=>document.getElementById(id);
+
+  // --- tooltips: fixed-positioned on hover/focus so they're never clipped and always on top ---
+  document.querySelectorAll('.qmark').forEach(q=>{
+    const tip=q.querySelector('.tip'); if(!tip) return;
+    const show=()=>{
+      tip.style.display='block';
+      const r=q.getBoundingClientRect();
+      const tw=tip.offsetWidth, th=tip.offsetHeight, pad=8;
+      let left=r.left;
+      if(left+tw>window.innerWidth-pad) left=window.innerWidth-pad-tw;
+      if(left<pad) left=pad;
+      let top=r.bottom+6;
+      if(top+th>window.innerHeight-pad) top=r.top-6-th; // flip above if no room below
+      tip.style.left=left+'px'; tip.style.top=Math.max(pad,top)+'px';
+    };
+    const hide=()=>{tip.style.display='none';};
+    q.addEventListener('mouseenter',show); q.addEventListener('mouseleave',hide);
+    q.addEventListener('focus',show); q.addEventListener('blur',hide);
+  });
+
+  const overlay=$('overlay');
+  $('open').onclick=()=>{overlay.classList.add('on');crtClick();};
+  $('close').onclick=()=>overlay.classList.remove('on');
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('on');});
+
+  // date default today
+  $('date').value=new Date().toISOString().slice(0,10);
+
+  // block-cursor mirror: the visible text is a span; the input overlays it transparently
+  function syncMirror(input){ const m=input.parentElement.querySelector('.mirror'); if(m) m.textContent=input.value; }
+  document.querySelectorAll('.inp[data-cursor] > input').forEach(i=>{ i.addEventListener('input',()=>syncMirror(i)); syncMirror(i); });
+
+  // slug is derived silently from the title (no visible field)
+  const slugify=s=>s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  let uploadedSlug=null; // the slug the current upload was keyed to
+  $('title').addEventListener('input',()=>{ if(uploaded && slugify($('title').value)!==uploadedSlug){ resetUpload(); } refresh(); });
+
+  // description counter
+  $('desc').addEventListener('input',()=>{
+    const n=$('desc').value.length;const c=$('counter');
+    c.textContent=n+' / 355';c.classList.toggle('over',n>=355);
+  });
+
+  // hidden toggle
+  const toggle=$('toggle');let hidden=false;
+  function flip(){ hidden=!hidden;toggle.classList.toggle('on',hidden);toggle.setAttribute('aria-checked',String(hidden));
+    const st=$('tstate');st.textContent=hidden?'ON — hidden':'OFF — public';
+    st.className='toggle-state '+(hidden?'hidden-on':'hidden-off');crtClick(); }
+  toggle.onclick=flip; toggle.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip();}});
+
+  // file picker enable gating (needs a slug)
+  const filebtn=$('filebtn');
+  function refresh(){
+    const slug=slugify($('title').value);
+    const hasSlug=/^[a-z0-9][a-z0-9-]*$/.test(slug);
+    filebtn.classList.toggle('disabled',!hasSlug);
+    if(!hasSlug && !uploaded)$('filename').textContent='no file — enter a title first';
+    const ready = $('title').value.trim() && hasSlug && $('date').value && uploaded;
+    $('create').classList.toggle('ready',!!ready);
+    $('create').toggleAttribute('disabled',!ready);
+  }
+  filebtn.onclick=()=>{ if(!filebtn.classList.contains('disabled')) $('file').click(); };
+
+  // file selected: real duration + poster grab, then SIMULATED upload
+  let uploaded=false, uploadTimer=null;
+  const fmtBytes=b=>b<1e6?(b/1e3).toFixed(0)+' KB':(b/1e6).toFixed(1)+' MB';
+  const fmtDur=s=>{const m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+String(ss).padStart(2,'0');};
+
+  function resetUpload(){ uploaded=false; uploadedSlug=null; clearInterval(uploadTimer); $('prog').style.display='none'; $('prog').classList.remove('done');
+    $('fill').style.width='0'; $('filename').textContent='title changed — re-select the file'; $('poster').style.display='none'; $('dur').textContent=''; refresh(); }
+
+  $('file').addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    $('filename').textContent=f.name+' · '+fmtBytes(f.size);
+    // real: read duration + grab a poster frame
+    const v=document.createElement('video'); v.preload='metadata'; v.muted=true; v.src=URL.createObjectURL(f);
+    v.addEventListener('loadedmetadata',()=>{ const d=v.duration||0; $('dur').textContent='duration '+fmtDur(d)+' (auto)';
+      v.currentTime=Math.min(1,d/2); });
+    v.addEventListener('seeked',()=>{ const c=$('poster'); const g=c.getContext('2d'); g.drawImage(v,0,0,c.width,c.height); c.style.display='block'; },{once:true});
+    v.addEventListener('error',()=>{ $('dur').textContent='(could not read metadata — still simulating upload)'; });
+    simulateUpload(f.size);
+  });
+
+  function simulateUpload(total){
+    uploaded=false; refresh();
+    const prog=$('prog'); prog.style.display='block'; prog.classList.remove('done');
+    let done=0; const speedBase=2.2e6; // ~2.2 MB/s with jitter
+    const t0=performance.now(); let last=t0, lastDone=0;
+    clearInterval(uploadTimer);
+    uploadTimer=setInterval(()=>{
+      const chunk=speedBase*(0.6+Math.random()*0.9)*0.15;
+      done=Math.min(total,done+chunk);
+      const now=performance.now();
+      const inst=(done-lastDone)/((now-last)/1000); lastDone=done; last=now;
+      const pct=done/total;
+      $('fill').style.width=(pct*100).toFixed(1)+'%';
+      $('pct').textContent=(pct*100).toFixed(0)+'%';
+      $('bytes').textContent=fmtBytes(done)+' / '+fmtBytes(total);
+      $('speed').textContent=(inst/1e6).toFixed(1)+' MB/s';
+      const remain=(total-done)/Math.max(inst,1);
+      $('eta').textContent='ETA '+fmtDur(remain);
+      if(done>=total){ clearInterval(uploadTimer); prog.classList.add('done'); $('speed').textContent='done'; $('eta').textContent='ETA 0:00';
+        uploaded=true; uploadedSlug=slugify($('title').value); $('filename').textContent+='  ✓ uploaded'; refresh(); }
+    },150);
+  }
+
+  // demo: run the progress-bar animation without a real file
+  $('demobtn').onclick=()=>{
+    crtClick();
+    $('filename').textContent='demo-clip.mp4 · 24.0 MB';
+    const c=$('poster'),g=c.getContext('2d');
+    g.fillStyle='#0e150e';g.fillRect(0,0,c.width,c.height);
+    g.strokeStyle='#1f9a3f';g.lineWidth=2;g.strokeRect(6,6,c.width-12,c.height-12);
+    g.fillStyle='#33ff66';g.font='22px monospace';g.textAlign='center';g.fillText('▶ DEMO FRAME',c.width/2,c.height/2+6);
+    c.style.display='block';
+    $('dur').textContent='duration 3:12 (auto)';
+    simulateUpload(24e6);
+  };
+
+  // create (mockup)
+  $('create').onclick=()=>{ if($('create').hasAttribute('disabled'))return; crtClick();
+    const slug=slugify($('title').value);
+    alert('MOCKUP: would commit the entry to blog-content:\n\ntitle: '+$('title').value+'\nslug (derived): '+slug+'\ndate: '+$('date').value+'\nhidden(draft): '+hidden+'\nvideo: '+slug+'/video.mp4\n+ auto poster + duration'); };
+
+  refresh();
+</script>
+</body>
+</html>

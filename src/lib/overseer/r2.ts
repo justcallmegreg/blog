@@ -1,4 +1,5 @@
-import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export interface R2Config {
   endpoint: string;
@@ -48,4 +49,28 @@ export async function deletePrefix(
     token = list.IsTruncated ? list.NextContinuationToken : undefined;
   } while (token);
   return { deleted };
+}
+
+export type PresignFn = (key: string, contentType: string, expiresIn: number) => Promise<string>;
+
+/** A presigner bound to `cfg`'s R2 client — signs PutObject URLs. */
+export function makePresigner(cfg: R2Config): PresignFn {
+  const client = new S3Client({
+    region: 'auto',
+    endpoint: cfg.endpoint,
+    credentials: { accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey },
+  });
+  return (key, contentType, expiresIn) =>
+    getSignedUrl(client, new PutObjectCommand({ Bucket: cfg.bucket, Key: key, ContentType: contentType }), { expiresIn });
+}
+
+/** Presigned PUT URL for `key`. Injectable `presign` for tests. */
+export async function presignPut(
+  cfg: R2Config,
+  key: string,
+  contentType: string,
+  expiresIn = 900,
+  presign: PresignFn = makePresigner(cfg)
+): Promise<string> {
+  return presign(key, contentType, expiresIn);
 }
