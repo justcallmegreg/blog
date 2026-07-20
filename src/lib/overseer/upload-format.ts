@@ -8,6 +8,7 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatBytes(b: number): string {
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + ' GB';
   return b < 1e6 ? (b / 1e3).toFixed(0) + ' KB' : (b / 1e6).toFixed(1) + ' MB';
 }
 

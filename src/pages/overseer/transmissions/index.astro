@@ -249,9 +249,11 @@ const items = store.listAllTransmissions();
   $('tx-open').onclick = () => { overlay.classList.add('on'); crtClick(); };
   $('close').onclick = () => overlay.classList.remove('on');
   overlay.addEventListener('click', (e: Event) => { if (e.target === overlay) overlay.classList.remove('on'); });
+  document.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape' && overlay.classList.contains('on')) overlay.classList.remove('on'); });
 
-  // date default today
-  $('date').value = new Date().toISOString().slice(0, 10);
+  // date default today (local date, not UTC)
+  const now = new Date();
+  $('date').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   // block-cursor mirror: the visible text is a span; the input overlays it transparently
   function syncMirror(input: HTMLInputElement) { const m = input.parentElement?.querySelector('.mirror'); if (m) m.textContent = input.value; }
@@ -302,12 +304,22 @@ const items = store.listAllTransmissions();
     const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
     $('filename').textContent = f.name + ' · ' + formatBytes(f.size);
     const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.src = URL.createObjectURL(f);
-    await new Promise((res) => { v.addEventListener('loadedmetadata', res, { once: true }); v.addEventListener('error', res, { once: true }); });
+    let videoErrored = false;
+    await new Promise((res) => {
+      v.addEventListener('loadedmetadata', res, { once: true });
+      v.addEventListener('error', () => { videoErrored = true; res(undefined); }, { once: true });
+    });
+    if (videoErrored || v.error) {
+      showErr('could not read video — try another file');
+      URL.revokeObjectURL(v.src);
+      return;
+    }
     const d = v.duration || 0; durationStr = formatDuration(d); $('dur').textContent = 'duration ' + durationStr + ' (auto)';
     v.currentTime = Math.min(1, d / 2);
     await new Promise((res) => v.addEventListener('seeked', res, { once: true }));
     const c = $('poster'); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); c.style.display = 'block';
     posterBlob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.8));
+    URL.revokeObjectURL(v.src);
     startUpload(f);
   });
 
@@ -346,6 +358,7 @@ const items = store.listAllTransmissions();
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
+        if (slugify($('title').value) !== slug) { resetUpload(); return; }
         prog.classList.add('done'); $('speed').textContent = 'done'; $('eta').textContent = 'ETA 0:00';
         uploaded = true; uploadedSlug = slug; $('filename').textContent += '  ✓ uploaded'; refresh();
       } else showErr('upload failed (' + xhr.status + ')');

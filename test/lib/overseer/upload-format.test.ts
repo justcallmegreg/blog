@@ -20,6 +20,9 @@ describe('formatBytes', () => {
     expect(formatBytes(500)).toBe('1 KB'); // rounds
     expect(formatBytes(2_400_000)).toBe('2.4 MB');
   });
+  it('uses GB at and above 1e9 bytes', () => {
+    expect(formatBytes(2_500_000_000)).toBe('2.50 GB');
+  });
 });
 describe('uploadStats', () => {
   it('computes speed (B/s) and ETA (s) from a delta', () => {
