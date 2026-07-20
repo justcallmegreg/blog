@@ -106,7 +106,13 @@ matomo:
 #
 # The overseer additionally requires (for transmissions & content management):
 #   CONTENT_REPO_TOKEN (GitHub PAT with contents:write on blog-content, for commits)
-#   R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (for media deletion)
+#   R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY (with PutObject for upload
+#     and DeleteObject scope for media deletion)
+#   R2 bucket CORS rule: allow PUT from https://overseer.<your-domain>
+#     [{ "AllowedOrigins": ["https://overseer.<your-domain>"],
+#        "AllowedMethods": ["PUT"],
+#        "AllowedHeaders": ["content-type"],
+#        "MaxAgeSeconds": 3600 }]
 # IMPORTANT: The PUBLIC blog-engine MUST NOT receive these R2 write/delete creds.
 # The public engine needs only read scope on CONTENT_REPO_TOKEN (no contents:write).
 overseer:
