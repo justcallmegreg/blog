@@ -18,7 +18,7 @@ if (!post) {
 // Relative age is computed per request (SSR isn't cached), so it stays current.
 const rel = post.date ? relativeDay(post.date, new Date()) : '';
 ---
-<Terminal title={post.title} description={post.description ?? post.excerpt} ogType="article">
+<Terminal title={post.title} description={post.description ?? post.excerpt} ogType="article" image={`/og/blog/${slug}.png`}>
   <p><a href="/">&lt; back</a></p>
   <article>
     <div class="post-head">
