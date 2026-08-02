@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { renderCardPng, defaultBannerPng, __resetOgCacheForTests } from '../../src/lib/og/render';
+import { renderCardPng, defaultBannerPng, __resetOgCacheForTests, CACHE_MAX } from '../../src/lib/og/render';
 
 const input = { header: 'GregCo // Personal log', title: 'A Test Post', meta: '2026-07-14 · 6 min read' };
 
@@ -25,6 +25,34 @@ describe('renderCardPng', () => {
     expect(b).not.toBeNull();
     expect(a!.equals(b!)).toBe(false);
   });
+});
+
+describe('cache eviction (FIFO cap)', () => {
+  beforeEach(() => __resetOgCacheForTests());
+
+  // Tiny cards (1-char header/title/meta) keep resvg render time down since
+  // this fills the cache to CACHE_MAX + 1 entries (~201 renders).
+  it('evicts the oldest entry once CACHE_MAX is exceeded, while recent entries stay cached', () => {
+    const tiny = { header: 'h', title: 'T', meta: 'm' };
+    const oldestKey = 'evict-0';
+    const oldest = renderCardPng(oldestKey, tiny);
+    for (let i = 1; i < CACHE_MAX; i++) {
+      renderCardPng(`evict-${i}`, tiny);
+    }
+    // Cache now holds exactly CACHE_MAX entries: evict-0 .. evict-(CACHE_MAX-1).
+    const recentKey = `evict-${CACHE_MAX - 1}`;
+    const recentBefore = renderCardPng(recentKey, tiny); // cache hit, not a new render
+
+    // One more insert overflows the cap and must evict the oldest (evict-0).
+    renderCardPng('evict-overflow', tiny);
+
+    const oldestAfter = renderCardPng(oldestKey, tiny);
+    expect(oldestAfter).not.toBeNull();
+    expect(oldestAfter).not.toBe(oldest); // evicted → freshly re-rendered, not the cached Buffer
+
+    const recentAfter = renderCardPng(recentKey, tiny);
+    expect(recentAfter).toBe(recentBefore); // still cached, identical Buffer
+  }, 30000);
 });
 
 describe('defaultBannerPng', () => {

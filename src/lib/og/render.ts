@@ -11,10 +11,16 @@ const FONT_SOURCES = ['./dist/client/fonts/VT323-Regular.ttf', './public/fonts/V
 const DEFAULT_SOURCES = ['./dist/client/og-default.png', './public/og-default.png'];
 
 function readFirst(paths: string[]): Buffer | null {
-  for (const p of paths) {
-    if (existsSync(p)) return readFileSync(p);
+  try {
+    for (const p of paths) {
+      if (existsSync(p)) return readFileSync(p);
+    }
+    return null;
+  } catch {
+    // TOCTOU: file could vanish between existsSync and readFileSync (or be
+    // unreadable). Never let this escape — callers fall back to null.
+    return null;
   }
-  return null;
 }
 
 let fontBuf: Buffer | null | undefined;
@@ -26,7 +32,8 @@ export function defaultBannerPng(): Buffer | null {
 }
 
 const cache = new Map<string, Buffer>();
-const CACHE_MAX = 200;
+/** FIFO cache cap; exported so tests can exercise eviction without a magic number. */
+export const CACHE_MAX = 200;
 const warned = new Set<string>();
 
 /** Cached SVG→PNG render. Returns null on any failure (warned once per key). */

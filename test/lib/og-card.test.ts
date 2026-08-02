@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { wrapTitle, fitTitle, buildCardSvg, ADVANCE } from '../../src/lib/og/card';
 
 describe('wrapTitle', () => {
@@ -37,6 +38,35 @@ describe('fitTitle', () => {
   it('does not ellipsize when the title fits exactly', () => {
     const { lines } = fitTitle('Serving a Public Website From My Home Cluster');
     expect(lines.join(' ').includes('…')).toBe(false);
+  });
+});
+
+describe('ADVANCE calibration', () => {
+  it('matches the measured advance-width ratio of the bundled VT323 font', () => {
+    // Minimal sfnt (TrueType) table-directory parse — no new dependencies.
+    // Layout reference: https://learn.microsoft.com/typography/opentype/spec/otff
+    const buf = readFileSync('./public/fonts/VT323-Regular.ttf');
+    const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    const numTables = dv.getUint16(4);
+    const tables: Record<string, { offset: number; length: number }> = {};
+    for (let i = 0; i < numTables; i++) {
+      const rec = 12 + i * 16;
+      const tag = String.fromCharCode(
+        dv.getUint8(rec),
+        dv.getUint8(rec + 1),
+        dv.getUint8(rec + 2),
+        dv.getUint8(rec + 3)
+      );
+      tables[tag] = { offset: dv.getUint32(rec + 8), length: dv.getUint32(rec + 12) };
+    }
+    const unitsPerEm = dv.getUint16(tables['head'].offset + 18);
+    const numberOfHMetrics = dv.getUint16(tables['hhea'].offset + 34);
+    // Glyph 0 (.notdef) may have a different advance than the rendered glyphs;
+    // read the LAST hMetric instead, which for a monospace font like VT323
+    // carries the shared advance used by every rendered glyph.
+    const lastMetricOffset = tables['hmtx'].offset + (numberOfHMetrics - 1) * 4;
+    const advanceWidth = dv.getUint16(lastMetricOffset);
+    expect(advanceWidth / unitsPerEm).toBe(ADVANCE);
   });
 });
 

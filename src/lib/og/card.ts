@@ -13,8 +13,12 @@ const W = 1200;
 const H = 630;
 const MARGIN = 96;
 const MAX_TEXT_WIDTH = W - 2 * MARGIN; // 1008
-/** VT323 advance-width ratio (advance / font-size). Pixel font, half-width grid. */
-export const ADVANCE = 0.5;
+/**
+ * VT323 advance-width ratio (advance / font-size). Measured from the bundled
+ * font: unitsPerEm=1000, advanceWidth=400 for all rendered glyphs → 0.4 em.
+ * See test/lib/og-card.test.ts for a guard that parses the font and asserts this.
+ */
+export const ADVANCE = 0.4;
 const TITLE_SIZES = [96, 84, 72, 60];
 const MAX_LINES = 4;
 /** Vertical space available for the title block, between the divider and the meta line. */
