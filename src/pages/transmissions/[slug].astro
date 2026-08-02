@@ -17,7 +17,7 @@ if (!tx) {
 const src = transmissionMediaUrl(cfg.transmissions.mediaBaseUrl, tx.video);
 const posterUrl = `${tx.urlPrefix}/assets/${tx.poster}`;
 ---
-<Terminal title={tx.title}>
+<Terminal title={tx.title} description={tx.description} ogType="article">
   <p class="tx-back"><a href="/transmissions">◀ Back to transmissions</a></p>
   <div class="tx-stage">
     <video id="tx-video" class="tx-video" controls playsinline preload="none"

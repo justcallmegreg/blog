@@ -15,10 +15,30 @@ import CodeCopy from '../components/CodeCopy.astro';
 import { getConfig } from '../lib/config';
 import { VERSION } from '../lib/version';
 
-interface Props { title?: string }
-const { title } = Astro.props;
+interface Props {
+  title?: string;
+  // Per-page social-embed (Open Graph / Twitter) overrides. When omitted, the
+  // page falls back to the site-level description and the default OG banner.
+  description?: string;
+  image?: string;
+  ogType?: string;
+}
+const { title, description, image, ogType = 'website' } = Astro.props;
 const cfg = getConfig();
 const pageTitle = title ? `${title} — ${cfg.site.title}` : cfg.site.title;
+
+// Social link-unfurl (Slack/X/Discord/iMessage/LinkedIn) reads these from the
+// server-rendered <head>. Unfurlers require absolute URLs, so we resolve them
+// against the configured baseUrl, falling back to the request origin (SSR).
+const siteUrl = (cfg.site.baseUrl ?? Astro.url.origin).replace(/\/$/, '');
+const canonicalUrl = siteUrl + Astro.url.pathname;
+const ogTitle = title ?? cfg.site.title;
+const ogDescription = description ?? cfg.site.description;
+const ogImage = image
+  ? image.startsWith('http')
+    ? image
+    : siteUrl + image
+  : siteUrl + '/og-default.png';
 
 // Fun "boot handshake" lines (not meant to be precise): the node this container
 // resolved itself to, and where the inbound request came from.
@@ -64,6 +84,20 @@ function isActive(href: string): boolean {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     {cfg.site.description && <meta name="description" content={cfg.site.description} />}
+    <link rel="canonical" href={canonicalUrl} />
+    {/* Social embed / link unfurl (Open Graph + Twitter cards) */}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={cfg.site.title} />
+    <meta property="og:title" content={ogTitle} />
+    {ogDescription && <meta property="og:description" content={ogDescription} />}
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={ogTitle} />
+    {ogDescription && <meta name="twitter:description" content={ogDescription} />}
+    <meta name="twitter:image" content={ogImage} />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" href="/favicon-180.png" />
     <link rel="apple-touch-icon" href="/favicon-180.png" />
