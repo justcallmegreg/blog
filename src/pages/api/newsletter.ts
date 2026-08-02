@@ -56,16 +56,22 @@ export async function handleNewsletter(input: NewsletterInput, opts: HandleOpts)
   const payload = buildNewsletterPayload(input, { site: opts.site, now: opts.now });
   const mopts = { mailerUrl: opts.mailerUrl, fetchImpl: opts.fetchImpl };
 
-  // Update the SES contact list, then notify the owner and (on subscribe) the
-  // new subscriber.
+  // The owner notification is the source of record (subscribers are registered
+  // manually from it), so only its failure surfaces to the visitor. The SES
+  // contact-list update and the welcome email are best-effort: logged on
+  // failure, never turned into an error response.
   const listOk = await newsletterContact(input.action, payload.email, mopts);
-  const emails = [];
-  const ownerEmail = newsletterOwnerEmail(payload, opts.owner ?? '');
-  if (ownerEmail) emails.push(ownerEmail);
-  if (input.action === 'subscribe') emails.push(newsletterWelcomeEmail(payload.email, opts.site));
-  const mailOk = await sendAll(emails, mopts);
+  if (!listOk) console.error(`[newsletter] contact-list ${input.action} failed for ${payload.email}`);
 
-  if (!listOk || !mailOk) return { status: 502, body: { ok: false, error: 'delivery failed' } };
+  const ownerEmail = newsletterOwnerEmail(payload, opts.owner ?? '');
+  const ownerOk = ownerEmail ? await sendAll([ownerEmail], mopts) : true;
+
+  if (input.action === 'subscribe') {
+    const welcomeOk = await sendAll([newsletterWelcomeEmail(payload.email, opts.site)], mopts);
+    if (!welcomeOk) console.error(`[newsletter] welcome email failed for ${payload.email}`);
+  }
+
+  if (!ownerOk) return { status: 502, body: { ok: false, error: 'delivery failed' } };
   return { status: 200, body: { ok: true } };
 }
 
