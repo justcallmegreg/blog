@@ -52,6 +52,35 @@ describe('handleNewsletter', () => {
     expect(res.status).toBe(200);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it('subscribe returns 200 even when the contact-list update fails', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve({ ok: !String(url).endsWith('/subscribe') })
+    );
+    const res = await handleNewsletter({ email: 'a@b.example', action: 'subscribe' }, { ...ctx, fetchImpl: fetchMock });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it('subscribe returns 200 even when the welcome email fails, as long as the owner is notified', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: { body: string }) => {
+      const to = JSON.parse(init.body).to as string | undefined;
+      // welcome goes to the subscriber; owner notification goes to the owner
+      return Promise.resolve({ ok: to !== 'a@b.example' });
+    });
+    const res = await handleNewsletter({ email: 'a@b.example', action: 'subscribe' }, { ...ctx, fetchImpl: fetchMock });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it('502 when the owner notification fails', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: { body: string }) => {
+      const to = JSON.parse(init.body).to as string | undefined;
+      return Promise.resolve({ ok: to !== 'owner@gregco.example' });
+    });
+    const res = await handleNewsletter({ email: 'a@b.example', action: 'subscribe' }, { ...ctx, fetchImpl: fetchMock });
+    expect(res.status).toBe(502);
+  });
+
   it('rate-limits after 5 (429)', async () => {
     const opts = { ...ctx, mailerUrl: undefined as string | undefined };
     for (let i = 0; i < 5; i++) expect((await handleNewsletter({ email: 'a@b.example', action: 'subscribe' }, opts)).status).toBe(200);
