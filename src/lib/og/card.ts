@@ -17,6 +17,9 @@ const MAX_TEXT_WIDTH = W - 2 * MARGIN; // 1008
 export const ADVANCE = 0.5;
 const TITLE_SIZES = [96, 84, 72, 60];
 const MAX_LINES = 4;
+/** Vertical space available for the title block, between the divider and the meta line. */
+const BLOCK_HEIGHT = 380;
+const lineHeightFor = (fontSize: number) => Math.round(fontSize * 1.05);
 
 /** Word-wrap at maxChars; hard-break words longer than a whole line. */
 export function wrapTitle(title: string, maxChars: number): string[] {
@@ -48,7 +51,11 @@ export function fitTitle(title: string): { fontSize: number; lines: string[] } {
   for (const fontSize of TITLE_SIZES) {
     const maxChars = Math.floor(MAX_TEXT_WIDTH / (fontSize * ADVANCE));
     const lines = wrapTitle(title, maxChars);
-    if (lines.length <= MAX_LINES) return { fontSize, lines };
+    // Line count alone isn't enough: at the larger sizes, 4 short lines can still
+    // out-run the vertical block budget and crowd the meta line below. Require both.
+    if (lines.length <= MAX_LINES && lines.length * lineHeightFor(fontSize) <= BLOCK_HEIGHT) {
+      return { fontSize, lines };
+    }
   }
   const fontSize = TITLE_SIZES[TITLE_SIZES.length - 1];
   const maxChars = Math.floor(MAX_TEXT_WIDTH / (fontSize * ADVANCE));
@@ -64,9 +71,9 @@ const esc = (s: string) =>
 
 export function buildCardSvg(input: CardInput): string {
   const { fontSize, lines } = fitTitle(input.title);
-  const lineH = Math.round(fontSize * 1.05);
+  const lineH = lineHeightFor(fontSize);
   // Title block vertically centered between divider (y≈130) and meta (y≈540).
-  const blockTop = 150 + Math.max(0, Math.round((380 - lines.length * lineH) / 2));
+  const blockTop = 150 + Math.max(0, Math.round((BLOCK_HEIGHT - lines.length * lineH) / 2));
   const titleTexts = lines
     .map(
       (l, i) =>
